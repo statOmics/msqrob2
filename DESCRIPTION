@@ -1,0 +1,23 @@
+Package: msqrob2
+Title: Robust statistical inference for quantitative LC-MS proteomics
+Version: 0.0.1
+Authors@R: 
+    c(person(given = "Laurent",
+           family = "Gatto",
+           role = c("aut", "cre"),
+           email = "laurent.gatto@uclouvain.be",
+           comment = c(ORCID = "0000-0002-1520-2268")),
+      person(given = "Lieven",
+           family = "Clemente",
+           role = c("aut", "cre"),
+           email = "lieven.clement@ugent.be",
+           comment = c(ORCID = 0000-0002-9050-4370)))
+Description: Robust statistical inference for quantitative proteomics
+   using the Feature infrastructure for quantitative mass spectrometry
+   data.
+Depends: Features
+Remotes:
+   RforMassSpectrometry/Features
+License: Artistic-2.0
+Encoding: UTF-8
+LazyData: true
