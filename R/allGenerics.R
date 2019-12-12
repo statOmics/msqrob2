@@ -2,3 +2,8 @@
 setGeneric("getModel",function(object) standardGeneric("getModel"))
 setGeneric("getFitMethod",function(object) standardGeneric("getFitMethod"))
 setGeneric("getCoef",function(object) standardGeneric("getCoef"))
+setGeneric("vcovUnscaled",function(object) standardGeneric("vcovUnscaled"))
+setGeneric("varContrastUnscaled",function(object,...) standardGeneric("varContrastUnscaled"))
+setGeneric("getVar",function(object) standardGeneric("getVar"))
+setGeneric("getDF",function(object) standardGeneric("getDF"))
+setGeneric("getContrast",function(object,L) standardGeneric("getContrast"))

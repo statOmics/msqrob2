@@ -6,3 +6,6 @@ object@modelType)
 
 setMethod("getCoef",signature="msqrobModel",definition=function(object)
 object@model$coefficients)
+
+setMethod("getDF",signature="msqrobModel",definition=function(object)
+object@model$df.residual)
