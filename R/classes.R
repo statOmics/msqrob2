@@ -4,8 +4,7 @@
 #'
 #' @section Slots:
 #' \describe{
-#'  \item{\code{modelType}:}{msqrob provides four options to estimate a model. ols: estimation via ordinary least squares, robust: parameter estimation via robust regression
-, ridge: penalised estimation using a ridge penalty, robustRidge: penalised M-estimation using a ridge penalty.}
+#'  \item{\code{modelType}:}{msqrob provides four options to estimate a model. ols: estimation via ordinary least squares, robust: parameter estimation via robust regression, ridge: penalised estimation using a ridge penalty, robustRidge: penalised M-estimation using a ridge penalty.}
 #' \item{\code{model}:}{Model object. A list containing the estimated model parameters required for downstream inference.}
 #' }
 #' @name msqrobModel-class

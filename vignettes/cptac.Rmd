@@ -30,9 +30,9 @@ library(tidyverse)
 library(limma)
 library(Features)
 
-peptidesFile<-"~/Dropbox/proteomicsShortcourse/pda2019/data/quantification/cptacAvsB_lab3/peptides.txt"
+peptidesFile<-"https://raw.githubusercontent.com/statOmics/pda/data/quantification/cptacAvsB_lab3/peptides.txt"
 ecols<-MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
-pe<-readFeatures(table=peptidesFile,ecol=ecols,fnames=1,name="peptide",sep="\t")
+pe<-readFeatures(table=peptidesFile,fnames=1,ecol=ecols,name="peptide",sep="\t")
 ```
 
 We can extract the spikein condition from the raw file name.
@@ -61,7 +61,7 @@ assay(pe[["peptide"]])[assay(pe[["peptide"]])==0]<-NA
 ## Data exploration
 
 We can inspect the missingness in our data with the `plotNA()` function provided with `MSnbase`.
-`r format(mean(is.na(exprs(pepData)))*100,digits=2)`% of all peptide intensities are missing and for some peptides we don't even measure a signal in any sample. The missingness is similar across samples.
+`r format(mean(is.na(assay(pe[["peptide"]])))*100,digits=2)`% of all peptide intensities are missing and for some peptides we don't even measure a signal in any sample. The missingness is similar across samples.
 Note, that we plot the peptide data, so the label protein in the plot refers to peptides.
 
 
@@ -152,14 +152,6 @@ pe<-combineFeatures(pe,fcol="Proteins",na.rm=TRUE,name="protein")
 
 
 
-
-We filter proteins for which we have at least two protein expression values in both conditions:
-```{r}
-protnames<-rownames(pe[["protein"]])[assay(pe[["protein"]]) %>% is.na %>% `!` %>% rowSums>4]
-pe<-pe[protnames,,]
-```
-
-
 We notice that the leading differences (log FC) in the protein data is still according to technical variation. On the second dimension, however, we also observe a clear separation according to the spike-in condition. Hence, the summarization that accounts for peptide specific effects makes the effects due to the spike-in condition more prominent!
 
 ```{r}
@@ -176,8 +168,60 @@ plotMDS(assay(pe[["protein"]]),col=as.double(colData(pe)$condition))
 rowData(pe[["protein"]])$model<-msqrob(pe,"protein",~condition,nRobIter=1)
 ```
 
-Extract coefficients for first protein
+## Inference
 
 ```{r}
-getCoef(rowData(pe[["protein"]])$model[[1]])
+L<-matrix(c(0,1),nrow=2,ncol=1)
+rownames(L)<-rowData(pe[["protein"]])$model$models[[1]]%>%getCoef %>% names
+rowData(pe[["protein"]])$b_a<-topTable(rowData(pe[["protein"]])$model,L)
+```
+
+
+## Plots
+
+### Volcano-plot
+
+
+```{r,warning=FALSE}
+volcano<- ggplot(rowData(pe[["protein"]])$b_a,aes(x=logFC,y=-log10(pval),color=adjPval<0.05)) + geom_point() + scale_color_manual(values=c("black","red"))
+volcano
+```
+
+### Heatmap
+
+We first select the names of the significant proteins.
+
+```{r}
+sigNames<- rowData(pe[["protein"]])$b_a %>% rownames_to_column("protein") %>% filter(adjPval<0.05) %>% pull(protein)
+heatmap(assay(pe[["protein"]])[sigNames,])
+```
+
+
+#Detail plots
+
+We first extract the normalized peptide expression values for a particular protein.  
+
+
+```{r, warning=FALSE, message=FALSE}
+for (protName in sigNames)
+{
+pePlot<-pe[protName,]
+pePlotDf <- data.frame(longFormat(pePlot))
+pePlotDf$assay <- factor(pePlotDf$assay,
+                        levels = c("peptide", "protein"))
+pePlotDf$condition<-as.factor(colData(pePlot)[pePlotDf$colname,"condition"])
+p1<-ggplot(data = pePlotDf,
+       aes(x = colname,
+           y = value,
+           group = rowname)) +
+    geom_line() + geom_point() +
+    facet_grid(~ assay) + ggtitle(protName)
+print(p1)
+
+p2 <- ggplot(pePlotDf, aes(x=colname, y=value,fill=condition)) + geom_boxplot(outlier.shape=NA) +
+geom_point(position=position_jitter(width=.1),aes(shape=rowname)) + scale_shape_manual(values=1:nrow(pePlotDf)) +
+labs(title = protName, x="sample", y="Peptide intensity (log2)") +
+facet_grid(~assay)
+print(p2)
+}
 ```

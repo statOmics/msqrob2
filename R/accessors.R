@@ -8,4 +8,4 @@ setMethod("getCoef",signature="msqrobModel",definition=function(object)
 object@model$coefficients)
 
 setMethod("getDF",signature="msqrobModel",definition=function(object)
-object@model$df.residual)
+if(object@modelType=="fitError") return(NA) else return(object@model$df.residual))
