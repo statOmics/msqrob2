@@ -1,11 +1,19 @@
-setMethod("getModel",signature="msqrobModel",definition=function(object)
-object@model)
+setMethod("getModel",signature="StatModel",definition=function(object)
+object@params)
 
-setMethod("getFitMethod",signature="msqrobModel",definition=function(object)
-object@modelType)
+setMethod("getFitMethod",signature="StatModel",definition=function(object)
+object@type)
 
-setMethod("getCoef",signature="msqrobModel",definition=function(object)
-object@model$coefficients)
+setMethod("getCoef",signature="StatModel",definition=function(object)
+object@params$coefficients)
 
-setMethod("getDF",signature="msqrobModel",definition=function(object)
-if(object@modelType=="fitError") return(NA) else return(object@model$df.residual))
+
+setMethod("getDfPosterior",signature="StatModel",definition=function(object)
+object@dfPosterior)
+
+setMethod("getDF",signature="StatModel",definition=function(object)
+{
+if (object@type=="fitError") return(NA)
+if (object@type=="rlm") return(sum(object@params$w)-object@params$rank)
+else return(object@params$df.residual)
+})
