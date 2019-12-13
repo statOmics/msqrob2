@@ -1,18 +1,4 @@
-print.msqrobModel<-function(x,...)
-{
-cat("msqrobModel",x@modelType,"\n")
-
-if (x@modelType=="ols"|x@modelType=="robust")
-{
-cat("Coefficients:\n")
-cat(names(x@model$coefficients),"\n")
-cat(x@model$coefficients,"\n")
-}
-}
-
-setMethod("show","msqrobModel",function(object) print.msqrobModel(object))
-
-setMethod("vcovUnscaled","msqrobModel",function(object)
+setMethod("vcovUnscaled","StatModel",function(object)
 {
     mod<-getModel(object)
     p1 <- 1L:mod$rank
@@ -24,7 +10,7 @@ setMethod("vcovUnscaled","msqrobModel",function(object)
 }
 )
 
-setMethod("getContrast","msqrobModel",function(object,L)
+setMethod("getContrast","StatModel",function(object,L)
 {
 coefs<-getCoef(object)
 if(is.na(mean(names(coefs)==rownames(L))==1)) return(NA)
@@ -32,12 +18,12 @@ if (mean(names(coefs)==rownames(L))==1)
 return(t(L)%*%coefs)
 })
 
-setMethod("varContrast","msqrobModel",function(object,L)
+setMethod("varContrast","StatModel",function(object,L)
 {
 out<-matrix(NA,ncol(L),ncol(L))
 rownames(out)<-colnames(out)<-colnames(L)
-if (object@modelType!="fitError")
-if (object@model$rank!=0)
+if (object@type!="fitError")
+if (object@params$rank!=0)
 {
 vcovTmp<-vcovUnscaled(object)*object@varPosterior
 if (mean(rownames(vcovTmp)==rownames(L))==1)
@@ -47,11 +33,11 @@ return(out)
 }
 )
 
-setMethod("getVar","msqrobModel",function(object)
+setMethod("getVar","StatModel",function(object)
 {
 mod<-getModel(object)
-if(object@modelType=="fitError") return(NA)
-if(object@modelType=="rlm")
+if(object@type=="fitError") return(NA)
+if(object@type=="rlm")
 {
 return(sum(mod$w*mod$resid^2)/(sum(mod$w)-mod$rank))
 } else if (is.null(mod$weights)) {
