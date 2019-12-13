@@ -12,4 +12,4 @@
 #' @exportClass msqrobModel
 #'
 
-setClass("msqrobModel",representation=representation(modelType="character",model="list"),prototype = prototype(modelType="",model=list()))
+msqrobModel<-setClass("msqrobModel",representation=representation(modelType="character",model="list",varPosterior="numeric",dfPosterior="numeric"),prototype = prototype(modelType="",model=list(),varPosterior=as.numeric(NA),dfPosterior=as.numeric(NA)))

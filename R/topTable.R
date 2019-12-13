@@ -1,12 +1,12 @@
-topTable<-function(object,contrast)
+topTable<-function(models,contrast)
 {
 out<-data.frame(
-logFC=sapply(object$models,getContrast,L=contrast),
-se=sqrt(sapply(object$models,varContrastUnscaled,L=contrast)*object$var.post),
-df=object$df.post
+logFC=sapply(models,getContrast,L=contrast),
+se=sqrt(sapply(models,varContrast,L=contrast)),
+df=sapply(models,getDfPosterior)
 )
 out$t<-out$logFC/out$se
 out$pval<-pt(-abs(out$t),out$df)*2
-out$adjPval<-p.adjust(out$pval)
+out$adjPval<-p.adjust(out$pval,method="fdr")
 return(out)
 }

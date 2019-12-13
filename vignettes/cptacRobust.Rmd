@@ -150,6 +150,17 @@ Use the standard median summarization because other methods still have to be por
 pe<-combineFeatures(pe,fcol="Proteins",na.rm=TRUE,name="protein")
 ```
 
+##robust not implemented yet
+
+```{r}
+  assay(pe[["protein"]])<-MSnbase::combineFeatures(
+  MSnbase::MSnSet(assay(pe[["peptide"]]),
+  pData=colData(pe)%>%as.data.frame%>%AnnotatedDataFrame,
+  fData=rowData(pe[["peptide"]])%>%as.data.frame%>%AnnotatedDataFrame),
+  groupBy=pe[["peptide"]] %>% rowData %>% as.data.frame %>% pull(Proteins) %>% as.factor,
+  method="robust") %>% exprs
+```
+
 
 We notice that the leading differences (log FC) in the protein data is still according to technical variation. On the second dimension, however, we also observe a clear separation according to the spike-in condition. Hence, the summarization that accounts for peptide specific effects makes the effects due to the spike-in condition more prominent!
 

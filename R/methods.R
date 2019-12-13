@@ -32,12 +32,18 @@ if (mean(names(coefs)==rownames(L))==1)
 return(t(L)%*%coefs)
 })
 
-setMethod("varContrastUnscaled","msqrobModel",function(object,L)
+setMethod("varContrast","msqrobModel",function(object,L)
 {
-if (object@model$rank==0) return(matrix(NA,1,1))
-vcovTmp<-vcovUnscaled(object)
+out<-matrix(NA,ncol(L),ncol(L))
+rownames(out)<-colnames(out)<-colnames(L)
+if (object@modelType!="fitError")
+if (object@model$rank!=0)
+{
+vcovTmp<-vcovUnscaled(object)*object@varPosterior
 if (mean(rownames(vcovTmp)==rownames(L))==1)
 return(t(L)%*%vcovTmp%*%L)
+}
+return(out)
 }
 )
 
@@ -45,7 +51,10 @@ setMethod("getVar","msqrobModel",function(object)
 {
 mod<-getModel(object)
 if(object@modelType=="fitError") return(NA)
-if (is.null(mod$weights)) {
+if(object@modelType=="rlm")
+{
+return(sum(mod$w*mod$resid^2)/(sum(mod$w)-mod$rank))
+} else if (is.null(mod$weights)) {
       return(sum(mod$residuals^2)/mod$df.residual)
         }
         else {
