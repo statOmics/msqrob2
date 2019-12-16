@@ -29,17 +29,21 @@ With the grepEcols function we find the columns that are containing the expressi
 library(tidyverse)
 library(limma)
 library(Features)
+library(msqrob2)
 
-peptidesFile<-"https://raw.githubusercontent.com/statOmics/pda/data/quantification/cptacAvsB_lab3/peptides.txt"
-ecols<-MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
-pe<-readFeatures(table=peptidesFile,fnames=1,ecol=ecols,name="peptide",sep="\t")
+myurl <- "https://raw.githubusercontent.com/statOmics/pda/data/quantification/cptacAvsB_lab3/peptides.txt"
+peptidesFile <- myurl
+ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
+pe <- readFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
+                   name = "peptide", sep="\t")
 ```
 
 We can extract the spikein condition from the raw file name.
 It is the 12 character if the name.
 
 ```{r}
-colData(pe)$condition<-substr(colnames(pe),12,12) %>% unlist %>%  as.factor
+cond <- which(strsplit(colnames(pe)[[1]][1], split = "")[[1]] == "A") # find where condition is stored
+colData(pe)$condition <- substr(colnames(pe), cond, cond) %>% unlist %>%  as.factor
 ```
 
 
@@ -48,13 +52,13 @@ We calculate how many non zero intensities we have per peptide.
 This will be useful for filtering.
 
 ```{r}
-rowData(pe[["peptide"]])$nNonZero<- rowSums(assay(pe[["peptide"]]) > 0)
+rowData(pe[["peptide"]])$nNonZero <- rowSums(assay(pe[["peptide"]]) > 0)
 ```
 
 
 Peptides with zero intensities are missing peptides and should be represent with a `NA` value instead of `0`.
 ```{r}
-assay(pe[["peptide"]])[assay(pe[["peptide"]])==0]<-NA
+pe <- zeroIsNA(pe)
 ```
 
 
@@ -77,7 +81,7 @@ We will log transform, normalize, filter and summarize the data.
 ## Log transform the data
 
 ```{r}
-assay(pe[["peptide"]])<-log(assay(pe[["peptide"]]),base=2)
+pe <- logTransform(pe, base = 2)
 limma::plotDensities(assay(pe[["peptide"]]))
 ```
 
@@ -88,7 +92,7 @@ limma::plotDensities(assay(pe[["peptide"]]))
 In our approach a peptide can map to multiple proteins, as long as there is none of these proteins present in a smaller subgroup.
 
 ```{r}
-pe[["peptide"]]<-pe[["peptide"]][rowData(pe[["peptide"]])$Proteins %in% MSqRob::smallestUniqueGroups(rowData(pe[["peptide"]])$Proteins),]
+pe[["peptide"]]<-pe[["peptide"]][rowData(pe[["peptide"]])$Proteins %in% msqrob2::smallestUniqueGroups(rowData(pe[["peptide"]])$Proteins),]
 ```
 
 ### Remove reverse sequences (decoys) and contaminants
@@ -96,9 +100,9 @@ pe[["peptide"]]<-pe[["peptide"]][rowData(pe[["peptide"]])$Proteins %in% MSqRob::
 We now remove the contaminants, peptides that map to decoy sequences and proteins, which were only identified by peptides with modifications.
 
 ```{r}
-pe[["peptide"]] <- pe[["peptide"]][rowData(pe[["peptide"]])$Reverse!="+",]
+pe[["peptide"]] <- pe[["peptide"]][rowData(pe[["peptide"]])$Reverse!= "+", ]
 pe[["peptide"]] <- pe[["peptide"]][rowData(pe[["peptide"]])$
-Potential.contaminant!="+",]
+Potential.contaminant!="+", ]
 ```
 
 ### Remove peptides of proteins that were only identified with modified peptides
@@ -110,7 +114,7 @@ I will skip this step for the moment. Large protein groups file needed for this.
 We want to keep peptide that were at least observed twice.
 
 ```{r}
-pe[["peptide"]]<-pe[["peptide"]][rowData(pe[["peptide"]])$nNonZero>=2,]
+pe[["peptide"]] <- pe[["peptide"]][rowData(pe[["peptide"]])$nNonZero >= 2, ]
 nrow(pe[["peptide"]])
 ```
 
@@ -134,7 +138,7 @@ limma::plotDensities(assay(pe[["peptide"]]))
 We can visualize our data using a Multi Dimensional Scaling plot, eg. as provided by the limma package.
 
 ```{r}
-limma::plotMDS(assay(pe[["peptide"]]),col=as.double(colData(pe)$condition))
+limma::plotMDS(assay(pe[["peptide"]]), col = as.numeric(colData(pe)$condition))
 ```
 
 The first axis in the plot is showing the leading log fold changes (differences on the log scale) between the samples.
@@ -147,14 +151,14 @@ Indeed the samples do not seem to be clearly separated according to the spike in
 Use the standard median summarization because other methods still have to be ported to Features package.
 
 ```{r}
-pe<-combineFeatures(pe,fcol="Proteins",na.rm=TRUE,name="protein")
+pe <- aggregateFeatures(pe, fcol = "Proteins", na.rm = TRUE, name="protein")
 ```
 
 
 We notice that the leading differences (log FC) in the protein data is still according to technical variation. On the second dimension, however, we also observe a clear separation according to the spike-in condition. Hence, the summarization that accounts for peptide specific effects makes the effects due to the spike-in condition more prominent!
 
 ```{r}
-plotMDS(assay(pe[["protein"]]),col=as.double(colData(pe)$condition))
+plotMDS(assay(pe[["protein"]]),col = as.numeric(colData(pe)$condition))
 ```
 
 
@@ -163,16 +167,16 @@ plotMDS(assay(pe[["protein"]]),col=as.double(colData(pe)$condition))
 
 ## Estimation
 
-```{r}
-rowData(pe[["protein"]])$model<-msqrob(pe,"protein",~condition)
+```{r, warning=FALSE}
+rowData(pe[["protein"]])$model <- msqrob2::msqrob(pe, "protein", ~condition)
 ```
 
 ## Inference
 
 ```{r}
-L<-matrix(c(0,1),nrow=2,ncol=1)
-rownames(L)<-rowData(pe[["protein"]])$model[[1]]%>%getCoef %>% names
-rowData(pe[["protein"]])$b_a<-topTable(rowData(pe[["protein"]])$model,L)
+L <- as.matrix(c(0, 1))
+rownames(L) <- rowData(pe[["protein"]])$model[[1]] %>% msqrob2::getCoef() %>% names
+rowData(pe[["protein"]])$b_a <- msqrob2::topTable(rowData(pe[["protein"]])$model, L)
 ```
 
 
@@ -182,7 +186,9 @@ rowData(pe[["protein"]])$b_a<-topTable(rowData(pe[["protein"]])$model,L)
 
 
 ```{r,warning=FALSE}
-volcano<- ggplot(rowData(pe[["protein"]])$b_a,aes(x=logFC,y=-log10(pval),color=adjPval<0.05)) + geom_point() + scale_color_manual(values=c("black","red"))
+volcano <- ggplot(rowData(pe[["protein"]])$b_a, aes(x = logFC, y = -log10(pval), 
+                                                    color = adjPval < 0.05)) + 
+  geom_point(cex = 2.5) + scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal()
 volcano
 ```
 
@@ -191,8 +197,8 @@ volcano
 We first select the names of the significant proteins.
 
 ```{r}
-sigNames<- rowData(pe[["protein"]])$b_a %>% rownames_to_column("protein") %>% filter(adjPval<0.05) %>% pull(protein)
-heatmap(assay(pe[["protein"]])[sigNames,])
+sigNames <- rowData(pe[["protein"]])$b_a %>% rownames_to_column("protein") %>% filter(adjPval<0.05) %>% pull(protein)
+heatmap(assay(pe[["protein"]])[sigNames, ])
 ```
 
 
@@ -204,23 +210,23 @@ We first extract the normalized peptide expression values for a particular prote
 ```{r, warning=FALSE, message=FALSE}
 for (protName in sigNames)
 {
-pePlot<-pe[protName,]
+pePlot <- pe[protName, ]
 pePlotDf <- data.frame(longFormat(pePlot))
 pePlotDf$assay <- factor(pePlotDf$assay,
                         levels = c("peptide", "protein"))
-pePlotDf$condition<-as.factor(colData(pePlot)[pePlotDf$colname,"condition"])
-p1<-ggplot(data = pePlotDf,
+pePlotDf$condition <- as.factor(colData(pePlot)[pePlotDf$colname, "condition"])
+p1 <- ggplot(data = pePlotDf,
        aes(x = colname,
            y = value,
            group = rowname)) +
-    geom_line() + geom_point() +
+    geom_line() + geom_point() +  theme_minimal() + 
     facet_grid(~ assay) + ggtitle(protName)
 print(p1)
 
-p2 <- ggplot(pePlotDf, aes(x=colname, y=value,fill=condition)) + geom_boxplot(outlier.shape=NA) +
-geom_point(position=position_jitter(width=.1),aes(shape=rowname)) + scale_shape_manual(values=1:nrow(pePlotDf)) +
-labs(title = protName, x="sample", y="Peptide intensity (log2)") +
-facet_grid(~assay)
+p2 <- ggplot(pePlotDf, aes(x = colname, y = value, fill = condition)) + geom_boxplot(outlier.shape = NA) +
+geom_point(position = position_jitter(width = .1), aes(shape = rowname)) + scale_shape_manual(values = 1:nrow(pePlotDf)) +
+labs(title = protName, x = "sample", y = "Peptide intensity (log2)") + theme_minimal()
+facet_grid(~assay) 
 print(p2)
 }
 ```
