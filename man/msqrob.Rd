@@ -7,13 +7,13 @@
 msqrob(pe, assay, formula, robust = TRUE, maxitRob = 5)
 }
 \arguments{
-\item{pe}{Proteomics Experiment Object, is a Feature set that contains the assay with the quantified MS intensities.}
+\item{pe}{Proteomics Experiment Object, is an object off class Feature set that contains the assay with the quantified MS intensities.}
 
 \item{assay}{integer or string referring to the assay of the Feature object containing the intensities for modelling, e.g. peptide or protein.}
 
-\item{formula}{Model formula. The model is build based on the covariates in the colData of the pe object.}
+\item{formula}{Model formula. The model is built based on the covariates in the colData of the pe object.}
 
-\item{robust}{Flag to indicate if robust regression is conducted to account for outliers. If Flase an OLS fit is performed.}
+\item{robust}{bolean to indicate if robust regression is performed to account for outliers. If 'FALSE' an OLS fit is performed.}
 
 \item{maxitRob}{Maximum iterations in the IRWLS algorithm used in the M-estimation step of the robust regression.}
 }
@@ -27,5 +27,5 @@ Parameter estimation of msqrob models.
 TODO
 }
 \author{
-Lieven Clement
+Lieven Clement, Oliver M. Crook
 }

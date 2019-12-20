@@ -3,6 +3,7 @@
 \docType{class}
 \name{StatModel-class}
 \alias{StatModel-class}
+\alias{.StatModel}
 \alias{show,StatModel-method}
 \title{The StatModel class for msqrob}
 \usage{

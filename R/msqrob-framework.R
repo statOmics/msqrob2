@@ -17,11 +17,11 @@
 ##' df$mods <- c(mod1, mod2)
 ##' df$mods
 #' @export
-setClass("StatModel",
-         slots = c(type = "character",
-                   params = "list",
-                   varPosterior = "numeric",
-                   dfPosterior = "numeric"))
+.StatModel <- setClass("StatModel",
+                        slots = c(type = "character",
+                        params = "list",
+                        varPosterior = "numeric",
+                        dfPosterior = "numeric"))
 
 ##' @title show method for object of class StatModel
 ##'
