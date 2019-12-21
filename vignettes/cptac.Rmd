@@ -28,6 +28,7 @@ With the grepEcols function we find the columns that are containing the expressi
 ```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(limma)
+library(MSnbase)
 library(Features)
 library(msqrob2)
 

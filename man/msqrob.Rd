@@ -23,9 +23,6 @@ A list of objects of the StatModel class
 \description{
 Parameter estimation of msqrob models.
 }
-\examples{
-TODO
-}
 \author{
 Lieven Clement, Oliver M. Crook
 }

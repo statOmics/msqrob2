@@ -17,15 +17,3 @@ A character vector containing the names of the protein groups for which none of 
 \description{
 For a given vector of protein group names, outputs the names of those protein groups for which none of its member proteins is present in a smaller protein group.
 }
-\examples{
-#This example will give the names of the protein groups in the MSnSet object peptidesCPTAC for which none of its proteins is present in a smaller protein group.
-library("MSnbase")
-#Select the columns containing intensities
-colInt <- grepEcols(system.file("extdata/CPTAC", "peptides.txt", package = "MSqRob"), pattern="Intensity.", split = "\t")
-#Import MaxQuant's peptides.txt file and convert it to an MSnSet object
-peptidesCPTAC <- readMSnSet2(system.file("extdata/CPTAC", "peptides.txt", package = "MSqRob"), ecol = colInt, sep = "\t")
-
-#Our approach: a peptide can map to multiple proteins, as long as there is none of these proteins present in a smaller subgroup.
-groups <- smallestUniqueGroups(fData(peptidesCPTAC)$Proteins)
-groups
-}

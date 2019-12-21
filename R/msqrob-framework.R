@@ -9,7 +9,8 @@
 ##' @rdname msqrob-framework
 ##' @author Oliver M. Crook, Lieven Clement
 ##' @examples
-##' myModel <- new("StatModel", type = "rlm", params = list(x = 3, y = 7, b = 4), varPosterior = c(0.1, 0.2, 0.3), dfPosterior = c(6, 7, 8))
+##' myModel <- new("StatModel", type = "rlm", params = list(x = 3, y = 7, b = 4)
+##' , varPosterior = c(0.1, 0.2, 0.3), dfPosterior = c(6, 7, 8))
 ##' myModel@params
 ##' mod1 <- new("StatModel", type = "rlm")
 ##' mod2 <- new("StatModel", type = "lm")

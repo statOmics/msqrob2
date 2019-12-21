@@ -7,7 +7,7 @@
 #' @param formula Model formula. The model is built based on the covariates in the colData of the pe object.
 #' @param robust bolean to indicate if robust regression is performed to account for outliers. If 'FALSE' an OLS fit is performed.
 #' @param maxitRob Maximum iterations in the IRWLS algorithm used in the M-estimation step of the robust regression.
-#' @examples TODO
+#' @examples
 #' @return A list of objects of the StatModel class
 #' @rdname msqrob
 #' @author Lieven Clement, Oliver M. Crook
