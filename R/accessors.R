@@ -13,7 +13,15 @@ object@dfPosterior)
 
 setMethod("getDF",signature="StatModel",definition=function(object)
 {
-if (object@type=="fitError") return(NA)
-if (object@type=="rlm") return(sum(object@params$w)-object@params$rank)
-else return(object@params$df.residual)
+return(object@params$df.residual)
+})
+
+setMethod("getVar",signature="StatModel",definition=function(object)
+{
+return(object@params$sigma^2)
+})
+
+setMethod("getVcovUnscaled",signature="StatModel",definition=function(object)
+{
+return(object@params$vcovUnscaled)
 })

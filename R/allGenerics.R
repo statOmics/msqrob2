@@ -5,7 +5,7 @@ setGeneric("getFitMethod",function(object) standardGeneric("getFitMethod"))
 #' @export
 setGeneric("getCoef",function(object) standardGeneric("getCoef"))
 #' @export
-setGeneric("vcovUnscaled",function(object) standardGeneric("vcovUnscaled"))
+setGeneric("getVcovUnscaled",function(object) standardGeneric("vcovUnscaled"))
 #' @export
 setGeneric("varContrast",function(object,...) standardGeneric("varContrast"))
 #' @export
@@ -16,3 +16,5 @@ setGeneric("getDF",function(object) standardGeneric("getDF"))
 setGeneric("getDfPosterior",function(object) standardGeneric("getDfPosterior"))
 #' @export
 setGeneric("getContrast",function(object,L) standardGeneric("getContrast"))
+#' @export
+setGeneric("getVcovUnscaled",function(object) standardGeneric("getVcovUnscaled"))
