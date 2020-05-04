@@ -4,8 +4,7 @@
 ##' @slot type The type of the used model
 ##' @slot params A list containing information of the used model
 ##' @slot varPosterior A vector of posterior variance
-##' @slot dfPosterior A vecotr of posterior degrees of freedom
-##' @rd
+##' @slot dfPosterior A vector of posterior degrees of freedom
 ##' @rdname msqrob-framework
 ##' @author Oliver M. Crook, Lieven Clement
 ##' @examples

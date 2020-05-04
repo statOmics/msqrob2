@@ -21,7 +21,7 @@ classes for msqrob
 
 \item{\code{varPosterior}}{A vector of posterior variance}
 
-\item{\code{dfPosterior}}{A vecotr of posterior degrees of freedom}
+\item{\code{dfPosterior}}{A vector of posterior degrees of freedom}
 }}
 
 \examples{

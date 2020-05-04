@@ -168,15 +168,15 @@ plotMDS(assay(pe[["protein"]]),col = as.numeric(colData(pe)$condition))
 ## Estimation
 
 ```{r, warning=FALSE}
-rowData(pe[["protein"]])$model <- msqrob2::msqrobLm(pe[[ "protein"]], ~condition,colData=colData(pe))
+pe <- msqrob2::msqrob(object=pe,assayName="protein", formula=~condition)
 ```
 
 ## Inference
 
 ```{r}
 L <- as.matrix(c(0, 1))
-rownames(L) <- rowData(pe[["protein"]])$model[[1]] %>% msqrob2::getCoef() %>% names
-rowData(pe[["protein"]])$b_a <- msqrob2::topTable(rowData(pe[["protein"]])$model, L)
+rownames(L) <- rowData(pe[["protein"]])$msqrobModels[[1]] %>% msqrob2::getCoef() %>% names
+pe <- msqrob2::hypothesisTest(object=pe,assayName="protein",contrast=L)
 ```
 
 
@@ -186,7 +186,7 @@ rowData(pe[["protein"]])$b_a <- msqrob2::topTable(rowData(pe[["protein"]])$model
 
 
 ```{r,warning=FALSE}
-volcano <- ggplot(rowData(pe[["protein"]])$b_a, aes(x = logFC, y = -log10(pval),
+volcano <- ggplot(rowData(pe[["protein"]])$msqrobTestResults, aes(x = logFC, y = -log10(pval),
                                                     color = adjPval < 0.05)) +
   geom_point(cex = 2.5) + scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal()
 volcano
@@ -197,7 +197,7 @@ volcano
 We first select the names of the significant proteins.
 
 ```{r}
-sigNames <- rowData(pe[["protein"]])$b_a %>% rownames_to_column("protein") %>% filter(adjPval<0.05) %>% pull(protein)
+sigNames <- rowData(pe[["protein"]])$msqrobTestResults %>% rownames_to_column("protein") %>% filter(adjPval<0.05) %>% pull(protein)
 heatmap(assay(pe[["protein"]])[sigNames, ])
 ```
 

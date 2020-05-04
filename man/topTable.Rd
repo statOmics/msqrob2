@@ -18,7 +18,7 @@ A dataframe with log2 fold changes (logFC), standard errors (se), degrees of fre
 Summary table of the n most differentially expressed Features
 }
 \examples{
-TODO
+#TODO
 }
 \author{
 Lieven Clement

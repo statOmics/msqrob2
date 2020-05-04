@@ -2,30 +2,24 @@
 #'
 #' @description Parameter estimation of msqrob models.
 #'
-#' @param se is an object of class summarized experiment with the assay of the quantified MS intensities.
-#' @param formula Model formula. The model is built based on the covariates in the colData.
+#' @param y is a matrix with the quantified MS intensities, the features are in the rows and samples in the columns.
+#' @param formula Model formula. The model is built based on the covariates in the data object.
+#' @param data is a data frame of class DataFrame with information on the design. It has the same number of rows as the number of columns (samples) of y.
 #' @param robust boolean to indicate if robust regression is performed to account for outliers. If 'FALSE' an OLS fit is performed.
 #' @param maxitRob Maximum iterations in the IRWLS algorithm used in the M-estimation step of the robust regression.
-#' @param colData is a data frame of class DataFrame with information on the design. By default the colData of se is taken.
-#' @examples TODO
+#' @examples #TODO
 #' @return A list of objects of the StatModel class
 #' @rdname msqrob
 #' @author Lieven Clement, Oliver M. Crook
 #' @export
-msqrobLm <- function(se,
+msqrobLm <- function(y,
                    formula,
+                   data,
                    robust = TRUE,
-                   maxitRob = 5,
-                   colData=NULL)
+                   maxitRob = 5)
 {
-  if (is.null(colData)) colData=colData(se)
-  if (ncol(colData)==0) stop("colData does not contain variables")
-  # extract quantitative assay data
-  yAll <- assay(se)
-
-  myDesign <- model.matrix(formula, colData)
-
-  models <- apply(yAll, 1, function(y, design)
+  myDesign <- model.matrix(formula, data)
+  models <- apply(y, 1, function(y, design)
   {
     # computatability check
     obs <- is.finite(y)
@@ -94,19 +88,16 @@ msqrobLm <- function(se,
 
 
 #'@export
-msqrobRidge <- function(se,formula,robust=TRUE,maxitRob=1,lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),tol=1e-6,doQR=TRUE,colData=NULL)
+msqrobLmer <- function(y,formula,data,robust=TRUE,maxitRob=1,tol=1e-6,doQR=TRUE,featureGroups=NULL,lmerArgs = list(control = lmerControl(calc.derivs = FALSE)))
 {
   require(lme4)
-  if (is.null(colData)) colData=colData(se)
-  if (ncol(colData)==0) stop("colData does not contain variables")
-  yAll<-assay(se)
 
   if(length(formula)==3)
   formula<-formula[-2]
 
-  fixed <- model.matrix(nobars(formula),colData)
+  fixed <- model.matrix(nobars(formula),data)
 
-  df <- colData
+  df <- data
   df$fixed <- fixed
 
   if (ncol(fixed)<=2 & nobars(formula)[[2]]!=1)
@@ -120,8 +111,20 @@ msqrobRidge <- function(se,formula,robust=TRUE,maxitRob=1,lmerArgs = list(contro
         ) else
       form <- formula
 
-  models<-apply(yAll,1,function(y,form,data)
+  if (is.null(featureGroups)) featureGroups<-rownames(y)
+  y<-split.data.frame(y,featureGroups)
+
+  models <- bplapply(y, function(y, form, data)
   {
+
+    if(nrow(y)>1)
+    {
+      data<-data[rep(1:nrow(data),each=nrow(y)),]
+      data$samples<-as.factor(rep(colnames(y),each=nrow(y)))
+      data$features<-as.factor(rep(rownames(y),ncol(y)))
+      form<-update.formula(form,~.+(1|samples)+(1|features))
+    }
+    dim(y)<-NULL
     data$y<-y
     data<-data[!is.na(data$y),]
     qrFixed<-qr(data$fixed)
@@ -136,15 +139,17 @@ msqrobRidge <- function(se,formula,robust=TRUE,maxitRob=1,lmerArgs = list(contro
     if (nobars(formula)[[2]]!=1)
       ##Fooling lmer to adopt ridge regression using Fabian Scheipl's trick
       {if (qrFixed$rank==ncol(data$fixed)) try({
-        data$ridge<-as.factor(rep(seq(1:(ncol(Q)-1)),length=nrow(data)))
+        data$ridge<-as.factor(rep(colnames(data$fixed)[-1],length=nrow(data)))
         parsedFormulaC <- lFormula(form,data=as.list(data))
-        nRidge<-nlevels(data$ridge)
-        parsedFormulaC$reTrms <- within(parsedFormulaC$reTrms, {
-          cnms$ridge <- "ridge"
-          Zt[1:nRidge,] <- as(Matrix(t(qr.Q(qrFixed)[,-1])), class(Zt))
-          })
-          devianceFunctionC <- do.call(mkLmerDevfun, parsedFormulaC)
-          optimizerOutputC <- optimizeLmer(devianceFunctionC)
+
+        parsedFormulaC$reTrms$cnms$ridge <- ""
+        ridgeId<-grep(names(parsedFormulaC$reTrms$Ztlist),pattern="ridge")
+        colnames(Q)<-colnames(data$fixed)
+        parsedFormulaC$reTrms$Ztlist[[ridgeId]]<-as(Matrix(t(Q[,-1])), class(parsedFormulaC$reTrms$Ztlist[[ridgeId]]))
+        parsedFormulaC$reTrms$Zt<-do.call(rbind,parsedFormulaC$reTrms$Ztlist)
+
+        devianceFunctionC <- do.call(mkLmerDevfun, parsedFormulaC)
+        optimizerOutputC <- optimizeLmer(devianceFunctionC)
         model <- mkMerMod(
                          rho = environment(devianceFunctionC),
                          opt = optimizerOutputC,
@@ -177,21 +182,23 @@ msqrobRidge <- function(se,formula,robust=TRUE,maxitRob=1,lmerArgs = list(contro
       vcovUnscaled<-as.matrix(.getVcovBetaBUnscaled(model))
       if (nobars(formula)[[2]]!=1)
       {
-        names(betas)[1:ncol(Q)]<-colnames(data$fixed)
         if (doQR)
         {
+          ids<-c(1,grep("ridge",names(betas)))
           Rinv <- diag(betas)
-          Rinv[1:ncol(Q),1:ncol(Q)]<-solve(qr.R(qrFixed))
-          Rinv[1,1]<-1
           coefNames<-names(betas)
+          Rinv[ids,ids]<-solve(qr.R(qrFixed))
+          Rinv[1, 1] <- 1
           betas <- c(Rinv%*%betas)
           names(betas)<-coefNames
           vcovUnscaled<-t(Rinv)%*%vcovUnscaled%*%Rinv
-          rownames(vcovUnscaled)<-colnames(vcovUnscaled)<-names(betas)
+          rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- names(betas)
         }
       }
       df.residual<-.getDfLmer(model)
-      model<-list(coefficients=betas,vcovUnscaled=vcovUnscaled,sigma=sigma,df.residual=df.residual,w=model@frame$`(weights)`)
+      if (df.residual<2L)
+        model<-list(coefficients=NA,vcovUnscaled=NA,sigma=NA,df.residual=NA,w=NA) else
+        model<-list(coefficients=betas,vcovUnscaled=vcovUnscaled,sigma=sigma,df.residual=df.residual,w=model@frame$`(weights)`)
     }
   return(StatModel(type=type,params=model,varPosterior=as.numeric(NA),dfPosterior=as.numeric(NA)))
   },form=update.formula(form,y~.),data=df)
@@ -235,6 +242,7 @@ return(out)
 }
 
 #' @import purrr
+#' @import lme4
 .getBetaB <- function(model) {
   betaB <- c(as.vector(getME(model,"beta")),as.vector(getME(model,"b")))
   ranefLevels<-imap(model@flist,~{paste0(.y,levels(.x))})
