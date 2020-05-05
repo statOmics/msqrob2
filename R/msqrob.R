@@ -2,95 +2,117 @@
 #'
 #' @description Parameter estimation of msqrob models.
 #'
-#' @param y is a matrix with the quantified MS intensities, the features are in the rows and samples in the columns.
-#' @param formula Model formula. The model is built based on the covariates in the data object.
-#' @param data is a data frame of class DataFrame with information on the design. It has the same number of rows as the number of columns (samples) of y.
-#' @param robust boolean to indicate if robust regression is performed to account for outliers. If 'FALSE' an OLS fit is performed.
-#' @param maxitRob Maximum iterations in the IRWLS algorithm used in the M-estimation step of the robust regression.
+#' @param y A `matrix` with the quantified feature intensities. The
+#'     features are along the rows and samples along the columns.
+#' 
+#' @param formula Model formula. The model is built based on the
+#'     covariates in the data object.
+#' 
+#' @param data A `DataFrame` with information on the design. It has
+#'     the same number of rows as the number of columns (samples) of
+#'     `y`.
+#' 
+#' @param robust `boolean(1)` to indicate if robust regression is
+#'     performed to account for outliers. Default is `TRUE`. If
+#'     `FALSE` an OLS fit is performed.
+#' 
+#' @param maxitRob `numeric(1)` indicating the maximum iterations in
+#'     the IRWLS algorithm used in the M-estimation step of the robust
+#'     regression.
+#' 
 #' @examples #TODO
-#' @return A list of objects of the StatModel class
+#' 
+#' @return A list of objects of the `StatModel` class.
+#' 
 #' @rdname msqrob
+#' 
 #' @author Lieven Clement, Oliver M. Crook
+#'
+#' @importFrom MASS rlm
+#' @importFrom limma squeezeVar
+#' 
 #' @export
 msqrobLm <- function(y,
-                   formula,
-                   data,
-                   robust = TRUE,
-                   maxitRob = 5)
-{
-  myDesign <- model.matrix(formula, data)
-  models <- apply(y, 1, function(y, design)
-  {
-    # computatability check
-    obs <- is.finite(y)
-    type <- "fitError"
-    model <- list(coefficients=NA,vcovUnscaled=NA,sigma=NA,df.residual=NA,w=NULL)
+                     formula,
+                     data,
+                     robust = TRUE,
+                     maxitRob = 5) {
+    myDesign <- model.matrix(formula, data)
+    models <- apply(y, 1,
+                    function(y, design)  {
+                        ## computatability check
+                        obs <- is.finite(y)
+                        type <- "fitError"
+                        model <- list(coefficients = NA, vcovUnscaled = NA,
+                                      sigma = NA, df.residual = NA, w = NULL)
 
-    if (sum(obs) > 0)  {
-     # subset to finite observations, attention with R column switching
-     X <- design[obs, , drop = FALSE]
-     y <- y[obs]
+                        if (sum(obs) > 0)  {
+                            ## subset to finite observations, attention with R column switching
+                            X <- design[obs, , drop = FALSE]
+                            y <- y[obs]
 
-     if(robust) {
-     # use robust regression from MASS package, "M" estimation is used
-     mod <- try(MASS::rlm(X,
-                            y,
-                            method = "M",
-                            maxit = maxitRob),
-                            silent = TRUE)
-     if (class(mod)[1]!="try-error") type <- "rlm"
-     } else {
-     # if robust regression is not performed use standard linear fit
-     mod <- try(lm.fit(X, y))
-     if (class(mod)[1]!="try-error"&mod$rank==ncol(X)) type <- "lm"
-     }
+                            if (robust) {
+                                ## use robust regression from MASS package, "M" estimation is used
+                                mod <- try(MASS::rlm(X, y,
+                                                     method = "M",
+                                                     maxit = maxitRob),
+                                           silent = TRUE)
+                                if (class(mod)[1] != "try-error")
+                                    type <- "rlm"
+                            } else {
+                                ## if robust regression is not performed use standard linear fit
+                                mod <- try(lm.fit(X, y))
+                                if (class(mod)[1] != "try-error" & mod$rank == ncol(X))
+                                    type <- "lm"
+                            }
+                            if (type == "rlm") {
+                                w <- mod$w
+                                sigma <- sqrt(sum(mod$w * mod$resid^2) / (sum(mod$w) - mod$rank))
+                                df.residual <- sum(mod$w) - mod$rank
+                            }
+                            if (type == "lm") {
+                                w <- NULL
+                                sigma <- sqrt(sum(mod$residuals^2 / mod$df.residual))
+                                df.residual <- mod$df.residual
+                            }
+                            if (type != "fitError")
+                                model <- list(coefficients = mod$coef,
+                                              vcovUnscaled = .vcovUnscaled(mod),
+                                              sigma = sigma,
+                                              df.residual = df.residual,
+                                              w = w)
+                        }
+                        ## return object of class Statmodel (from apply)
+                        .StatModel(type = type,
+                                   params = model,
+                                   varPosterior = as.numeric(NA),
+                                   dfPosterior = as.numeric(NA))
 
-     if (type=="rlm") {
-        w <- mod$w
-        sigma <- sqrt(sum(mod$w*mod$resid^2)/(sum(mod$w)-mod$rank))
-        df.residual<-sum(mod$w)-mod$rank
-        }
-     if (type=="lm") {
-        w <- NULL
-        sigma <- sqrt(sum(mod$residuals^2/mod$df.residual))
-        df.residual<-mod$df.residual
-        }
-     if (type!="fitError") model<-list(coefficients=mod$coef,
-        vcovUnscaled=.vcovUnscaled(mod),
-        sigma=sigma,
-        df.residual=df.residual,
-        w=w)
+                    }, design = myDesign ) ## end of apply here
+
+    ## Squeeze a set of sample variances together by computing
+    ## empirical Bayes posterior means
+    hlp <- limma::squeezeVar(var = sapply(models, getVar),
+                             df = sapply(models, getDF))
+
+    ## Put variance and degrees of freedom in appropriate slots
+    for (i in 1:length(models)) {
+        mydf <- hlp$df.prior + getDF(models[[i]])
+        models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
+        models[[i]]@dfPosterior <- as.numeric(mydf)
     }
 
-  # return object of class Statmodel (from apply)
-  .out  <- .StatModel(type = type,
-                      params = model,
-                      varPosterior = as.numeric(NA),
-                      dfPosterior = as.numeric(NA))
-  return(.out)
-
-  }, design = myDesign ) # end of apply here
-
-  # Squeeze a set of sample variances together by computing empirical Bayes posterior means
-  hlp <- limma::squeezeVar(var = sapply(models, getVar),
-                           df = sapply(models, getDF))
-
-  # put variance and degrees of freedom in appropriate slots
-  for (i in 1:length(models)) {
-    mydf <- hlp$df.prior + getDF(models[[i]])
-    models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
-    models[[i]]@dfPosterior <- as.numeric(mydf)
-  }
-
-  #return object of class StatModel
-  return(models)
+    ## Return object of class StatModel
+    return(models)
 }
 
 
-#'@export
+
+#' @importFrom MASS psi.huber
+#'
+#' @export
 msqrobLmer <- function(y,formula,data,robust=TRUE,maxitRob=1,tol=1e-6,doQR=TRUE,featureGroups=NULL,lmerArgs = list(control = lmerControl(calc.derivs = FALSE)))
 {
-  require(lme4)
 
   if(length(formula)==3)
   formula<-formula[-2]

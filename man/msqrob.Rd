@@ -7,24 +7,33 @@
 msqrobLm(y, formula, data, robust = TRUE, maxitRob = 5)
 }
 \arguments{
-\item{y}{is a matrix with the quantified MS intensities, the features are in the rows and samples in the columns.}
+\item{y}{A \code{matrix} with the quantified feature intensities. The
+features are along the rows and samples along the columns.}
 
-\item{formula}{Model formula. The model is built based on the covariates in the data object.}
+\item{formula}{Model formula. The model is built based on the
+covariates in the data object.}
 
-\item{data}{is a data frame of class DataFrame with information on the design. It has the same number of rows as the number of columns (samples) of y.}
+\item{data}{A \code{DataFrame} with information on the design. It has
+the same number of rows as the number of columns (samples) of
+\code{y}.}
 
-\item{robust}{boolean to indicate if robust regression is performed to account for outliers. If 'FALSE' an OLS fit is performed.}
+\item{robust}{\code{boolean(1)} to indicate if robust regression is
+performed to account for outliers. Default is \code{TRUE}. If
+\code{FALSE} an OLS fit is performed.}
 
-\item{maxitRob}{Maximum iterations in the IRWLS algorithm used in the M-estimation step of the robust regression.}
+\item{maxitRob}{\code{numeric(1)} indicating the maximum iterations in
+the IRWLS algorithm used in the M-estimation step of the robust
+regression.}
 }
 \value{
-A list of objects of the StatModel class
+A list of objects of the \code{StatModel} class.
 }
 \description{
 Parameter estimation of msqrob models.
 }
 \examples{
 #TODO
+
 }
 \author{
 Lieven Clement, Oliver M. Crook
