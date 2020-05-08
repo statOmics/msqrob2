@@ -168,7 +168,7 @@ plotMDS(assay(pe[["protein"]]),col = as.numeric(colData(pe)$condition))
 ## Estimation
 
 ```{r, warning=FALSE}
-pe <- msqrob2::msqrob(object=pe,assayName="protein", formula=~condition)
+pe <- msqrob2::msqrob(object=pe,i="protein", formula=~condition)
 ```
 
 ## Inference
@@ -176,7 +176,7 @@ pe <- msqrob2::msqrob(object=pe,assayName="protein", formula=~condition)
 ```{r}
 L <- as.matrix(c(0, 1))
 rownames(L) <- rowData(pe[["protein"]])$msqrobModels[[1]] %>% msqrob2::getCoef() %>% names
-pe <- msqrob2::hypothesisTest(object=pe,assayName="protein",contrast=L)
+pe <- msqrob2::hypothesisTest(object=pe,i="protein",contrast=L)
 ```
 
 

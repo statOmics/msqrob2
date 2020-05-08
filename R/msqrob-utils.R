@@ -6,33 +6,28 @@
 #' @return A character vector containing the names of the protein groups for which none of its proteins is present in a smaller protein group.
 #' @examples #TODO
 #' @export
-smallestUniqueGroups <- function(proteins, split=";"){
+smallestUniqueGroups <- function(proteins,
+                                 split=";"){
+                        b <- strsplit(x=as.character(unique(proteins)),split=split,fixed=TRUE)
 
-  b <- strsplit(x=as.character(unique(proteins)),split=split,fixed=TRUE)
+                        included <- vector()
 
-  erbij <- vector()
+                        j <- 1
+                        while(length(b)!=0){
+                            included <- c(included,sapply(b[sapply(b, length)==j], function(x) paste(x, collapse=split)))
+                            a <- unlist(b[sapply(b, length)==j])
+                            b <- b[sapply(b, length)>j]
 
-  j <- 1
-  while(length(b)!=0)
-  {
+                            if(length(b)!=0){
+                                sel <- vector()
+                                for(i in 1:length(b)){
+                                    sel[i] <- !any(b[[i]] %in% a)
+                                }
+                            b <- b[sel]
+                            j <- j+1
+                            }
+                        }
 
-    erbij <- c(erbij,sapply(b[sapply(b, length)==j], function(x) paste(x, collapse=split)))
-
-    a <- unlist(b[sapply(b, length)==j])
-    b <- b[sapply(b, length)>j]
-
-    if(length(b)!=0){
-      welke <- vector()
-      for(i in 1:length(b))
-      {
-        welke[i] <- !any(b[[i]] %in% a)
-      }
-
-      b <- b[welke]
-      j <- j+1
-    }
-  }
-
-  erbij <- unlist(erbij)
-  return(erbij)
-}
+                        included <- unlist(included)
+                        return(included)
+                        }
