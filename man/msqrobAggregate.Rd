@@ -2,6 +2,7 @@
 % Please edit documentation in R/msqrobAggregate.R
 \name{msqrobAggregate,Features-method}
 \alias{msqrobAggregate,Features-method}
+\alias{msqrobAggregate}
 \title{Method to fit msqrob models with robust regression and/or ridge regression and/or random effects
 It models multiple features simultaneously, e.g. multiple peptides from the same protein.}
 \usage{

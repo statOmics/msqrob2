@@ -82,6 +82,8 @@
 #'
 #' @rdname msqrobAggregate
 #'
+#' @aliases msqrobAggregate msqrobAggregate,Features-method
+#'
 #' @export
 
 

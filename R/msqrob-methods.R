@@ -5,7 +5,7 @@
 #'
 #' @rdname msqrob
 #'
-#' @aliases msqrob msqrob,SummarizedExperiment-method msqrob,Features-method msqrobAggregate,Features-method
+#' @aliases msqrob msqrob,SummarizedExperiment-method msqrob,Features-method
 #'
 #' @author Lieven Clement
 #'

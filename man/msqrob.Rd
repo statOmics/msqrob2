@@ -4,7 +4,6 @@
 \alias{msqrob,SummarizedExperiment-method}
 \alias{msqrob}
 \alias{msqrob,Features-method}
-\alias{msqrobAggregate,Features-method}
 \title{Methods to fit msqrob models with ridge regression and/or random effects using lme4}
 \usage{
 \S4method{msqrob}{SummarizedExperiment}(
