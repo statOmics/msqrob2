@@ -18,9 +18,9 @@
 #'
 #' @format Feature set with an instance "peptide":
 #'         \describe{
-#'         \item{assay} {contains the raw peptide intensities}
-#'         \item{rowData} {contains a variable "Proteins" with the protein accession and an variable ecoli to indicate if the protein is a spikin.}
-#'         \item{colData} {contains a factor condition indicating the spike-in condition}
+#'         \item{assay}{contains the raw peptide intensities}
+#'         \item{rowData}{contains a variable "Proteins" with the protein accession and an variable ecoli to indicate if the protein is a spikin.}
+#'         \item{colData}{contains a factor condition indicating the spike-in condition}
 #'         }
 #'
 #' @rdname data

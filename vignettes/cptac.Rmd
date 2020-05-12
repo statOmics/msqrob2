@@ -173,9 +173,20 @@ pe <- msqrob2::msqrob(object=pe,i="protein", formula=~condition)
 
 ## Inference
 
+What are the parameter names of the model?
 ```{r}
-L <- as.matrix(c(0, 1))
-rownames(L) <- rowData(pe[["protein"]])$msqrobModels[[1]] %>% msqrob2::getCoef() %>% names
+getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
+```
+
+Spike-in condition a is the reference class.
+So the mean log2 expression for samples from condition a is
+'(Intercept).
+The mean log2 expression for samples from condition B is '(Intercept)+conditionB'.
+Hence the average log2 fold change between condition b and condition a is modelled using the parameter 'conditionB'.
+Hence we will assess the contrast 'conditionB=0' with our statistical test.
+
+```{r}
+L <- makeContrast("conditionB=0",parameterNames=c("conditionB"))
 pe <- msqrob2::hypothesisTest(object=pe,i="protein",contrast=L)
 ```
 
@@ -186,7 +197,7 @@ pe <- msqrob2::hypothesisTest(object=pe,i="protein",contrast=L)
 
 
 ```{r,warning=FALSE}
-volcano <- ggplot(rowData(pe[["protein"]])$msqrobTestResults, aes(x = logFC, y = -log10(pval),
+volcano <- ggplot(rowData(pe[["protein"]])$conditionB, aes(x = logFC, y = -log10(pval),
                                                     color = adjPval < 0.05)) +
   geom_point(cex = 2.5) + scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal()
 volcano
@@ -197,7 +208,7 @@ volcano
 We first select the names of the significant proteins.
 
 ```{r}
-sigNames <- rowData(pe[["protein"]])$msqrobTestResults %>% rownames_to_column("protein") %>% filter(adjPval<0.05) %>% pull(protein)
+sigNames <- rowData(pe[["protein"]])$conditionB %>% rownames_to_column("protein") %>% filter(adjPval<0.05) %>% pull(protein)
 heatmap(assay(pe[["protein"]])[sigNames, ])
 ```
 

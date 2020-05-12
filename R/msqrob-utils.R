@@ -31,3 +31,33 @@ smallestUniqueGroups <- function(proteins,
                         included <- unlist(included)
                         return(included)
                         }
+
+
+#' Make contrast matrix
+#'
+#' @description  Construct the contrast matrix corresponding to specified contrasts
+#'               of a set of parameters.
+#'
+#' @param contrasts: character vector specifying contrasts, i.e. the linear combination of the modelparameters that equals to zero.
+#'
+#' @param parameterNames: character vector specifying the model parameters that are involved in the contrasts, e.g if we model data of
+#'        three conditions using a factor condition with three levels a, b and c then our model will have 3 mean parameters named (Intercept),
+#'        conditionb and conditionc. Hence the log2 fold change between  b and a is conditionb. Under the null hypothesis the log2 fold change
+#'        equals 0. Which is to be encoded as "conditionb=0". If we would like to test for log2 fold change between condition c and b we assess if
+#'        the log2 fold change conditionc-conditionb equals 0, encoded as "condtionb-conditionc=0".
+#'
+#' @examples
+#' makeContrast(c("conditionb=0"),parameterNames=c("(Intercept)","conditionb","conditionc"))
+#' makeContrast(c("conditionc=b"),parameterNames=c("conditionB"))
+#' makeContrast(c("conditionb=0","conditionc=0","conditionc-conditionb=0"),parameterNames=c("conditionb","conditionc"))
+#'
+#' @return A numeric contrast matrix with rownames that equal the model parameters that are involved in the contrasts
+#'
+#' @rdname makeContrast
+#'
+#' @export
+
+
+makeContrast<-function(contrasts,parameterNames){
+                  return(t(multcomp:::chrlinfct2matrix(contrasts,parameterNames)$K))
+              }

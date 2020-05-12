@@ -1,5 +1,6 @@
 setMethod("getContrast","StatModel",
           function(object,L){
+              if (class(L)!="matrix") L <- as.matrix(L)
               coefs<-getCoef(object)
               out<-matrix(rep(NA,ncol(L)))
               rownames(out)<-colnames(L)
@@ -10,6 +11,7 @@ setMethod("getContrast","StatModel",
 
 setMethod("varContrast","StatModel",
           function(object,L){
+              if (class(L)!="matrix") L <- as.matrix(L)
               out<-matrix(NA,ncol(L),ncol(L))
               rownames(out)<-colnames(out)<-colnames(L)
               vcovTmp<-getVcovUnscaled(object)*object@varPosterior

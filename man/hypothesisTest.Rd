@@ -13,7 +13,7 @@ expression}
   contrast,
   adjust.method = "BH",
   modelColumn = "msqrobModels",
-  resultsColumnName = "msqrobTestResults",
+  resultsColumnNamePrefix = "",
   overwrite = FALSE
 )
 
@@ -23,7 +23,7 @@ expression}
   contrast,
   adjust.method = "BH",
   modelColumn = "msqrobModels",
-  resultsColumnName = "msqrobTestResults",
+  resultsColumnNamePrefix = "",
   overwrite = FALSE
 )
 }
@@ -31,9 +31,14 @@ expression}
 \item{object}{\code{SummarizedExperiment} or \code{Features} instance}
 
 \item{contrast}{\code{numeric} matrix specifying one or more contrasts of
-the linear model coefficients to be tested equal to zero.
-The rownames of the matrix should be equal to the names of
-parameters of the model.}
+the linear model coefficients to be tested equal to zero. If multiple
+contrasts are given (multiple columns) then results will be returned for
+each contrast. The rownames of the matrix should be equal to the names
+of parameters of the model that are involved in the contrast.
+The column names of the matrix will be used to construct names to store
+the results in the rowData of the SummarizedExperiment or of the assay of
+the Features object. The contrast matrix can be made using the \code{makeContrast}
+function.}
 
 \item{adjust.method}{\code{character} specifying the method to adjust
 the p-values for multiple testing.
@@ -42,13 +47,18 @@ Options, in increasing conservatism, include ‘"none"’,
 list of options. Default is "BH" the Benjamini-Hochberg method
 to controle the False Discovery Rate (FDR).}
 
-\item{modelColumn}{\code{character} to indicate the variable name that is used
+\item{modelColumn}{\code{character} to indicate the variable name that was used
 to store the msqrob models in the rowData of the SummarizedExperiment
 instance or of the assay of the Features instance. Default is "msqrobModels".}
 
-\item{resultsColumnName}{\code{character} to indicate the variable name that will be used
-to store test results in the rowData of the SummarizedExperiment instance
-or of the assay of the Features instance. Default is "msqrobTestResults".}
+\item{resultsColumnNamePrefix}{\code{character} to indicate the the prefix for the
+variable name that will be used to store test results in the rowData of
+the SummarizedExperiment instance or of the assay of the Features instance.
+Default is "" so that the variable name with the results will be
+the column name of the column in the contrast matrix L. If L is a matrix
+with multiple columns, multiple results columns will be made, one for each
+contrast. If L has no column names and if resultsColumnNamePrefix="" the
+results will be stored in the column with name msqrobResults.}
 
 \item{i}{\code{character} or \code{integer} to specify the element of the \code{Features} that
 contains the log expression intensities that will be modelled.}
@@ -63,7 +73,7 @@ Summary table of the estimates for differential expression of features
 \examples{
 
 # Load example data
-# The data are a Feature object with containing
+# The data are a Feature object containing
 # a SummarizedExperiment named "peptide" with MaxQuant peptide intensities
 # The data are a subset of spike-in the human-ecoli study
 # The variable condition in the colData of the Feature object
@@ -76,22 +86,30 @@ pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
 # Fit msqrob model
 pe <- msqrob(pe,i="protein",formula=~condition)
 
-#Define contrast
-coef1<-getCoef(rowData(pe[["protein"]])$rlm[[1]])
-L <- matrix(0,ncol=1,nrow=length(coef1))
-rownames(L) <- names(coef1)
-L[2,1]<-1
+# Define contrast
+getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
+# Assess log2 fold change between condition c and condition b:
+L <- makeContrast("conditionc - conditionb=0",c("conditionb","conditionc"))
 
 #example SummarizedExperiment instance
 se <- pe[["protein"]]
 se <- hypothesisTest(se,L)
-head(rowData(se)$msqrobTestResults,10)
-
-#example Features instance
-pe <- hypothesisTest(pe,i="protein",L)
-head(rowData(pe[["protein"]])$msqrobTestResults,10)
+head(rowData(se)$"conditionc - conditionb",10)
 #Volcano plot
-plot(-log10(pval)~logFC,rowData(pe[["protein"]])$msqrobTestResults,col=(adjPval<0.05)+1)
+plot(-log10(pval)~logFC,rowData(se)$"conditionc - conditionb",col=(adjPval<0.05)+1)
+
+# Example for Features instance
+# Assess log2 fold change between condition b and condition a (reference class),
+# condition c and condition a, and, condition c and condition b.
+L <-  makeContrast(c("conditionb=0","conditionc=0","conditionc - conditionb=0"),c("conditionb","conditionc"))
+pe <- hypothesisTest(pe,i="protein",L)
+head(rowData(pe[["protein"]])$"conditionb",10)
+#Volcano plots
+par(mfrow=c(1,3))
+plot(-log10(pval)~logFC,rowData(pe[["protein"]])$"conditionb",col=(adjPval<0.05)+1,main="log2 FC b-a")
+plot(-log10(pval)~logFC,rowData(pe[["protein"]])$"conditionc",col=(adjPval<0.05)+1,main="log2 FC c-a")
+plot(-log10(pval)~logFC,rowData(pe[["protein"]])$"conditionc - conditionb",col=(adjPval<0.05)+1,main="log2 FC c-b")
+
 }
 \author{
 Lieven Clement
