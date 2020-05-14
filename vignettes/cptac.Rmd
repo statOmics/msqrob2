@@ -17,12 +17,10 @@ Three replicates are available for each concentration.
 
 # Data
 
-We first import the peptides.txt file. This is the file that contains your peptide-level intensities. For a MaxQuant search [6], this peptides.txt file can be found by default in the "path_to_raw_files/combined/txt/" folder from the MaxQuant output, with "path_to_raw_files" the folder where raw files were saved. In this tutorial, we will use a MaxQuant peptides file from MaxQuant that can be found on the pdaData repository.
-We will use the MSnbase package to import the data.
+We first import the peptides.txt file. This is the file that contains your peptide-level intensities. For a MaxQuant search [6], this peptides.txt file can be found by default in the "path_to_raw_files/combined/txt/" folder from the MaxQuant output, with "path_to_raw_files" the folder where raw files were saved. In this tutorial, we will use a MaxQuant peptides file that is a subset of the cptac study and which is available in the msdata package.
+We will use the Features package to import the data.
 
 We generate the object peptideFile with the path to the peptides.txt file.
-In this file we will fetch the data from the github repository linked to the pda course: https://statomics.github.io/pda.
-You can also replace the peptideFile with a string that points to the path of a file on your local hard drive.
 With the grepEcols function we find the columns that are containing the expression data of the peptides in the peptides.txt file.
 
 ```{r, warning=FALSE, message=FALSE}
@@ -31,15 +29,13 @@ library(limma)
 library(Features)
 library(msqrob2)
 
-myurl <- "https://raw.githubusercontent.com/statOmics/pda/data/quantification/cptacAvsB_lab3/peptides.txt"
-peptidesFile <- myurl
+peptidesFile <- msdata::quant(pattern = "cptac_a_b_peptides", full.names = TRUE)
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
 pe <- readFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
                    name = "peptide", sep="\t")
 ```
 
 We can extract the spikein condition from the raw file name.
-It is the 12 character if the name.
 
 ```{r}
 cond <- which(strsplit(colnames(pe)[[1]][1], split = "")[[1]] == "A") # find where condition is stored
@@ -92,7 +88,7 @@ limma::plotDensities(assay(pe[["peptide"]]))
 In our approach a peptide can map to multiple proteins, as long as there is none of these proteins present in a smaller subgroup.
 
 ```{r}
-pe[["peptide"]]<-pe[["peptide"]][rowData(pe[["peptide"]])$Proteins %in% msqrob2::smallestUniqueGroups(rowData(pe[["peptide"]])$Proteins),]
+pe[["peptide"]]<-pe[["peptide"]][rowData(pe[["peptide"]])$Proteins %in% smallestUniqueGroups(rowData(pe[["peptide"]])$Proteins),]
 ```
 
 ### Remove reverse sequences (decoys) and contaminants
@@ -167,8 +163,11 @@ plotMDS(assay(pe[["protein"]]),col = as.numeric(colData(pe)$condition))
 
 ## Estimation
 
+We model the protein level expression values using msqrob.
+By default msqrob2 estimates the model parameters using robust regression.  
+
 ```{r, warning=FALSE}
-pe <- msqrob2::msqrob(object=pe,i="protein", formula=~condition)
+pe <- msqrob(object=pe,i="protein", formula=~condition)
 ```
 
 ## Inference
@@ -187,7 +186,7 @@ Hence we will assess the contrast 'conditionB=0' with our statistical test.
 
 ```{r}
 L <- makeContrast("conditionB=0",parameterNames=c("conditionB"))
-pe <- msqrob2::hypothesisTest(object=pe,i="protein",contrast=L)
+pe <- hypothesisTest(object=pe,i="protein",contrast=L)
 ```
 
 

@@ -93,6 +93,7 @@ msqrobLm <- function(y,
                                 sigma <- sqrt(sum(mod$residuals^2 / mod$df.residual))
                                 df.residual <- mod$df.residual
                             }
+                            if (df.residual<2L) type <- "fitError"
                             if (type != "fitError")
                                 model <- list(coefficients = mod$coef,
                                               vcovUnscaled = .vcovUnscaled(mod),
