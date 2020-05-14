@@ -57,3 +57,11 @@ setMethod("getSigma",
 setMethod("getVcovUnscaled",
           signature="StatModel",
           definition=function(object) object@params$vcovUnscaled)
+
+#setMethod("getResults", "Features",
+#          function(object, i, columnName){
+#              if (!(i in names(object))) stop(paste0(i," is no assay of the Features object"))
+#              if (is.null(columnName)) return(rowData(object[[i]]))
+#              if (!(columnName %in% colnames(rowData(object[[i]])))) stop(paste0(columnName," is not a column of the rowData of the assay ",i," of the Features object"))
+#              rowData(object[[i]])[[columnName]]
+#              })
