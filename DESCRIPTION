@@ -23,7 +23,7 @@ License: Artistic-2.0
 Collate: 'msqrob-framework.R' 'constructors.R' 'allGenerics.R'
         'accessors.R' 'msqrob.R' 'msqrob-utils.R' 'StatModel-methods.R'
         'hypothesisTest-methods.R' 'msqrob-methods.R' 'msqrobAggregate.R'
-        'topFeatures.R' 'data.R'
+        'topFeatures.R' 'data.R' 'msqrobQB.R'
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown=TRUE)

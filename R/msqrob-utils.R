@@ -61,3 +61,42 @@ smallestUniqueGroups <- function(proteins,
 makeContrast<-function(contrasts,parameterNames){
                   return(t(multcomp:::chrlinfct2matrix(contrasts,parameterNames)$K))
               }
+
+
+#' Summary function for aggregateFeatures to count the number of observed peptides
+#' per sample
+#'
+#' @description  Summarise function for aggregateFeatures to count the number of
+#'               observed features.
+#'
+#' @param y Matrix of features
+#'
+#' @examples
+#'
+#' # Load example data
+#' # The data are a Feature object with containing
+#' # a SummarizedExperiment named "peptide" with MaxQuant peptide intensities
+#' # The data are a subset of spike-in the human-ecoli study
+#' # The variable condition in the colData of the Feature object
+#' # contains information on the spike in condition a-e (from low to high)
+#' data(pe)
+#'
+#' # Aggregate peptide intensities in protein expression values by counting number
+#' # of peptides per protein
+#' pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="proteinCount",fun=nObsPep)
+#'
+#' #Add total number of peptides per Protein in the rowData of the new assay
+#' rowData(pe[["proteinCount"]])$nPep <- rowData(pe[["peptide"]]) %>%
+#'        data.frame(.$Proteins)  %>%
+#'        group_by(Proteins) %>%
+#'        summarise(no_rows = length(Proteins)) %>%
+#'        column_to_rownames("Proteins") %>%
+#'        .$(nPep)
+#'
+#' @return A vector with counts
+#'
+#' @rdname nPep
+#'
+#' @export
+
+nObsPep <- function(y) colSums(!is.na(y))

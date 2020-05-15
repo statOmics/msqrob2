@@ -87,13 +87,14 @@ msqrobLm <- function(y,
                                 w <- mod$w
                                 sigma <- sqrt(sum(mod$w * mod$resid^2) / (sum(mod$w) - mod$rank))
                                 df.residual <- sum(mod$w) - mod$rank
+                                if (df.residual<2L) type <- "fitError"
                             }
                             if (type == "lm") {
                                 w <- NULL
                                 sigma <- sqrt(sum(mod$residuals^2 / mod$df.residual))
                                 df.residual <- mod$df.residual
+                                if (df.residual<2L) type <- "fitError"
                             }
-                            if (df.residual<2L) type <- "fitError"
                             if (type != "fitError")
                                 model <- list(coefficients = mod$coef,
                                               vcovUnscaled = .vcovUnscaled(mod),
@@ -394,4 +395,95 @@ return(out)
     if (is.null(w)) w <- 1
     sigma <- sigma(object)
     sum((resid(object)* sqrt(w))^2)/sigma^2
+}
+
+
+#' Function to fit msqrob models to peptide counts using glm
+#'
+#' @description Low-level function for parameter estimation with msqrob
+#'              by modeling peptide counts using quasibinomial glm
+#'
+#' @param y A `matrix` with the peptide counts. The
+#'        features are along the rows and samples along the columns.
+#'
+#' @param nPep A vector with number of peptides per protein. It has as length
+#'        the number of rows of y. The counts are equal or larger than the largest
+#'        peptide count in y.
+#'
+#' @param formula Model formula. The model is built based on the
+#'        covariates in the data object.
+#'
+#' @param data A `DataFrame` with information on the design. It has
+#'        the same number of rows as the number of columns (samples) of
+#'        `y`.
+#'
+#' @param priorCount A 'numeric(1)', which is a prior count to be added to the observations to shrink
+#'          the estimated log-fold-changes towards zero.
+#'
+#' @param binomialBound: logical, if ‘TRUE’ then the quasibinomial variance estimator will
+#'        be never smaller than 1 (no underdispersion).
+#'
+#' @examples
+#'
+#'
+#' @return A list of objects of the `StatModel` class.
+#'
+#' @rdname msqrobQB
+#'
+#' @author Lieven Clement
+#'
+#' @importFrom limma squeezeVar
+#'
+#' @export
+
+msqrobGlm <- function(y,
+                     npep,
+                     formula,
+                     data,
+                     priorCount=.1,
+                     binomialBound=TRUE)
+{
+  myDesign <- model.matrix(formula, data)
+  models <- lapply(1:nrow(y),
+                function(i, y, npep, myDesign)  {
+                    type <- "fitError"
+                    model <- list(coefficients = NA, vcovUnscaled = NA,
+                                  sigma = NA, df.residual = NA, w = NULL)
+                    if (npep[i]>=max(y[i,])){
+                            mod <- try(glm.fit(y=cbind(y[i,],npep[i]-y[i,])+priorCount,
+                                           x=myDesign,
+                                           family=binomial())
+                                      )
+                            if (class(mod)[1] != "try-error" & mod$rank == ncol(myDesign))
+                            type <- "quasibinomial"
+                    }
+                    if (class(mod)[1] != "try-error"){
+                        if (mod$deviance<0) mod$deviance <- sum(pmax(mod$family$dev.resids(mod$y,mod$fitted.values,mod$prior.weights),0))
+                        if (mod$df.residual<2L) type <- "fitError"
+                        }
+                        
+                    if (type != "fitError")
+                        model <- list(coefficients = mod$coef,
+                                      vcovUnscaled = .vcovUnscaled(mod),
+                                      sigma = sqrt(mod$deviance/mod$df.residual),
+                                      df.residual = mod$df.residual,
+                                      w = mod$w)
+
+                    ## return object of class Statmodel (from apply)
+                    .StatModel(type = type,
+                               params = model,
+                               varPosterior = as.numeric(NA),
+                               dfPosterior = as.numeric(NA))
+                  }, y=y, npep=npep, myDesign=myDesign)
+  hlp<-limma::squeezeVar(var=sapply(models,getVar),df=sapply(models,getDF))
+  for (i in 1:length(models)){
+    models[[i]]@varPosterior<-as.numeric(hlp$var.post[i])
+    models[[i]]@dfPosterior<-as.numeric(hlp$df.prior+getDF(models[[i]]))
+    if (!is.na(models[[i]]@varPosterior)&binomialBound)
+        if (models[[i]]@varPosterior<1) {
+            models[[i]]@varPosterior <- 1
+            models[[i]]@dfPosterior <- Inf
+        }
+    }
+  return(models)
 }

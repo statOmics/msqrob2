@@ -129,3 +129,19 @@ setMethod("hypothesisTest","Features",
             }
             return(object)
             })
+
+#setMethod("Hurdle", "Features"
+#          function(object,
+#                   i,
+#                   j,
+#                   contrast,
+#                   adjustMethod="BH",
+#                   modelColumni="msqrobModels",
+#                   modelColumnj="msqrobModels",
+#                   resultsColumnNamePrefix=c("hurdleComp1","hurdleComp2","hurdle"))
+#                   ){
+#    object <- hypothesisTest(object,i,contrast,adjustMethod="BH",modelColumn=modelColumni,resultsColumnNamePrefix=resultsColumnNamePrefix[1])
+#    object <- hypothesisTest(object,j,contrast,adjustMethod="BH",modelColumn=modelColumnj,resultsColumnNamePrefix=resultsColumnNamePrefix[1])
+#    object[[i]]
+#
+#}
