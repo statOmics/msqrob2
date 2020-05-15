@@ -15,7 +15,7 @@ Authors@R:
 Description: Robust statistical inference for quantitative proteomics
    using the Feature infrastructure for quantitative mass spectrometry
    data.
-Depends: R, Features, methods, lme4
+Depends: R (>= 3.6.0), Features, methods, lme4
 Imports: MASS, limma
 Remotes:
    RforMassSpectrometry/Features
