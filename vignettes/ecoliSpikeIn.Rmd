@@ -35,7 +35,7 @@ unzip("peptides.zip")
 peptidesFile <- "peptides.txt"
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
 pe <- readFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
-                   name = "peptide", sep="\t")
+                   name = "peptideRaw", sep="\t")
 pe
 ```
 
@@ -50,13 +50,13 @@ We calculate how many non zero intensities we have per peptide.
 This will be useful for filtering.
 
 ```{r}
-rowData(pe[["peptide"]])$nNonZero <- rowSums(assay(pe[["peptide"]]) > 0)
+rowData(pe[["peptideRaw"]])$nNonZero <- rowSums(assay(pe[["peptideRaw"]]) > 0)
 ```
 
 
 Peptides with zero intensities are missing peptides and should be represent with a `NA` value instead of `0`.
 ```{r}
-pe <- zeroIsNA(pe)
+pe <- zeroIsNA(pe,"peptideRaw")
 ```
 
 ## Information on species
@@ -80,7 +80,7 @@ id <- list(ecoli = 'ecoli.fasta',
 ## Data exploration
 
 We can inspect the missingness in our data with the `plotNA()` function provided with `MSnbase`.
-`r format(mean(is.na(assay(pe[["peptide"]])))*100,digits=2)`% of all peptide intensities are missing and for some peptides we don't even measure a signal in any sample. The missingness is similar across samples.
+`r format(mean(is.na(assay(pe[["peptideRaw"]])))*100,digits=2)`% of all peptide intensities are missing and for some peptides we don't even measure a signal in any sample. The missingness is similar across samples.
 Note, that we plot the peptide data, so the label protein in the plot refers to peptides.
 
 
@@ -100,7 +100,7 @@ We will normalize the data using vsn normalisation. Note, that the data should n
 In our approach a peptide can map to multiple proteins, as long as there is none of these proteins present in a smaller subgroup.
 
 ```{r}
-pe[["peptide"]]<-pe[["peptide"]][rowData(pe[["peptide"]])$Proteins %in% smallestUniqueGroups(rowData(pe[["peptide"]])$Proteins),]
+pe[["peptideRaw"]]<-pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Proteins %in% smallestUniqueGroups(rowData(pe[["peptideRaw"]])$Proteins),]
 ```
 
 ### Remove reverse sequences (decoys) and contaminants
@@ -108,8 +108,8 @@ pe[["peptide"]]<-pe[["peptide"]][rowData(pe[["peptide"]])$Proteins %in% smallest
 We now remove the contaminants, peptides that map to decoy sequences and proteins, which were only identified by peptides with modifications.
 
 ```{r}
-pe[["peptide"]] <- pe[["peptide"]][rowData(pe[["peptide"]])$Reverse!= "+", ]
-pe[["peptide"]] <- pe[["peptide"]][rowData(pe[["peptide"]])$
+pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Reverse!= "+", ]
+pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$
 Potential.contaminant!="+", ]
 ```
 
@@ -118,31 +118,31 @@ Potential.contaminant!="+", ]
 We want to keep peptide that were at least observed twice.
 
 ```{r}
-pe[["peptide"]] <- pe[["peptide"]][rowData(pe[["peptide"]])$nNonZero >= 2, ]
-nrow(pe[["peptide"]])
+pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$nNonZero >= 2, ]
+nrow(pe[["peptideRaw"]])
 ```
 
-We keep `r nrow(pe[["peptide"]])` peptides upon filtering.
+We keep `r nrow(pe[["peptideRaw"]])` peptides upon filtering.
 
 
 ## Normalize the data using the vsn method
 ```{r}
-pe <- normalize(pe,i,method="vsn")
+pe <- normalize(pe,i="peptideRaw",method="vsn",name="peptideNorm")
 ```
 
 
-## Explore quantile normalized data
+## Explore vsn normalized data
 
 Upon normalisation the density curves for all samples coincide.
 
 ```{r}
-limma::plotDensities(assay(pe[["peptide"]]))
+limma::plotDensities(assay(pe[["peptideNorm"]]))
 ```
 
 We can visualize our data using a Multi Dimensional Scaling plot, eg. as provided by the limma package.
 
 ```{r}
-limma::plotMDS(assay(pe[["peptide"]]), col = as.numeric(colData(pe)$condition))
+limma::plotMDS(assay(pe[["peptideNorm"]]), col = as.numeric(colData(pe)$condition))
 ```
 
 The first axis in the plot is showing the leading log fold changes (differences on the log scale) between the samples.
@@ -153,8 +153,8 @@ We notice that the leading differences (log FC) in the peptide data seems to be 
 
 Use the standard summarisation in aggregateFeatures ( robust summarisation).
 
-```{r}
-pe <- aggregateFeatures(pe, fcol = "Proteins", na.rm = TRUE, name="protein")
+```{r warning=FALSE}
+pe <- aggregateFeatures(pe, i="peptideNorm", fcol = "Proteins", na.rm = TRUE, name="protein")
 ```
 
 ```{r}
@@ -285,10 +285,10 @@ We first extract the normalized peptide expression values for a particular prote
 ```{r, warning=FALSE, message=FALSE}
 for (protName in sigNames[1:5])
 {
-pePlot <- pe[protName, ]
+pePlot <- pe[protName,,c("peptideNorm","protein")]
 pePlotDf <- data.frame(longFormat(pePlot))
 pePlotDf$assay <- factor(pePlotDf$assay,
-                        levels = c("peptide", "protein"))
+                        levels = c("peptideNorm", "protein"))
 pePlotDf$condition <- as.factor(colData(pePlot)[pePlotDf$colname, "condition"])
 p1 <- ggplot(data = pePlotDf,
        aes(x = colname,
@@ -442,8 +442,8 @@ Note, that the FDP is not close to the chosen FDR of 0.01 for the comparisons in
 
 # Comparison with other workflows
 ## Median summarisation
-```{r}
-pe <- aggregateFeatures(pe, fcol = "Proteins", na.rm = TRUE, name="proteinMedian",fun=matrixStats::colMedians)
+```{r warning=FALSE}
+pe <- aggregateFeatures(pe,"peptideNorm",fcol = "Proteins", na.rm = TRUE, name="proteinMedian",fun=matrixStats::colMedians)
 pe <- msqrob(object=pe,i="proteinMedian", formula=~condition)
 pe <- hypothesisTest(object=pe,i="proteinMedian",contrast=L)
 ```
@@ -581,7 +581,7 @@ priorEst<-limma::fitFDist(vars,dfs)
 
 Next, we estimate the models by dropping the levels of the factor for which all observations are missing.
 
-```{r}
+```{r warning=FALSE}
 modelsFitErrors<-apply(yFitErrors,1,function(y,data,formula){
 # Remove information for which we have missing values
 sel<-!is.na(y)
