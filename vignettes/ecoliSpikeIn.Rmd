@@ -1,27 +1,47 @@
 ---
 title: "Ecoli-Human Spike-in Study (PRIDE ID PXD003881)"
 author:
-- name: Lieven Clement
+- name: Lieven Clement, Oliver M. Crook
 output:
   BiocStyle::html_document
 ---
 
 
 # Background
-In this vignette we assess the performance of MSqRob for differential expression analysis using a publicly available
-spikein study (PRIDE identifier: PXD003881 Shen et al. [2018]). E. Coli lysates were spiked at five different concentrations (3%, 4.5%, 6%, 7.5% and 9% wt/wt) in a stable human background (four replicates per treatment). The samples were run on an Orbitrap Fusion mass spectrometer.
-Raw data files were processed with MaxQuant (version 1.6.1.0, Cox and Mann [2008]) using default search settings unless otherwise noted. Spectra were searched against the UniProtKB/SwissProt human and E. Coli reference proteome databases (07/06/2018), concatenated with the default Maxquant contaminant database. Carbamidomethylation of Cystein was set as a fixed modification, and oxidation of Methionine and acetylation of the protein amino-terminus were allowed as variable modifications. In silico cleavage was set to use trypsin/P, allowing two miscleavages. Match between runs was also enabled using default settings. The resulting peptide-to-spectrum matches (PSMs) were filtered by MaxQuant at 1% FDR.
+In this vignette, we assess the performance of MSqRob for differential
+expression analysis using a publicly available spike-in study 
+(PRIDE identifier: PXD003881 Shen et al. [2018]). E. Coli lysates were spiked
+at five different concentrations (3%, 4.5%, 6%, 7.5% and 9% wt/wt)
+in a stable human background (four replicates per treatment). The samples
+were run on an Orbitrap Fusion mass spectrometer. Raw data files were processed
+with MaxQuant (version 1.6.1.0, Cox and Mann [2008]) using default search
+settings unless otherwise noted. Spectra were searched against the
+UniProtKB/SwissProt human and E. Coli reference proteome databases (07/06/2018),
+concatenated with the default Maxquant contaminant database. C
+arbamidomethylation of Cystein was set as a fixed modification,
+and oxidation of Methionine and acetylation of the protein amino-terminus
+were allowed as variable modifications. In silico cleavage was set to use trypsin/P,
+allowing two miscleavages. Match between runs was also enabled using default settings.
+The resulting peptide-to-spectrum matches (PSMs) were filtered by MaxQuant at 1% FDR.
+
+We first set the concertations for the different spike-ins.
 
 ```{r}
-concentrations <- c(a=3,b=4.5,c=6,d=7.5,e=9)
+concentrations <- seq.int(1:5) * 1.5
+names(concentrations) <- letters[1:5]
 ```
 
 # Data
 
-We first import the peptides.txt file. This is the file that contains your peptide-level intensities. For a MaxQuant search [6], this peptides.txt file can be found by default in the "path_to_raw_files/combined/txt/" folder from the MaxQuant output, with "path_to_raw_files" the folder where raw files were saved. In this tutorial, we will use a MaxQuant peptides file of the ecoli spike in study that is stored in the msdata package.
-We will use the Features package to import the data.
+We first import the peptides.txt file. This is the file that contains
+your peptide-level intensities. For a MaxQuant search [6], this peptides.txt file
+can be found by default in the "path_to_raw_files/combined/txt/" folder from
+the MaxQuant output, with "path_to_raw_files" the folder where raw files were saved.
+In this tutorial, we use a MaxQuant peptides file of the ecoli spike in study
+that is stored in the `msdata` package. We use the `Features` package to import the data.
 
-With the grepEcols function we find the columns that are containing the expression data of the peptides in the peptides.txt file.
+With the `grepEcols` function we find the columns that are
+containing the expression data of the peptides in the peptides.txt file.
 
 ```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
@@ -30,7 +50,7 @@ library(Features)
 library(msqrob2)
 
 myurl<- "https://www.dropbox.com/s/62hhol96pz0sjbi/peptides.zip?dl=0"
-download.file(myurl,"peptides.zip",method="curl",extra="-L")
+download.file(myurl,"peptides.zip", method="curl" ,extra = "-L")
 unzip("peptides.zip")
 peptidesFile <- "peptides.txt"
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
@@ -54,20 +74,22 @@ rowData(pe[["peptideRaw"]])$nNonZero <- rowSums(assay(pe[["peptideRaw"]]) > 0)
 ```
 
 
-Peptides with zero intensities are missing peptides and should be represent with a `NA` value instead of `0`.
+Peptides with zero intensities are missing peptides and
+should be represent with a `NA` value instead of `0`.
 ```{r}
 pe <- zeroIsNA(pe,"peptideRaw")
 ```
 
 ## Information on species
 
-In the spikin-study there are peptides from ecoli and human proteins. The ecoli peptides are spiked.
+In the spik-in study there are peptides from e.coli and human proteins.
+The ecoli peptides are added at different concerntrations.
 
 ```{r}
-myurl<- "https://www.dropbox.com/s/swhu9nqwktythtb/ecoli_up000000625_7_06_2018.fasta?dl=0"
-download.file(myurl,"ecoli.fasta",method="curl",extra="-L")
-myurl<-"https://www.dropbox.com/s/n61n28wrcpwsb4a/human_up000005640_sp_7_06_2018.fasta?dl=0"
-download.file(myurl,"human.fasta",method="curl",extra="-L")
+myurl <- "https://www.dropbox.com/s/swhu9nqwktythtb/ecoli_up000000625_7_06_2018.fasta?dl=0"
+download.file(myurl, "ecoli.fasta", method = "curl", extra = "-L")
+myurl <- "https://www.dropbox.com/s/n61n28wrcpwsb4a/human_up000005640_sp_7_06_2018.fasta?dl=0"
+download.file(myurl, "human.fasta", method = "curl", extra = "-L")
 ```
 
 ```{r}
@@ -79,19 +101,22 @@ id <- list(ecoli = 'ecoli.fasta',
 ```
 ## Data exploration
 
-We can inspect the missingness in our data with the `plotNA()` function provided with `MSnbase`.
-`r format(mean(is.na(assay(pe[["peptideRaw"]])))*100,digits=2)`% of all peptide intensities are missing and for some peptides we don't even measure a signal in any sample. The missingness is similar across samples.
-Note, that we plot the peptide data, so the label protein in the plot refers to peptides.
+We can inspect the missingness in our data with the `plotNA()` function
+provided with `MSnbase`. `r format(mean(is.na(assay(pe[["peptideRaw"]])))*100,digits=2)`%
+of all peptide intensities are missing and for some peptides we don't even measure a signal in any sample.
+The missingness is similar across samples.
 
 
 ```{r, cache= TRUE, eval=FALSE}
-MSnbase::plotNA(assay(pe))
+MSnbase::plotNA(assay(pe))  +
+  xlab("Peptide index (ordered by data completeness)")
 ```
 
 
 # Preprocessing
 
-We will normalize the data using vsn normalisation. Note, that the data should not be log-transformed then.
+We will normalize the data using `vsn` normalisation. 
+Note, that the data should not be log-transformed.
 
 
 ## Filtering
@@ -100,7 +125,8 @@ We will normalize the data using vsn normalisation. Note, that the data should n
 In our approach a peptide can map to multiple proteins, as long as there is none of these proteins present in a smaller subgroup.
 
 ```{r}
-pe[["peptideRaw"]]<-pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Proteins %in% smallestUniqueGroups(rowData(pe[["peptideRaw"]])$Proteins),]
+pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Proteins %in%
+                                           smallestUniqueGroups(rowData(pe[["peptideRaw"]])$Proteins), ]
 ```
 
 ### Remove reverse sequences (decoys) and contaminants
@@ -108,14 +134,14 @@ pe[["peptideRaw"]]<-pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Proteins %in%
 We now remove the contaminants, peptides that map to decoy sequences and proteins, which were only identified by peptides with modifications.
 
 ```{r}
-pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Reverse!= "+", ]
+pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Reverse != "+", ]
 pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$
-Potential.contaminant!="+", ]
+Potential.contaminant != "+", ]
 ```
 
 ### Drop peptides that were only identified in one sample
 
-We want to keep peptide that were at least observed twice.
+We want to keep peptide that were observed at least twice.
 
 ```{r}
 pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$nNonZero >= 2, ]
@@ -127,7 +153,7 @@ We keep `r nrow(pe[["peptideRaw"]])` peptides upon filtering.
 
 ## Normalize the data using the vsn method
 ```{r}
-pe <- normalize(pe,i="peptideRaw",method="vsn",name="peptideNorm")
+pe <- normalize(pe, i = "peptideRaw", method = "vsn", name = "peptideNorm")
 ```
 
 
@@ -139,26 +165,29 @@ Upon normalisation the density curves for all samples coincide.
 limma::plotDensities(assay(pe[["peptideNorm"]]))
 ```
 
-We can visualize our data using a Multi Dimensional Scaling plot, eg. as provided by the limma package.
+We can visualize our data using a Multi Dimensional Scaling plot,
+eg. as provided by the limma package.
 
 ```{r}
 limma::plotMDS(assay(pe[["peptideNorm"]]), col = as.numeric(colData(pe)$condition))
 ```
 
-The first axis in the plot is showing the leading log fold changes (differences on the log scale) between the samples.
-We notice that the leading differences (log FC) in the peptide data seems to be driven by the spike-in condition.
+The first axis in the plot is showing the leading log fold changes
+(differences on the log scale) between the samples. We notice that the leading
+differences (log FC) in the peptide data seems to be driven by the spike-in condition.
 
 
 ## Summarization to protein level
 
-Use the standard summarisation in aggregateFeatures ( robust summarisation).
+We use the standard sumarisation in aggregateFeatures, which is a
+robust summarisation method.
 
 ```{r warning=FALSE}
-pe <- aggregateFeatures(pe, i="peptideNorm", fcol = "Proteins", na.rm = TRUE, name="protein")
+pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", na.rm = TRUE, name="protein")
 ```
 
 ```{r}
-plotMDS(assay(pe[["protein"]]),col = as.numeric(colData(pe)$condition))
+plotMDS(assay(pe[["protein"]]), col = as.numeric(colData(pe)$condition))
 ```
 
 
@@ -171,7 +200,7 @@ We model the protein level expression values using msqrob.
 By default msqrob2 estimates the model parameters using robust regression.
 
 ```{r, warning=FALSE}
-pe <- msqrob(object=pe,i="protein", formula=~condition)
+pe <- msqrob(object = pe, i = "protein", formula = ~condition)
 ```
 
 ## Inference
@@ -704,7 +733,8 @@ function(j){
 sum(!is.na(rowData(pe[["protein"]])[[paste0("rlmOpt",j)]]$pval))
 })
 
-cbind(default=nProtDefault,custom=nProtCustom,extra=nProtCustom-nProtDefault)
+cbind(default = nProtDefault, custom = nProtCustom,
+      extra = nProtCustom-nProtDefault)
 ```
 
 We observe that we can retrieve additional results for `r min(nProtCustom-nProtDefault)` to `r max(nProtCustom-nProtDefault)` proteins.

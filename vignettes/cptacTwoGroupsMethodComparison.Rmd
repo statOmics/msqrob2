@@ -82,12 +82,11 @@ provided with `MSnbase`.
 `r format(mean(is.na(assay(pe[["peptideRaw"]])))*100,digits=2)`% of all
 peptide intensities are missing and for some peptides we do not
 even measure a signal in any sample. The missingness is similar across samples.
-Note, that we plot the peptide data, so the label protein in the plot
-refers to peptides.
 
 
 ```{r, cache= TRUE, eval=FALSE}
-MSnbase::plotNA(assay(pe[["peptideRaw"]]))
+MSnbase::plotNA(assay(pe[["peptideRaw"]]))  +
+  xlab("Peptide index (ordered by data completeness)")
 ```
 
 
