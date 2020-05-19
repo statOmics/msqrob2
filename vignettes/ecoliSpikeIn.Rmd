@@ -96,7 +96,7 @@ download.file(myurl, "human.fasta", method = "curl", extra = "-L")
 ```{r}
 id <- list(ecoli = 'ecoli.fasta',
           human = 'human.fasta') %>%
-  map(~{read_lines(.x) %>%
+  purrr::map(~{read_lines(.x) %>%
           {.[str_detect(.,'^>')]} %>%
           str_extract(.,'(?<=\\|).*(?=\\|)')})
 ```
