@@ -104,8 +104,8 @@ id <- list(ecoli = 'ecoli.fasta',
 
 We can inspect the missingness in our data with the `plotNA()` function
 provided with `MSnbase`. `r format(mean(is.na(assay(pe[["peptideRaw"]])))*100,digits=2)`%
-of all peptide intensities are missing and for some peptides we don't even measure a signal in any sample.
-The missingness is similar across samples.
+of all peptide intensities are missing and for some peptides we de not
+even measure a signal in any sample. The missingness is similar across samples.
 
 
 ```{r, cache= TRUE, eval=FALSE}
@@ -116,14 +116,15 @@ MSnbase::plotNA(assay(pe))  +
 
 # Preprocessing
 
-We will normalize the data using `vsn` normalisation. 
+We normalize the data using `vsn` normalisation.
 Note, that the data should not be log-transformed.
 
 
 ## Filtering
 
 ### Handling overlapping protein groups
-In our approach a peptide can map to multiple proteins, as long as there is none of these proteins present in a smaller subgroup.
+In our approach a peptide can map to multiple proteins, as long as there is
+none of these proteins present in a smaller subgroup.
 
 ```{r}
 pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Proteins %in%
@@ -132,7 +133,8 @@ pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Proteins %i
 
 ### Remove reverse sequences (decoys) and contaminants
 
-We now remove the contaminants, peptides that map to decoy sequences and proteins, which were only identified by peptides with modifications.
+We now remove the contaminants, peptides that map to decoy sequences
+and proteins, which were only identified by peptides with modifications.
 
 ```{r}
 pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Reverse != "+", ]
@@ -165,8 +167,17 @@ Upon normalisation the density curves for all samples coincide.
 ```{r}
 limma::plotDensities(assay(pe[["peptideNorm"]]))
 ```
+This is more easily seen in a boxplot. 
 
-We can visualize our data using a Multi Dimensional Scaling plot,
+```{r,}
+boxplot(assay(pe[["peptideNorm"]]), col = palette()[-1],
+        main = "Peptide distribtutions after normalisation", ylab = "intensity")
+
+```
+
+
+
+We can visualize our data using a multi-dimensional scaling plot,
 eg. as provided by the limma package.
 
 ```{r}
@@ -175,7 +186,8 @@ limma::plotMDS(assay(pe[["peptideNorm"]]), col = as.numeric(colData(pe)$conditio
 
 The first axis in the plot is showing the leading log fold changes
 (differences on the log scale) between the samples. We notice that the leading
-differences (log FC) in the peptide data seems to be driven by the spike-in condition.
+differences (log FC) in the peptide data seems to be driven by the
+spike-in condition.
 
 
 ## Summarization to protein level
@@ -184,7 +196,8 @@ We use the standard sumarisation in aggregateFeatures, which is a
 robust summarisation method.
 
 ```{r warning=FALSE}
-pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", na.rm = TRUE, name="protein")
+pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", na.rm = TRUE,
+                        name = "protein")
 ```
 
 ```{r}
@@ -211,13 +224,12 @@ What are the parameter names of the model?
 getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
 ```
 
-Spike-in condition a is the reference class.
-So the mean log2 expression for samples from condition a is
-'(Intercept).
+Spike-in condition a is the reference class. So the mean log2 expression for
+samples from condition a is `(Intercept)`.
 The mean log2 expression for samples from condition b-e is
 '(Intercept)+conditionb',...,'(Intercept)+conditione', respectively.
-Hence the average log2 fold change (FC) between condition b and condition a
-is modelled using the parameter 'conditionb'. Hence, we assess the contrast
+Hence, the average log2 fold change (FC) between condition b and condition a
+is modelled using the parameter 'conditionb'. Thus, we assess the contrast
 'conditionb = 0' with our statistical test. The same holds for comparison c-a, d-a, e-a.
 
 ```{r}
@@ -225,7 +237,8 @@ comparisonsRef <- paste0(paste0("condition", letters[2:5]), " = 0")
 comparisonsRef
 ```
 
-The test for average log2 FC between condition c and b will assess the contrast 'conditionc - conditionb = 0', ...
+The test for average log2 FC between condition
+c and b will assess the contrast 'conditionc - conditionb = 0', ...
 
 ```{r}
 comparisonsOther <- paste0(
@@ -295,8 +308,10 @@ volcano
 Note, that the majority of the significant DE proteins are upregulated.
 In the spike-in study all ecoli proteins are indeed present at a higher
 concentration in condition b than in condition a. We also observe that the
-DE proteins are indeed close to the spiked in fold change of `r log2(concentrations["b"]/concentrations["a"]) %>% round(.,2)`.
-The log2 FC of the spike-in proteins is indicated with the vertical read line in the plot.
+DE proteins are indeed close to the spiked in fold change of 
+`r log2(concentrations["b"]/concentrations["a"]) %>% round(.,2)`.
+The log2 FC of the spike-in proteins is indicated with the vertical red line
+in the plot.
 
 #### Heatmap
 
@@ -315,7 +330,8 @@ Indeed, the majority of the DE proteins at 1% FDR seem to be spiked.
 
 ####Detail plots
 
-We first extract the normalized peptide expression values for a particular protein.
+We first extract the normalized peptide expression values
+for a particular protein.
 
 
 ```{r, warning=FALSE, message=FALSE}
@@ -331,7 +347,7 @@ p1 <- ggplot(data = pePlotDf,
        aes(x = colname,
            y = value,
            group = rowname)) +
-    geom_line() + geom_point() +  theme_minimal() +
+    geom_line() + geom_point() +  theme_minimal() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
     facet_grid(~ assay) + ggtitle(protName)
 print(p1)
 
@@ -339,7 +355,8 @@ p2 <- ggplot(pePlotDf, aes(x = colname, y = value, fill = condition)) +
   geom_boxplot(outlier.shape = NA) + 
   geom_point(position = position_jitter(width = .1), aes(shape = rowname)) + 
   scale_shape_manual(values = 1:nrow(pePlotDf)) +
-  labs(title = protName, x = "sample", y = "Peptide intensity (log2)") + theme_minimal() + 
+  labs(title = protName, x = "sample", y = "Peptide intensity (log2)") + 
+  theme_minimal() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
   facet_grid(~assay)
 print(p2)
 }
@@ -359,11 +376,12 @@ $$TPR=\frac{TP}{\text{#actual positives}},$$
 here TP are the true positives in the list. The TPR is thus the fraction
 of ups proteins that we can recall.
 
-- false discovery proportion (FPD): fraction of false positives in the protein list that we return:
+- false discovery proportion (FPD): fraction of false positives
+in the protein list that we return:
 $$FPD=\frac{FP}{FP+TP},$$
 with FP the false positives. In our case the yeast proteins that are in our list.
 
-Instead of only calculating that for the protein list that is returned for the
+Instead of only calculating these metric for the protein list that is returned for the
 chosen FDR level, we can do this for all possible FDR cutoffs so that
 we get an overview of the quality of the ranking of the proteins in the protein list.
 
@@ -414,12 +432,14 @@ tprFdpPlotBa <- tprFdpCompBa %>%
       ggplot(aes(x = fdp, y = tpr)) +
       geom_path() +
       geom_vline(xintercept=0.01,lty=2) + 
-  geom_point(data = tprFdpCompBa[sum(tprFdpCompBa$adjPval < 0.01, na.rm=TRUE), ], aes(x = fdp, y = tpr), cex = 2)
+  geom_point(data = tprFdpCompBa[sum(tprFdpCompBa$adjPval < 0.01, na.rm = TRUE), ],
+             aes(x = fdp, y = tpr), cex = 2)
 tprFdpPlotBa
 tprFdpPlotBa + xlim(0,.25)
 ```
 
- The toplist that is returned at the 1% FDR level is indeed close to 1% FDP, indicating that the FDR level is well controlled. (see dot on performance plot).
+ The toplist that is returned at the 1% FDR level is indeed close to 1% FDP,
+ indicating that the FDR level is well controlled. (see dot on performance plot).
 
 ### Other contrasts
 
@@ -728,11 +748,13 @@ for (j in 1:4) {
 }
 ```
 
-Next, we perform inference for the remaining contrasts and correct for the change in reference level.
+Next, we perform inference for the remaining contrasts
+and correct for the change in reference level.
 
 ```{r}
 protNamesHlp <- names(modelsFitErrors[refLevels != "a"])
 for (j in 5:ncol(L)) {
+  
 inferenceErrorRefLevelAltered[[colnames(L)[j]]] <-
     sapply(protNamesHlp, function(i, models, contrast, refLevels){
         contrast[contrast == 0] <- NA
@@ -757,8 +779,8 @@ We store the results in the rowData of the assay in columns starting with
 "rlmOpt" followed by the name of the contrast.
 
 ```{r}
-for (j in colnames(L))
-{
+for (j in colnames(L)) {
+  
   # Combining the results
   featureTableHlp <-rowData(pe[["protein"]])[[j]]
   featureTableHlp[rownames(inferenceErrorRefLevelA[[j]]), ] <- inferenceErrorRefLevelA[[j]]
@@ -784,7 +806,7 @@ sum(!is.na(rowData(pe[["protein"]])[[paste0("rlmOpt", j)]]$pval))
 })
 
 cbind(default = nProtDefault, custom = nProtCustom,
-      extra = nProtCustom-nProtDefault)
+      extra = nProtCustom - nProtDefault)
 ```
 
 We observe that we can retrieve additional results
@@ -811,4 +833,5 @@ tprFdpRlmOptPlot
 ```
 
 As expected, the ranking does not improve much for the comparisons involving
-the low spike-in concentration because the ecoli proteins are mainly missing for these conditions.
+the low spike-in concentration because the ecoli proteins are mainly
+missing for these conditions.
