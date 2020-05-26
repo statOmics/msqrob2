@@ -1,33 +1,46 @@
 ---
 title: "Introduction to proteomics data analysis"
 author:
-- name: Lieven Clement
+- name: Lieven Clement, Oliver M. Crook
 output:
   BiocStyle::html_document
 ---
 
 
 # Background
-This case-study is a subset of the data of the 6th study of the Clinical Proteomic Technology Assessment for Cancer (CPTAC).
-In this experiment, the authors spiked the Sigma Universal Protein Standard mixture 1 (UPS1) containing 48 different human proteins in a protein background of 60 ng/$\mu$L Saccharomyces cerevisiae strain BY4741.
-Two different spike-in concentrations were used: 6A (0.25 fmol UPS1 proteins/$\mu$L) and 6B (0.74 fmol UPS1 proteins/$\mu$L) [5].
+This case-study is a subset of the data of the 6th study of the Clinical
+Proteomic Technology Assessment for Cancer (CPTAC).
+In this experiment, the authors spiked the Sigma Universal Protein Standard
+mixture 1 (UPS1) containing 48 different human proteins in a protein background
+of 60 ng/$\mu$L Saccharomyces cerevisiae strain BY4741.
+Two different spike-in concentrations were used:
+6A (0.25 fmol UPS1 proteins/$\mu$L) and 6B (0.74 fmol UPS1 proteins/$\mu$L) [5].
 We limited ourselves to the data of LTQ-Orbitrap W at site 56.
-The data were searched with MaxQuant version 1.5.2.8, and detailed search settings were described in Goeminne et al. (2016) [1].
+The data were searched with MaxQuant version 1.5.2.8, and
+detailed search settings were described in Goeminne et al. (2016) [1].
 Three replicates are available for each concentration.
 
 # Data
 
-We first import the peptideRaws.txt file. This is the file that contains your peptideRaw-level intensities. For a MaxQuant search [6], this peptideRaws.txt file can be found by default in the "path_to_raw_files/combined/txt/" folder from the MaxQuant output, with "path_to_raw_files" the folder where raw files were saved. In this tutorial, we will use a MaxQuant peptideRaws file that is a subset of the cptac study and which is available in the msdata package.
-We will use the Features package to import the data.
+We first import the data from peptideRaws.txt file. This is the file containing
+your peptideRaw-level intensities. For a MaxQuant search [6],
+this peptideRaws.txt file can be found by default in the
+"path_to_raw_files/combined/txt/" folder from the MaxQuant output,
+with "path_to_raw_files" the folder where the raw files were saved.
+In this vignette, we use a MaxQuant peptideRaws file which is a subset
+of the cptac study. This data is available in the `msdata` package.
+To import the data we use the `Features` package.
 
 We generate the object peptideRawFile with the path to the peptideRaws.txt file.
-With the grepEcols function we find the columns that are containing the expression data of the peptideRaws in the peptideRaws.txt file.
+Using the `grepEcols` function, we find the columns that contain the expression
+data of the peptideRaws in the peptideRaws.txt file.
 
 ```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(limma)
 library(Features)
 library(msqrob2)
+library(plotly)
 
 peptidesFile <- msdata::quant(pattern = "cptac_a_b_peptides", full.names = TRUE)
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
@@ -35,7 +48,7 @@ pe <- readFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
                    name = "peptideRaw", sep="\t")
 ```
 
-We can extract the spikein condition from the raw file name.
+In the following code chunk, we can extract the spikein condition from the raw file name.
 
 ```{r}
 cond <- which(strsplit(colnames(pe)[[1]][1], split = "")[[1]] == "A") # find where condition is stored
@@ -43,41 +56,45 @@ colData(pe)$condition <- substr(colnames(pe), cond, cond) %>% unlist %>%  as.fac
 ```
 
 
-
-We calculate how many non zero intensities we have per peptide
-This will be useful for filtering.
+We calculate how many non zero intensities we have per peptide and this
+will be useful for filtering.
 
 ```{r}
 rowData(pe[["peptideRaw"]])$nNonZero <- rowSums(assay(pe[["peptideRaw"]]) > 0)
 ```
 
 
-peptide with zero intensities are missing peptide and should be represent with a `NA` value instead of `0`.
+Peptides with zero intensities are missing peptides and should be represent
+with a `NA` value rather than `0`.
 ```{r}
-pe <- zeroIsNA(pe,"peptideRaw")
+pe <- zeroIsNA(pe, "peptideRaw") # convert 0 to NA
 ```
 
 
 ## Data exploration
 
-We can inspect the missingness in our data with the `plotNA()` function provided with `MSnbase`.
-`r format(mean(is.na(assay(pe[["peptideRaw"]])))*100,digits=2)`% of all peptide intensities are missing and for some peptides we don't even measure a signal in any sample. The missingness is similar across samples.
-Note, that we plot the peptide data, so the label protein in the plot refers to peptides.
+We can inspect the missingness in our data with the `plotNA()` function
+provided with `MSnbase`.
+`r format(mean(is.na(assay(pe[["peptideRaw"]])))*100,digits=2)`% of all peptide
+intensities are missing and for some peptides we do not even measure a signal
+in any sample. The missingness is similar across samples.
 
 
 ```{r, cache= TRUE, eval=FALSE}
-MSnbase::plotNA(assay(pe[["peptideRaw"]]))
+MSnbase::plotNA(assay(pe[["peptideRaw"]])) +
+  xlab("Peptide index (ordered by data completeness)")
 ```
 
 
 # Preprocessing
 
-We will log transform, normalize, filter and summarize the data.
+This section preforms standard preprocessing for the peptide data. This 
+include log transformation, filtering and summarisation of the data.
 
 ## Log transform the data
 
 ```{r}
-pe <- logTransform(pe, base = 2,i="peptideRaw",name="peptideLog")
+pe <- logTransform(pe, base = 2, i = "peptideRaw", name = "peptideLog")
 limma::plotDensities(assay(pe[["peptideLog"]]))
 ```
 
@@ -85,20 +102,23 @@ limma::plotDensities(assay(pe[["peptideLog"]]))
 ## Filtering
 
 ### Handling overlapping protein groups
-In our approach a peptide can map to multiple proteins, as long as there is none of these proteins present in a smaller subgroup.
+In our approach a peptide can map to multiple proteins, as long as there is
+none of these proteins present in a smaller subgroup.
 
 ```{r}
-pe[["peptideLog"]]<-pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Proteins %in% smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins),]
+pe[["peptideLog"]]<-pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Proteins
+                                       %in% smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins),]
 ```
 
 ### Remove reverse sequences (decoys) and contaminants
 
-We now remove the contaminants, peptides that map to decoy sequences and proteins, which were only identified by peptides with modifications.
+We now remove the contaminants, peptides that map to decoy sequences, and proteins
+which were only identified by peptides with modifications.
 
 ```{r}
-pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Reverse!= "+", ]
+pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Reverse != "+", ]
 pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$
-Potential.contaminant!="+", ]
+Potential.contaminant != "+", ]
 ```
 
 ### Remove peptides of proteins that were only identified with modified peptides
@@ -107,86 +127,102 @@ I will skip this step for the moment. Large protein groups file needed for this.
 
 ### Drop peptides that were only identified in one sample
 
-We want to keep peptides that were at least observed twice.
+We keep peptides that were observed at last twice.
 
 ```{r}
 pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$nNonZero >= 2, ]
 nrow(pe[["peptideLog"]])
 ```
 
-We keep `r nrow(pe[["peptideLog"]])` peptides upon filtering.
-
+We keep `r nrow(pe[["peptideLog"]])` peptides after filtering.
 
 ## Quantile normalize the data
 ```{r}
-pe <- normalize(pe,i="peptideLog",method="quantiles",name="peptideNorm")
+pe <- normalize(pe, i = "peptideLog", method = "quantiles", name = "peptideNorm")
 ```
 
 
 ## Explore quantile normalized data
 
-Upon normalisation the density curves for all samples coincide.
+After quantile normalisation the density curves for all samples coincide.
 
 ```{r}
 limma::plotDensities(assay(pe[["peptideNorm"]]))
 ```
 
-We can visualize our data using a Multi Dimensional Scaling plot, eg. as provided by the limma package.
+This is more clearly seen is a boxplot.
+
+```{r,}
+boxplot(assay(pe[["peptideNorm"]]), col = palette()[-1],
+        main = "Peptide distribtutions after normalisation", ylab = "intensity")
+
+```
+
+
+We can visualize our data using a Multi Dimensional Scaling plot,
+eg. as provided by the `limma` package.
 
 ```{r}
 limma::plotMDS(assay(pe[["peptideNorm"]]), col = as.numeric(colData(pe)$condition))
 ```
 
-The first axis in the plot is showing the leading log fold changes (differences on the log scale) between the samples.
-We notice that the leading differences (log FC) in the peptideRaw data seems to be driven by technical variability.
-Indeed the samples do not seem to be clearly separated according to the spike in condition.
+The first axis in the plot is showing the leading log fold changes
+(differences on the log scale) between the samples.
+We notice that the leading differences (log FC)
+in the peptideRaw data seems to be driven by technical variability.
+Indeed, the samples do not seem to be clearly separated according
+to the spike-in condition.
 
 
 ## Summarization to protein level
 
-Use the standard sumarisation in aggregateFeatures ( robust summarisation).
+We use the standard sumarisation in aggregateFeatures, which is a
+robust summarisation method.
 
 ```{r,warning=FALSE}
-pe <- aggregateFeatures(pe,i="peptideNorm", fcol = "Proteins", na.rm = TRUE, name="protein")
+pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", na.rm = TRUE,
+                        name = "protein")
 ```
 
 
-We notice that the leading differences (log FC) in the protein data is still according to technical variation. On the second dimension, however, we also observe a clear separation according to the spike-in condition. Hence, the summarization that accounts for peptide specific effects makes the effects due to the spike-in condition more prominent!
+We notice that the leading differences (log FC) in the protein data are still
+according to technical variation. On the second dimension; however, we also observe
+a clear separation according to the spike-in condition. Hence, the summarization
+that accounts for peptide specific effects makes the effects due
+to the spike-in condition more prominent!
 
 ```{r}
-plotMDS(assay(pe[["protein"]]),col = as.numeric(colData(pe)$condition))
+plotMDS(assay(pe[["protein"]]), col = as.numeric(colData(pe)$condition))
 ```
-
-
 
 # Data Analysis
 
 ## Estimation
 
-We model the protein level expression values using msqrob.
-By default msqrob2 estimates the model parameters using robust regression.  
+We model the protein level expression values using `msqrob`.
+By default `msqrob2` estimates the model parameters using robust regression.  
 
 ```{r, warning=FALSE}
-pe <- msqrob(object=pe,i="protein", formula=~condition)
+pe <- msqrob(object = pe, i = "protein", formula = ~condition)
 ```
 
 ## Inference
 
-What are the parameter names of the model?
+First, we extract the parameter names of the model.
 ```{r}
 getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
 ```
 
-Spike-in condition a is the reference class.
-So the mean log2 expression for samples from condition a is
-'(Intercept).
+Spike-in condition a is the reference class. So the mean log2 expression
+for samples from condition a is '(Intercept).
 The mean log2 expression for samples from condition B is '(Intercept)+conditionB'.
-Hence the average log2 fold change between condition b and condition a is modelled using the parameter 'conditionB'.
-Hence we will assess the contrast 'conditionB=0' with our statistical test.
+Hence, the average log2 fold change between condition b and
+condition a is modelled using the parameter 'conditionB'.
+Thus, we assess the contrast 'conditionB=0' with our statistical test.
 
 ```{r}
-L <- makeContrast("conditionB=0",parameterNames=c("conditionB"))
-pe <- hypothesisTest(object=pe,i="protein",contrast=L)
+L <- makeContrast("conditionB=0", parameterNames = c("conditionB"))
+pe <- hypothesisTest(object = pe, i = "protein", contrast = L)
 ```
 
 
@@ -196,23 +232,27 @@ pe <- hypothesisTest(object=pe,i="protein",contrast=L)
 
 
 ```{r,warning=FALSE}
-volcano <- ggplot(rowData(pe[["protein"]])$conditionB, aes(x = logFC, y = -log10(pval),
-                                                    color = adjPval < 0.05)) +
-  geom_point(cex = 2.5) + scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal()
+volcano <- ggplot(rowData(pe[["protein"]])$conditionB, 
+                  aes(x = logFC, y = -log10(pval), color = adjPval < 0.05)) +
+  geom_point(cex = 2.5) + 
+  scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal()
 volcano
 ```
 
 ### Heatmap
 
-We first select the names of the significant proteins.
+We first select the names of the proteins that were declared signficant.
 
 ```{r}
-sigNames <- rowData(pe[["protein"]])$conditionB %>% rownames_to_column("protein") %>% filter(adjPval<0.05) %>% pull(protein)
+sigNames <- rowData(pe[["protein"]])$conditionB %>%
+  rownames_to_column("protein") %>%
+  filter(adjPval<0.05) %>%
+  pull(protein)
 heatmap(assay(pe[["protein"]])[sigNames, ])
 ```
 
 
-#Detail plots
+# Detail plots
 
 We first extract the normalized peptideRaw expression values for a particular protein.  
 
@@ -220,23 +260,26 @@ We first extract the normalized peptideRaw expression values for a particular pr
 ```{r, warning=FALSE, message=FALSE}
 for (protName in sigNames)
 {
-pePlot <- pe[protName,,c("peptideNorm","protein")]
+pePlot <- pe[protName, , c("peptideNorm","protein")]
 pePlotDf <- data.frame(longFormat(pePlot))
 pePlotDf$assay <- factor(pePlotDf$assay,
                         levels = c("peptideNorm", "protein"))
 pePlotDf$condition <- as.factor(colData(pePlot)[pePlotDf$colname, "condition"])
+
+# plotting
 p1 <- ggplot(data = pePlotDf,
-       aes(x = colname,
-           y = value,
-           group = rowname)) +
+       aes(x = colname, y = value, group = rowname)) +
     geom_line() + geom_point() +  theme_minimal() +
-    facet_grid(~ assay) + ggtitle(protName)
+    facet_grid(~assay) + ggtitle(protName)
 print(p1)
 
-p2 <- ggplot(pePlotDf, aes(x = colname, y = value, fill = condition)) + geom_boxplot(outlier.shape = NA) +
-geom_point(position = position_jitter(width = .1), aes(shape = rowname)) + scale_shape_manual(values = 1:nrow(pePlotDf)) +
-labs(title = protName, x = "sample", y = "peptide intensity (log2)") + theme_minimal()
-facet_grid(~assay)
+# plotting 2
+p2 <- ggplot(pePlotDf, aes(x = colname, y = value, fill = condition)) +
+  geom_boxplot(outlier.shape = NA) + geom_point(position = position_jitter(width = .1),
+                                                aes(shape = rowname)) + 
+  scale_shape_manual(values = 1:nrow(pePlotDf)) +
+  labs(title = protName, x = "sample", y = "peptide intensity (log2)") + theme_minimal()
+  facet_grid(~assay)
 print(p2)
 }
 ```

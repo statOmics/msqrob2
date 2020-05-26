@@ -8,28 +8,40 @@ output:
 
 
 # Background
-This case-study is a subset of the data of the 6th study of the Clinical Proteomic Technology Assessment for Cancer (CPTAC).
-In this experiment, the authors spiked the Sigma Universal Protein Standard mixture 1 (UPS1) containing 48 different human proteins in a protein background of 60 ng/$\mu$L Saccharomyces cerevisiae strain BY4741.
-Two different spike-in concentrations were used: 6A (0.25 fmol UPS1 proteins/$\mu$L) and 6B (0.74 fmol UPS1 proteins/$\mu$L) [5].
+This case-study is a subset of the data of the 6th study of the Clinical
+Proteomic Technology Assessment for Cancer (CPTAC). In this experiment, the
+authors spiked the Sigma Universal Protein Standard mixture 1 (UPS1)
+containing 48 different human proteins in a protein background of
+60 ng/$\mu$L Saccharomyces cerevisiae strain BY4741.
+Two different spike-in concentrations were used: 6A (0.25 fmol
+UPS1 proteins/$\mu$L) and 6B (0.74 fmol UPS1 proteins/$\mu$L) [5].
 We limited ourselves to the data of LTQ-Orbitrap W at site 56.
-The data were searched with MaxQuant version 1.5.2.8, and detailed search settings were described in Goeminne et al. (2016) [1].
+The data were searched with MaxQuant version 1.5.2.8, and detailed search
+settings were described in Goeminne et al. (2016) [1].
 Three replicates are available for each concentration.
 
 We first run the default workflow. Next we compare the method to other workflows.
 
 # Data
-
-We first import the peptideRaws.txt file. This is the file that contains your peptideRaw-level intensities. For a MaxQuant search [6], this peptideRaws.txt file can be found by default in the "path_to_raw_files/combined/txt/" folder from the MaxQuant output, with "path_to_raw_files" the folder where raw files were saved. In this tutorial, we will use a MaxQuant peptideRaws file that is a subset of the cptac study and which is available in the msdata package.
-We will use the Features package to import the data.
+We first import the data from peptideRaws.txt file. This is the file containing
+your peptideRaw-level intensities. For a MaxQuant search [6],
+this peptideRaws.txt file can be found by default in the
+"path_to_raw_files/combined/txt/" folder from the MaxQuant output,
+with "path_to_raw_files" the folder where the raw files were saved.
+In this vignette, we use a MaxQuant peptideRaws file which is a subset
+of the cptac study. This data is available in the `msdata` package.
+To import the data we use the `Features` package.
 
 We generate the object peptideRawFile with the path to the peptideRaws.txt file.
-With the grepEcols function we find the columns that are containing the expression data of the peptideRaws in the peptideRaws.txt file.
+Using the `grepEcols` function, we find the columns that contain the expression
+data of the peptideRaws in the peptideRaws.txt file.
 
 ```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(limma)
 library(Features)
 library(msqrob2)
+library(BiocParallel)
 
 peptidesFile <- msdata::quant(pattern = "cptac_a_b_peptides", full.names = TRUE)
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
@@ -37,11 +49,13 @@ pe <- readFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
                    name = "peptideRaw", sep="\t")
 ```
 
-We can extract the spikein condition from the raw file name.
+We can extract the spike-in condition from the raw file name.
 
 ```{r}
 cond <- which(strsplit(colnames(pe)[[1]][1], split = "")[[1]] == "A") # find where condition is stored
-colData(pe)$condition <- substr(colnames(pe), cond, cond) %>% unlist %>%  as.factor
+colData(pe)$condition <- substr(colnames(pe), cond, cond) %>%
+  unlist %>%  
+  as.factor
 ```
 
 
@@ -54,27 +68,32 @@ rowData(pe[["peptideRaw"]])$nNonZero <- rowSums(assay(pe[["peptideRaw"]]) > 0)
 ```
 
 
-peptide with zero intensities are missing peptide and should be represent with a `NA` value instead of `0`.
+peptide with zero intensities are missing peptide and should be represent with
+a `NA` value rather than `0`.
 ```{r}
-pe <- zeroIsNA(pe,"peptideRaw")
+pe <- zeroIsNA(pe, "peptideRaw")
 ```
 
 
 ## Data exploration
 
-We can inspect the missingness in our data with the `plotNA()` function provided with `MSnbase`.
-`r format(mean(is.na(assay(pe[["peptideRaw"]])))*100,digits=2)`% of all peptide intensities are missing and for some peptides we don't even measure a signal in any sample. The missingness is similar across samples.
-Note, that we plot the peptide data, so the label protein in the plot refers to peptides.
+We can inspect the missingness in our data with the `plotNA()` function
+provided with `MSnbase`.
+`r format(mean(is.na(assay(pe[["peptideRaw"]])))*100,digits=2)`% of all
+peptide intensities are missing and for some peptides we do not
+even measure a signal in any sample. The missingness is similar across samples.
 
 
 ```{r, cache= TRUE, eval=FALSE}
-MSnbase::plotNA(assay(pe[["peptideRaw"]]))
+MSnbase::plotNA(assay(pe[["peptideRaw"]]))  +
+  xlab("Peptide index (ordered by data completeness)")
 ```
 
 
 # Preprocessing
 
-We will log transform, normalize, filter and summarize the data.
+This section preforms standard preprocessing for the peptide data. This 
+include log transformation, filtering and summarisation of the data.
 
 ## Log transform the data
 
@@ -87,20 +106,23 @@ limma::plotDensities(assay(pe[["peptideLog"]]))
 ## Filtering
 
 ### Handling overlapping protein groups
-In our approach a peptide can map to multiple proteins, as long as there is none of these proteins present in a smaller subgroup.
+In our approach a peptide can map to multiple proteins, as long as there is none
+of these proteins present in a smaller subgroup.
 
 ```{r}
-pe[["peptideLog"]]<-pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Proteins %in% smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins),]
+pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Proteins %in% 
+                                           smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins), ]
 ```
 
 ### Remove reverse sequences (decoys) and contaminants
 
-We now remove the contaminants, peptides that map to decoy sequences and proteins, which were only identified by peptides with modifications.
+In our approach a peptide can map to multiple proteins, as long as there is
+none of these proteins present in a smaller subgroup.
 
 ```{r}
-pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Reverse!= "+", ]
+pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Reverse != "+", ]
 pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$
-Potential.contaminant!="+", ]
+Potential.contaminant != "+", ]
 ```
 
 ### Remove peptides of proteins that were only identified with modified peptides
@@ -121,7 +143,7 @@ We keep `r nrow(pe[["peptideLog"]])` peptides upon filtering.
 
 ## Quantile normalize the data
 ```{r}
-pe <- normalize(pe,i="peptideLog",method="quantiles",name="peptideNorm")
+pe <- normalize(pe, i = "peptideLog", method = "quantiles", name = "peptideNorm")
 ```
 
 
@@ -133,33 +155,48 @@ Upon normalisation the density curves for all samples coincide.
 limma::plotDensities(assay(pe[["peptideNorm"]]))
 ```
 
-We can visualize our data using a Multi Dimensional Scaling plot, eg. as provided by the limma package.
+This is more clearly seen is a boxplot.
+
+```{r,}
+boxplot(assay(pe[["peptideNorm"]]), col = palette()[-1],
+        main = "Peptide distribtutions after normalisation", ylab = "intensity")
+
+```
+
+
+We can visualize our data using a Multi Dimensional Scaling plot, 
+eg. as provided by the limma package.
 
 ```{r}
 limma::plotMDS(assay(pe[["peptideNorm"]]), col = as.numeric(colData(pe)$condition))
 ```
 
-The first axis in the plot is showing the leading log fold changes (differences on the log scale) between the samples.
-We notice that the leading differences (log FC) in the peptideRaw data seems to be driven by technical variability.
-Indeed the samples do not seem to be clearly separated according to the spike in condition.
+The first axis in the plot is showing the leading log fold changes
+(differences on the log scale) between the samples. We notice that the leading
+differences (log FC) in the peptideRaw data seems to be driven by technical
+variability. Indeed, the samples do not seem to be clearly 
+separated according to the spike-in condition.
 
 
 ## Summarization to protein level
 
-Use the standard sumarisation in aggregateFeatures ( robust summarisation).
+We use the standard sumarisation in aggregateFeatures, which is a
+robust summarisation method.
 
 ```{r,warning=FALSE}
-pe <- aggregateFeatures(pe,i="peptideNorm", fcol = "Proteins", na.rm = TRUE, name="protein")
+pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins",
+                        na.rm = TRUE, name = "protein")
 ```
 
-
-We notice that the leading differences (log FC) in the protein data is still according to technical variation. On the second dimension, however, we also observe a clear separation according to the spike-in condition. Hence, the summarization that accounts for peptide specific effects makes the effects due to the spike-in condition more prominent!
+We notice that the leading differences (log FC) in the protein data
+is still according to technical variation. On the second dimension; however,
+we also observe a clear separation according to the spike-in condition.
+Hence, the summarization that accounts for peptide specific effects makes
+the effects due to the spike-in condition more prominent!
 
 ```{r}
-plotMDS(assay(pe[["protein"]]),col = as.numeric(colData(pe)$condition))
+plotMDS(assay(pe[["protein"]]), col = as.numeric(colData(pe)$condition))
 ```
-
-
 
 # Data Analysis
 
@@ -169,37 +206,35 @@ We model the protein level expression values using msqrob.
 By default msqrob2 estimates the model parameters using robust regression.  
 
 ```{r, warning=FALSE}
-pe <- msqrob(object=pe,i="protein", formula=~condition)
+pe <- msqrob(object = pe,i = "protein", formula = ~condition)
 ```
 
 ## Inference
 
-What are the parameter names of the model?
+First, we extract the parameter names of the model.
 ```{r}
 getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
 ```
 
-Spike-in condition a is the reference class.
-So the mean log2 expression for samples from condition a is
-'(Intercept).
-The mean log2 expression for samples from condition B is '(Intercept)+conditionB'.
-Hence the average log2 fold change between condition b and condition a is modelled using the parameter 'conditionB'.
-Hence we will assess the contrast 'conditionB=0' with our statistical test.
+Spike-in condition a is the reference class. So the mean log2 expression
+for samples from condition a is '(Intercept). The mean log2 expression
+for samples from condition B is '(Intercept)+conditionB'. Hence, the average
+log2 fold change between condition b and condition a is modelled using
+the parameter 'conditionB'. Hence, we assess the contrast 'conditionB=0'
+with our statistical test.
 
 ```{r}
-L <- makeContrast("conditionB=0",parameterNames=c("conditionB"))
-pe <- hypothesisTest(object=pe,i="protein",contrast=L)
+L <- makeContrast("conditionB=0", parameterNames = c("conditionB"))
+pe <- hypothesisTest(object = pe, i = "protein", contrast = L)
 ```
-
 
 ## Plots
 
 ### Volcano-plot
 
-
 ```{r,warning=FALSE}
-volcano <- ggplot(rowData(pe[["protein"]])$conditionB, aes(x = logFC, y = -log10(pval),
-                                                    color = adjPval < 0.05)) +
+volcano <- ggplot(rowData(pe[["protein"]])$conditionB,
+                  aes(x = logFC, y = -log10(pval), color = adjPval < 0.05)) +
   geom_point(cex = 2.5) + scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal()
 volcano
 ```
@@ -209,29 +244,34 @@ volcano
 ## Median summarisation
 
 ```{r}
-pe <- aggregateFeatures(pe, i= "peptideNorm", fcol = "Proteins", na.rm = TRUE, name="proteinMedian",fun=matrixStats::colMedians)
-pe <- msqrob(object=pe,i="proteinMedian", formula=~condition)
-pe <- hypothesisTest(object=pe,i="proteinMedian",contrast=L)
+pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", na.rm = TRUE,
+                        name = "proteinMedian", fun = matrixStats::colMedians)
+pe <- msqrob(object = pe, i = "proteinMedian", formula = ~condition)
+pe <- hypothesisTest(object = pe, i = "proteinMedian", contrast = L)
 ```
 
 ### MDS plot
 
 ```{r}
-limma::plotMDS(assay(pe[["proteinMedian"]]), col = as.numeric(colData(pe)$condition))
+limma::plotMDS(assay(pe[["proteinMedian"]]),
+               col = as.numeric(colData(pe)$condition))
 ```
 
-Note, that upon median summarisation the separation between the samples according to the spike-in condition is much less clear than when using robust summarisation.
-This is because median summarisation does not account for a differences in observed peptides per protein. Indeed, for DE proteins more peptides will go missing in the low spike-in condition a.
+Note, that upon median summarisation the separation between
+the samples according to the spike-in condition is much less clear
+than when using robust summarisation. This is because median summarisation
+does not account for a differences in observed peptides per protein. 
+Indeed, for DE proteins more peptides will go missing in the low spike-in
+condition a.
 
 ### Volcano-plots
 
 ```{r,warning=FALSE}
 volcanoMed <- rowData(pe[["proteinMedian"]])[[colnames(L)]] %>%
-    ggplot(aes(x = logFC, y = -log10(pval),
-           color = adjPval < 0.01)) +
+    ggplot(aes(x = logFC, y = -log10(pval), color = adjPval < 0.01)) +
     geom_point(cex = 2.5) +
     scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal() +
-    geom_vline(xintercept=log2(0.74/.25),col="red") +
+    geom_vline(xintercept = log2(0.74/.25),col="red") +
     ggtitle("median summarisation")
 volcanoMed
 ```
@@ -247,16 +287,22 @@ The performance of ridge regression generally improves for more complex designs 
 Note, that the parameter names for ridge regression always start with the string "ridge".
 
 ```{r}
-try(pe <- msqrob(object=pe,i="protein", formula=~condition,modelColumnName="ridge",ridge=TRUE))
+try(pe <- msqrob(object = pe,i = "protein", formula = ~condition, 
+                 modelColumnName = "ridge", ridge = TRUE)) # note: intentional error
 ```
 
-Note, that by default ridge regression does not work for two group comparisons because it typically performs better the more parameters there are in the mean model (more complex designs).
-However, we can force ridge regression in a two group comparison using a formula without intercept.
+Note, that by default ridge regression does not work for two group comparisons
+because it typically performs better the more parameters there are in the mean model
+(more complex designs). However, we can force ridge regression in a two
+group comparison using a formula without intercept.
 
 ```{r}
-pe <- msqrob(object=pe,i="protein", formula=~-1+condition,modelColumnName="ridge",ridge=TRUE)
-Lridge<-makeContrast("ridgeconditionB - ridgeconditionA = 0",c("ridgeconditionB","ridgeconditionA"))
-pe <- hypothesisTest(object=pe,i="protein",contrast=Lridge,modelColumn="ridge")
+pe <- msqrob(object = pe, i = "protein", formula = ~-1 + condition,
+             modelColumnName = "ridge", ridge = TRUE)
+Lridge <- makeContrast("ridgeconditionB - ridgeconditionA = 0",
+                       c("ridgeconditionB", "ridgeconditionA"))
+pe <- hypothesisTest(object = pe , i = "protein", contrast = Lridge,
+                      modelColumn = "ridge")
 ```
 
 
@@ -268,89 +314,112 @@ volcanoRidge <- rowData(pe[["protein"]])[[colnames(Lridge)]] %>%
            color = adjPval < 0.01)) +
     geom_point(cex = 2.5) +
     scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal() +
-    geom_vline(xintercept=log2(0.74/0.25),col="red") +
+    geom_vline(xintercept = log2(0.74/0.25), col = "red") +
     ggtitle(paste("robust ridge"))
 volcanoRidge
 ```
 
-Note, that the volcano plot opens up and that the dots are more tight. The DE proteins are also around the real fold change of the spiked proteins.
+Note, that the volcano plot opens up and that the dots are more tight.
+The DE proteins are also around the real fold change of the spiked proteins.
 
 # Comparison of performance
 
 
-Because we are analysing a spike-in study we know the ground truth, i.e. we know that only the spike-in proteins (UPS proteins) are differentially expressed.
+Because we are analysing a spike-in study we know the ground truth,
+i.e. we know that only the spike-in proteins (UPS proteins) are differentially expressed.
 
 We first add the ground truth data to the rowData of the object.
 
 ```{r}
-rowData(pe[["protein"]])$ups<-grepl("UPS",rownames(pe[["protein"]]))
-rowData(pe[["proteinMedian"]])$ups<-grepl("UPS",rownames(pe[["proteinMedian"]]))
+rowData(pe[["protein"]])$ups <- grepl("UPS", rownames(pe[["protein"]]))
+rowData(pe[["proteinMedian"]])$ups <- grepl("UPS", rownames(pe[["proteinMedian"]]))
 ```
 
 ## log2 Fold Change Estimation
 
 ```{r}
-logFC<-data.frame(default=rowData(pe[["protein"]])[[colnames(L)]][,1],median=rowData(pe[["proteinMedian"]])[[colnames(L)]][,1],ridge=rowData(pe[["protein"]])[[colnames(Lridge)]][,1],ups=rowData(pe[["protein"]])$ups)
+logFC <- data.frame(default = rowData(pe[["protein"]])[[colnames(L)]][, 1],
+                    median = rowData(pe[["proteinMedian"]])[[colnames(L)]][, 1],
+                    ridge = rowData(pe[["protein"]])[[colnames(Lridge)]][, 1],
+                    ups = rowData(pe[["protein"]])$ups)
 
-logFC<-logFC %>% gather(method,log2FC,c("default","median","ridge"))
-
-logFC$ups<-as.factor(logFC$ups)
-
-logFC %>% ggplot(aes(x=method,y=log2FC,fill=ups)) + geom_boxplot() + geom_hline(yintercept=log2(0.74/.25),color="red")
+logFC <-logFC %>% gather(method, log2FC, c("default", "median", "ridge"))
+logFC$ups <- as.factor(logFC$ups)
+logFC %>% ggplot(aes(x = method, y = log2FC, fill = ups)) + geom_boxplot() +
+  geom_hline(yintercept = log2(0.74/.25), color = "red")
 ```
 
-Note, that methods based on robust summarisation (default and ridge) have unbiased fold change estimates for both the ecoli (real log2 FC = 0) and spiked UPS proteins (real log2 FC = `r round(log2(.74/.25),2)` red horizontal line). Ridge regression provides a strong shrinkage of the fold change estimates of the non-DE (ecoli) proteins towards zero.
+Note, that methods based on robust summarisation (default and ridge) have
+unbiased fold change estimates for both the ecoli (real log2 FC = 0)
+and spiked UPS proteins 
+(real log2 FC = `r round(log2(.74/.25),2)` red horizontal line).
+Ridge regression provides a strong shrinkage of the fold change
+estimates of the non-DE (ecoli) proteins towards zero.
 
-Median summarisation returns biased fold changes for the spiked UPS proteins. This is because peptides of the ups proteins that do not fly well through the mass spec are typically missing in the low spike-in condition. Hence the protein estimates for condition a are typically overestimated and for condition b underestimated leading to an underestimation of the fold change. The default robust summarisation uses a peptide based model to summarise the data, which estimates the protein expression value while correcting for the peptide.
+Median summarisation returns biased fold changes for the spiked UPS proteins.
+This is because peptides of the ups proteins that do not fly well through
+the mass spec are typically missing in the low spike-in condition.
+Hence, the protein estimates for condition a are typically overestimated
+and for condition b underestimated leading to an underestimation
+of the fold change. The default robust summarisation uses a peptide
+based model to summarise the data, which estimates the protein expression
+value while correcting for the peptide.
 
 ## Sensitivity FDP Plots
 
-Because we are analysing a spike-in study we know the ground truth, i.e. we know that only the spike-in proteins (UPS proteins) are differentially expressed. We can therefore evaluate the performance of the method, i.e. we will assess
+Because we are analysing a spike-in study we know the ground truth,
+i.e. we know that only the spike-in proteins (UPS proteins)
+are differentially expressed. We can therefore evaluate the performance
+of the method, i.e. we will assess - the sensitivity or true positive rate (TPR),
+the proportion of actual positives that are correctly identified, in the
+protein list that we return $$TPR=\frac{TP}{\text{#actual positives}},$$
+here TP are the true positives in the list.
+The TPR is thus the fraction of ups proteins that we can recall.
 
-- the sensitivity or true positive rate (TPR), the proportion of actual positives that are correctly identified, in the protein list that we return
-$$TPR=\frac{TP}{\text{#actual positives}},$$
-here TP are the true positives in the list. The TPR is thus the fraction of ups proteins that we can recall.
-
-- false discovery proportion (FPD): fraction of false positives in the protein list that we return:
-$$FPD=\frac{FP}{FP+TP},$$
+- false discovery proportion (FPD): fraction of false positives in the
+protein list that we return: $$FPD=\frac{FP}{FP+TP},$$
 with FP the false positives. In our case the yeast proteins that are in our list.
 
-Instead of only calculating that for the protein list that is returned for the chosen FDR level, we can do this for all possible FDR cutoffs so that we get an overview of the quality of the ranking of the proteins in the protein list.
-
-
-
+Instead, of only calculating that for the protein list that is returned
+for the chosen FDR level, we can do this for all possible FDR cutoffs
+so that we get an overview of the quality of the ranking of the proteins
+in the protein list.
 
 Function to calculate TPR and FDP
 ```{r}
-tprFdp<-function(pval,tp,adjPval){
-ord<-order(pval)
+tprFdp <- function(pval, tp, adjPval){
+ord <- order(pval)
 return(data.frame(
-  pval=pval[ord],
-  adjPval=adjPval[ord],
-  tpr=cumsum(tp[ord])/sum(tp),
-  fdp=cumsum(!tp[ord])/1:length(tp)))
+  pval = pval[ord],
+  adjPval = adjPval[ord],
+  tpr = cumsum(tp[ord])/sum(tp),
+  fdp = cumsum(!tp[ord])/1:length(tp)))
 }
 ```
 
-
 ```{r}
 tprFdpDefault <- tprFdp(rowData(pe[["protein"]])[[colnames(L)]]$pval,
-             rowData(pe[["protein"]])$ups,rowData(pe[["protein"]])[[colnames(L)]]$adjPval)
+             rowData(pe[["protein"]])$ups,
+             rowData(pe[["protein"]])[[colnames(L)]]$adjPval)
 tprFdpMedian <- tprFdp(rowData(pe[["proteinMedian"]])[[colnames(L)]]$pval,
-             rowData(pe[["proteinMedian"]])$ups,rowData(pe[["proteinMedian"]])[[colnames(L)]]$adjPval)
+             rowData(pe[["proteinMedian"]])$ups,
+             rowData(pe[["proteinMedian"]])[[colnames(L)]]$adjPval)
 
 tprFdpRidge <- tprFdp(rowData(pe[["protein"]])[[colnames(Lridge)]]$pval,
-             rowData(pe[["protein"]])$ups,rowData(pe[["protein"]])[[colnames(Lridge)]]$adjPval)
+             rowData(pe[["protein"]])$ups,
+             rowData(pe[["protein"]])[[colnames(Lridge)]]$adjPval)
 
-hlp <- rbind(cbind(tprFdpDefault,method="default"),
-             cbind(tprFdpMedian,method="median"),
-             cbind(tprFdpRidge,method="ridge"))
+hlp <- rbind(cbind(tprFdpDefault, method = "default"),
+             cbind(tprFdpMedian, method = "median"),
+             cbind(tprFdpRidge, method = "ridge"))
 tprFdpPlot <- hlp %>%
-      ggplot(aes(x=fdp,y=tpr,color=method)) +
+      ggplot(aes(x = fdp, y = tpr, color = method)) +
       geom_path()
 tprFdpPlot
 ```
 
-Ridge regression does not seem to improve the performance in two-group comparisons.
-By default the ridge regression workflow returns an error message if the model only has two fixed effect parameters, e.g. "(intercept)" and  parameter "conditionB".
-In the vignette of a large spike-in study with multiple spike-in conditions we illustrate the benefit of ridge regression when dealing with more complex experiments.
+Ridge regression does not seem to improve the performance in two-group
+comparisons. By default the ridge regression workflow returns an error message
+if the model only has two fixed effect parameters, e.g. "(intercept)" and  parameter "conditionB".
+In the vignette of a large spike-in study with multiple spike-in conditions
+we illustrate the benefit of ridge regression when dealing with more complex experiments.
