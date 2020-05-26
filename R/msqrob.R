@@ -82,17 +82,23 @@ msqrobLm <- function(y,
                                 mod <- try(lm.fit(X, y))
                                 if (class(mod)[1] != "try-error" & mod$rank == ncol(X))
                                     type <- "lm"
-                            } if (type == "rlm") {
+                            } 
+                            
+                            if (type == "rlm") {
                                 w <- mod$w
                                 sigma <- sqrt(sum(mod$w * mod$resid^2) / (sum(mod$w) - mod$rank))
                                 df.residual <- sum(mod$w) - mod$rank
                                 if (df.residual<2L) type <- "fitError"
-                            } if (type == "lm") {
+                            } 
+                            
+                            if (type == "lm") {
                                 w <- NULL
                                 sigma <- sqrt(sum(mod$residuals^2 / mod$df.residual))
                                 df.residual <- mod$df.residual
                                 if (df.residual<2L) type <- "fitError"
-                            } if (type != "fitError")
+                            } 
+                            
+                            if (type != "fitError")
                                 model <- list(coefficients = mod$coef,
                                               vcovUnscaled = .vcovUnscaled(mod),
                                               sigma = sigma,
@@ -231,14 +237,18 @@ msqrobLmer <- function(y,
               rerun the function with a formula where you drop the intercept. e.g. ~-1+condition
             ")
 
-    if(is.null(findbars(formula))){
-        form<-formula(y ~ (1|ridge))} else {
-        if(nobars(formula)[[2]] != 1) {
-            form<-formula(
+    if(is.null(findbars(formula))) {
+        form <- formula(y ~ (1|ridge))
+    } else {
+      
+      if(nobars(formula)[[2]] != 1) {
+            form <- formula(
                          paste0("y ~ (1|ridge) + ", paste0("(",paste(findbars(formula), collapse=")+("),")"))
-            )} else {
-            form <- formula}
-            }
+            )
+      } else { 
+        form <- formula
+      }
+    }
 
     if (is.null(featureGroups)) featureGroups <- rownames(y)
     
@@ -247,12 +257,13 @@ msqrobLmer <- function(y,
     models <- bplapply(y,
                        function(y, form, data) {
                                 if(nrow(y) > 1) {
-                                      data <- data[rep(1:nrow(data), each = nrow(y)),]
-                                      data$samples <- as.factor(rep(colnames(y), each =n row(y)))
+                                      data <- data[rep(1:nrow(data), each = nrow(y)), ]
+                                      data$samples <- as.factor(rep(colnames(y), each = nrow(y)))
                                       data$features <- as.factor(rep(rownames(y), ncol(y)))
                                       form <- update.formula(form, ~.+(1|samples) + (1|features))
                                 }
-                                dim(y) <- NULL
+                         
+                                #dim(y) <- NULL
                                 data$y <- y
                                 data <- data[!is.na(data$y), ]
                                 qrFixed <- qr(data$fixed)
@@ -265,12 +276,13 @@ msqrobLmer <- function(y,
                                 }
                                 model <- NULL
 
-                                if (nobars(formula)[[2]]!=1){
+                                if (nobars(formula)[[2]] != 1) {
+                                  
                                     ##Fooling lmer to adopt ridge regression using Fabian Scheipl's trick
                                     if (qrFixed$rank == ncol(data$fixed))
                                     try({
                                           colnames(Q) <- colnames(data$fixed)
-                                          if(colnames(data$fixed)[1] == "(Intercept)") Q <- Q[, -1]
+                                          if (colnames(data$fixed)[1] == "(Intercept)") Q <- Q[, -1]
                                           
                                           data$ridge <- as.factor(rep(colnames(Q),length = nrow(data)))
                                           parsedFormulaC <- lFormula(form,data = as.list(data))
@@ -288,9 +300,10 @@ msqrobLmer <- function(y,
                                         }, silent=TRUE)
                                 } else {
                                   ## For advanced users who opted to perform ridge regression by specifying all effects as random effects
-                                  try(model <- lmer(form, as.list(data)), silent = TRUE)}
+                                  try(model <- lmer(form, as.list(data)), silent = TRUE)
+                                }
 
-                                  if (is.null(model)) {
+                                if (is.null(model)) {
                                       type <- "fitError"
                                       model <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA)
                                       } else {
@@ -309,21 +322,22 @@ msqrobLmer <- function(y,
                                       sigma <- sigma(model)
                                       betas <- .getBetaB(model)
                                       vcovUnscaled <- as.matrix(.getVcovBetaBUnscaled(model))
-                                      if (nobars(formula)[[2]] != 1){
-                                          if (doQR){
+                                      if (nobars(formula)[[2]] != 1) {
+                                          if (doQR) {
                                               if(colnames(data$fixed)[1] == "(Intercept)"){
                                                   ids <- c(1,grep("ridge", names(betas)))
-                                                  } else {
+                                              } else {
                                                   ids <- grep("ridge", names(betas))
-                                                  }
-                                              Rinv <- diag(betas)
-                                              coefNames <- names(betas)
-                                              Rinv[ids,ids] <- solve(qr.R(qrFixed))
-                                              Rinv[1, 1] <- 1
-                                              betas <- c(Rinv %*% betas)
-                                              names(betas) <- coefNames
-                                              vcovUnscaled <- t(Rinv) %*% vcovUnscaled %*% Rinv
-                                              rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- names(betas)
+                                              }
+                                            
+                                          Rinv <- diag(betas)
+                                          coefNames <- names(betas)
+                                          Rinv[ids, ids] <- solve(qr.R(qrFixed))
+                                          Rinv[1, 1] <- 1
+                                          betas <- c(Rinv %*% betas)
+                                          names(betas) <- coefNames
+                                          vcovUnscaled <- t(Rinv) %*% vcovUnscaled %*% Rinv
+                                          rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- names(betas)
                                               }
                                       }
                                       df.residual <- .getDfLmer(model)
