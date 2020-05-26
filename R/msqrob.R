@@ -350,6 +350,7 @@ msqrobLmer <- function(y,
                          data = df)
 
     hlp <- limma::squeezeVar(var = sapply(models, getVar), df = sapply(models, getDF))
+    
     for (i in 1:length(models)){
         models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
         models[[i]]@dfPosterior <- as.numeric(hlp$df.prior + getDF(models[[i]]))
@@ -398,7 +399,7 @@ msqrobLmer <- function(y,
 #' @import lme4
 .getBetaB <- function(model) {
     betaB <- c(as.vector(getME(model, "beta")), as.vector(getME(model, "b")))
-    ranefLevels <- imap(model@flist,~{paste0(.y, levels(.x))})
+    ranefLevels <- imap(model@flist, ~{paste0(.y, levels(.x))})
     zNames <- unlist(lapply(1:length(model@cnms), function(x, cnms, levels)
       c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0)),
       cnms = model@cnms, levels = ranefLevels))
@@ -457,8 +458,8 @@ msqrobGlm <- function(y,
                      npep,
                      formula,
                      data,
-                     priorCount=.1,
-                     binomialBound=TRUE)
+                     priorCount = .1,
+                     binomialBound = TRUE)
 {
   myDesign <- model.matrix(formula, data)
   models <- lapply(1:nrow(y),
@@ -466,19 +467,18 @@ msqrobGlm <- function(y,
                     type <- "fitError"
                     model <- list(coefficients = NA, vcovUnscaled = NA,
                                   sigma = NA, df.residual = NA, w = NULL)
-                    if (npep[i]>=max(y[i,])){
-                            mod <- try(glm.fit(y=cbind(y[i,],npep[i]-y[i,])+priorCount,
-                                           x=myDesign,
-                                           family=binomial())
+                    if (npep[i] >= max(y[i, ])){
+                            mod <- try(glm.fit(y = cbind(y[i, ],npep[i] - y[i, ]) + priorCount,
+                                           x = myDesign,
+                                           family = binomial())
                                       )
                             if (class(mod)[1] != "try-error" & mod$rank == ncol(myDesign))
                             type <- "quasibinomial"
                     }
                     if (class(mod)[1] != "try-error"){
-                        if (mod$deviance<0) mod$deviance <- sum(pmax(mod$family$dev.resids(mod$y,mod$fitted.values,mod$prior.weights),0))
-                        if (mod$df.residual<2L) type <- "fitError"
-                        }
-                        
+                        if (mod$deviance < 0) mod$deviance <- sum(pmax(mod$family$dev.resids(mod$y, mod$fitted.values, mod$prior.weights), 0))
+                        if (mod$df.residual < 2L) type <- "fitError"
+                    }
                     if (type != "fitError")
                         model <- list(coefficients = mod$coef,
                                       vcovUnscaled = .vcovUnscaled(mod),
@@ -491,16 +491,19 @@ msqrobGlm <- function(y,
                                params = model,
                                varPosterior = as.numeric(NA),
                                dfPosterior = as.numeric(NA))
-                  }, y=y, npep=npep, myDesign=myDesign)
-  hlp<-limma::squeezeVar(var=sapply(models,getVar),df=sapply(models,getDF))
-  for (i in 1:length(models)){
+                  }, y = y, npep = npep, myDesign = myDesign)
+  hlp <- limma::squeezeVar(var = sapply(models, getVar), df = sapply(models, getDF))
+  
+  for (i in 1:length(models)) {
     models[[i]]@varPosterior<-as.numeric(hlp$var.post[i])
-    models[[i]]@dfPosterior<-as.numeric(hlp$df.prior+getDF(models[[i]]))
-    if (!is.na(models[[i]]@varPosterior)&binomialBound)
-        if (models[[i]]@varPosterior<1) {
+    models[[i]]@dfPosterior<-as.numeric(hlp$df.prior + getDF(models[[i]]))
+    
+    if (!is.na(models[[i]]@varPosterior) & binomialBound)
+        if (models[[i]]@varPosterior < 1) {
             models[[i]]@varPosterior <- 1
             models[[i]]@dfPosterior <- Inf
         }
-    }
+  }
+  
   return(models)
 }
