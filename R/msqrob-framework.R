@@ -12,13 +12,15 @@
 #' as a variable in a `DataFrame` object, as illustred in the example
 #' below.
 #'
-#' @slot type The type of the used model
+#' @slot type `character(1)` defining type of the used model. Default
+#'     is `"fitError"`, i.e. a error model. Other include `"lm"`,
+#'     `"rlm"`, ...
 #' 
-#' @slot params A list containing information of the used model
+#' @slot params A `list()` containing information of the used model.
 #' 
-#' @slot varPosterior A vector of posterior variance
+#' @slot varPosterior `numeric()` of posterior variance.
 #' 
-#' @slot dfPosterior A vector of posterior degrees of freedom
+#' @slot dfPosterior `numeric()` of posterior degrees of freedom.
 #' 
 #' @rdname StatModel
 #' 
@@ -41,7 +43,7 @@
 #' mod2 <- StatModel(type = "lm")
 #' df <- DataFrame(x = 1:2)
 #' df$mods <- c(mod1, mod2)
-#' df$mods
+#' df
 .StatModel <- setClass("StatModel",
                         slots = c(type = "character",
                                   params = "list",
@@ -74,3 +76,10 @@ StatModel<-function(type = "fitError",
     out@dfPosterior <- dfPosterior
     return(out)
 }
+
+setMethod("head", "StatModel", function(x, ...) x)
+
+setMethod("showAsCell", "StatModel",
+          function (object) paste0("StatModel:", object@type))
+
+
