@@ -21,7 +21,8 @@ the default Maxquant contaminant database. Carbamidomethylation of Cystein
 was set as a fixed modification, and oxidation of Methionine and acetylation
 of the protein amino-terminus were allowed as variable modifications. In silico
 cleavage was set to use trypsin/P, allowing two miscleavages. Match between
-runs was also enabled using default settings. The resulting peptide-to-spectrum matches (PSMs) were filtered by MaxQuant at 1% FDR.
+runs was also enabled using default settings. The resulting peptide-to-spectrum
+matches (PSMs) were filtered by MaxQuant at 1% FDR.
 
 ```{r}
 concentrations <- seq.int(1:5) * 1.5
@@ -373,7 +374,7 @@ tprFdpHurdle[[i]] <- tprFdp(rowData(pe[["proteinCount"]])[[paste0("hurdle",i)]]$
 hlp <- rbind(cbind(tprFdpDefault[[i]], method = "default"), cbind(tprFdpHurdle[[i]], method = "hurdle"))
 tprFdpPlots[[i]] <- hlp %>%
       ggplot(aes(x = fdp, y = tpr, color = method)) +
-      geom_path() +
+      geom_path(aes(alpha = 0.7, size = 4)) + theme_classic(base_size = 14) + guides(size = FALSE, alpha = FALSE)
       ggtitle(i)
 }
 tprFdpPlots
