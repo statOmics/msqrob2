@@ -16,12 +16,6 @@
 #' @param overwrite `boolean(1)` to indicate if the column in the rowData has to
 #'        be overwritten if the modelColumnName already exists. Default is FALSE.
 #'
-#' @param nFeat `character(1)` to indicate the name of the variable in the rowData
-#'        of object that contains the maximum number of features (maximum count).
-#'        E.g. when peptides are summarized to proteins by counting how many peptides
-#'        that were observed for a protein in a sample, nFeat will indicate the maximum
-#'        number of peptides that could be observed for a protein. The default is "nPep"
-#'
 #' @param priorCount A 'numeric(1)', which is a prior count to be added to the observations to shrink
 #'          the estimated log-fold-changes towards zero. Default is 0.1.
 #'
@@ -39,26 +33,18 @@
 #' data(pe)
 #'
 #' # Aggregate by counting how many peptide we observe for each protein
-#' pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="proteinCount",fun=nObsPep)
-#'
-#' # Calculate the total number of peptides for each protein
-#' rowData(pe[["proteinCount"]])$nPep<- rowData(pe[["peptide"]]) %>%
-#'        data.frame(.$Proteins)  %>%
-#'        group_by(Proteins) %>%
-#'        summarise(nPep = length(Proteins)) %>%
-#'        column_to_rownames("Proteins") %>%
-#'        .$nPep
+#' pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
 #'
 #' # Fit MSqrob model to peptide counts using a quasi-binomial model
 #' # For summarized SummarizedExperiment
-#' se <- pe[["proteinCount"]]
+#' se <- pe[["protein"]]
 #' se
 #' colData(se) <- colData(pe)
 #' se <- msqrobQB(se,formula=~condition)
-#' getCoef(rowData(se)$msqrobModels[[1]])
+#' getCoef(rowData(se)$msqrobQbModels[[1]])
 #'
 #' # For features object
-#' pe <- msqrobQB(pe,i="proteinCount",formula=~condition)
+#' pe <- msqrobQB(pe,i="protein",formula=~condition)
 #'
 #' @return SummarizedExperiment or Features instance
 #'
@@ -71,9 +57,8 @@
 setMethod("msqrobQB","SummarizedExperiment",
           function(object,
                    formula,
-                   modelColumnName="msqrobModels",
+                   modelColumnName="msqrobQbModels",
                    overwrite=FALSE,
-                   nFeat="nPep",
                    priorCount=.1,
                    binomialBound=TRUE){
 
@@ -81,11 +66,9 @@ setMethod("msqrobQB","SummarizedExperiment",
            if((modelColumnName %in% colnames(rowData(object)))&!overwrite) stop(paste0("There is already a column named \'",
                                                                                modelColumnName,
                                                                                "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of SummarizedExperiment object"))
-           if(!(nFeat %in% colnames(rowData(object)))) stop(paste0("There is no column named\'",
-                                                                   nFeat,
-                                                                   "\'in the rowData of object"))
-           rowData(object)[[modelColumnName]] <- msqrobGlm(assay(object),
-                                                           rowData(object)[[nFeat]],
+           if(!(".n" %in% colnames(rowData(object)))) stop("The assay does not seem to be aggregated so the number of features are not available")
+           rowData(object)[[modelColumnName]] <- msqrobGlm(aggcounts(object),
+                                                           rowData(object)[[".n"]],
                                                            formula,
                                                            colData(object),
                                                            priorCount=priorCount,
@@ -102,9 +85,8 @@ setMethod("msqrobQB","Features",
           function(object,
                    i,
                    formula,
-                   modelColumnName="msqrobModels",
+                   modelColumnName="msqrobQbModels",
                    overwrite=FALSE,
-                   nFeat="nPep",
                    priorCount=.1,
                    binomialBound=TRUE){
            if (is.null(object[[i]])) stop(paste0("Features object does not contain an assay with the name ",i))
@@ -113,13 +95,9 @@ setMethod("msqrobQB","Features",
                                                                                "\' in the rowData of assay \'",
                                                                                i,
                                                                                "'of object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of SummarizedExperiment object"))
-           if(!(nFeat %in% colnames(rowData(object[[i]])))) stop(paste0("There is no column named\'",
-                                                                   nFeat,
-                                                                   "\'in the rowData of assay \'",
-                                                                   i,
-                                                                   "\' of object"))
-           rowData(object[[i]])[[modelColumnName]] <- msqrobGlm(assay(object[[i]]),
-                                                           rowData(object[[i]])[[nFeat]],
+           if(!(".n" %in% colnames(rowData(object[[i]])))) stop("The assay does not seem to be aggregated so the number of features are not available")
+           rowData(object[[i]])[[modelColumnName]] <- msqrobGlm(aggcounts(object[[i]]),
+                                                           rowData(object[[i]])[[".n"]],
                                                            formula,
                                                            colData(object),
                                                            priorCount=priorCount,

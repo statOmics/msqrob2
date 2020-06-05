@@ -190,45 +190,25 @@ pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", na.rm = TRUE, 
 plotMDS(assay(pe[["protein"]]),col = as.numeric(colData(pe)$condition))
 ```
 
-### Count based
-
-We make and additional summarisation assay where we summarise the peptides to protein values by counting how many peptides are observed for each protein.
-
-We also need to create a column in the rowData of the assay with the number of peptides that could be observed per protein, which we call nPep.
-
-```{r}
-pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", name = "proteinCount", fun = nObsPep)
-rowData(pe[["proteinCount"]])$nPep<- rowData(pe[["peptideNorm"]]) %>%
-        data.frame(.$Proteins)  %>%
-        group_by(Proteins) %>%
-        summarise(nPep = length(Proteins)) %>%
-        column_to_rownames("Proteins") %>%
-        .$nPep
-```
-
-
 # Data Analysis
 
-## Estimation intensity based method
+## Estimation
 
-We model the protein level expression values using msqrob.
-By default msqrob2 estimates the model parameters using robust regression.
+With the hurdle approach we model the protein level expression values using msqrob.
+By default the hurdle model estimates the model parameters for the model component that models the protein intensities using robust regression.
+By default, this model component is stored in the row data under name "msqrobHurdleIntensity".
+The number of peptides that were used to summarize to protein level expression values are modelled using a quasibinomial model. This model component is stored by default in the row data under the name "msqrobHurdleCount".
 
 ```{r, warning=FALSE}
-pe <- msqrob(object = pe, i = "protein", formula = ~condition)
+pe <- msqrobHurdle(object = pe, i = "protein", formula = ~condition)
 ```
 
-## Estimation count based method
-
-```{r}
-pe <- msqrobQB(object = pe, i = "proteinCount", formula = ~condition)
-```
 
 ## Inference
 
 What are the parameter names of the model?
 ```{r}
-getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
+getCoef(rowData(pe[["protein"]])$msqrobHurdleIntensity[[1]])
 ```
 
 Spike-in condition a is the reference class.
@@ -236,7 +216,7 @@ So the mean log2 expression for samples from condition a is
 '(Intercept). The mean log2 expression for samples from condition b-e is
 '(Intercept)+conditionb',...,'(Intercept)+conditione', respectively. Hence, the
 average log2 fold change (FC) between condition b and condition a is modelled using the parameter 'conditionb'.
-Thus, we assess the contrast 'conditionb = 0' with our statistical test. 
+Thus, we assess the contrast 'conditionb = 0' with our statistical test.
 The same holds for comparison c-a, d-a, e-a.
 
 ```{r}
@@ -270,26 +250,17 @@ L
 And we adopt the hypothesis tests for each contrast and for both hurdle components.
 
 ```{r}
-pe <- hypothesisTest(object = pe, i = "protein", contrast = L)
-pe <- hypothesisTest(object = pe, i = "proteinCount", contrast = L)
-for (j in colnames(L)) {
-  sam <- cbind(rowData(pe[["protein"]])[[j]][,1:5],
-               rowData(pe[["proteinCount"]])[[j]][,1:5])
-  colnames(sam)[2:5] <- paste0("logFC", colnames(sam)[2:5])
-  colnames(sam)[6] <- "logOR"
-  colnames(sam)[7:10] <- paste0("logOR", colnames(sam)[7:10])
-  sam$fisher <- -2*(log(sam[, 5]) + log(sam[, 10]))
-  sam$fisherDf <- 4
-  sam$fisherDf[is.na(sam$fisher)] <- 2
-  id1 <- is.na(sam$fisher)&!is.na(sam[, 5])
-  id2 <- is.na(sam$fisher)&!is.na(sam[, 10])
-  sam$fisher[id1] <- -2 * log(sam[id1, 5])
-  sam$fisher[id2] <- -2 * log(sam[id2, 10])
-  sam$fisherPval <- pchisq(sam$fisher, sam$fisherDf, lower.tail = FALSE)
-  sam$fisherAdjPval <- p.adjust(sam$fisherPval, "BH")
-  rowData(pe[["proteinCount"]])[[paste0("hurdle", j)]] <- sam
-}
+pe <- hypothesisTestHurdle(object = pe, i = "protein", contrast = L)
 ```
+
+Compare it with inference on MSqRob native, i.e. the intensity component only
+
+```{r}
+pe <- hypothesisTest(object = pe, i = "protein", contrast = L,modelColumn="msqrobHurdleIntensity")
+```
+
+
+
 
 
 # Plots
@@ -297,7 +268,7 @@ for (j in colnames(L)) {
 
 ```{r}
 for (i in colnames(L)) {
-sigNames <- rowData(pe[["proteinCount"]])[[paste0("hurdle", i)]] %>%
+sigNames <- rowData(pe[["protein"]])[[paste0("hurdle_", i)]] %>%
     rownames_to_column("protein") %>% filter(fisherAdjPval<0.01) %>% pull(protein)
 heatmap(assay(pe[["protein"]])[sigNames, ] , main=i)
 }
@@ -369,13 +340,13 @@ tprFdpPlots <- list()
 for (i in colnames(L)) {
 tprFdpDefault[[i]] <- tprFdp(rowData(pe[["protein"]])[[i]]$pval,
              rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[i]]$adjPval)
-tprFdpHurdle[[i]] <- tprFdp(rowData(pe[["proteinCount"]])[[paste0("hurdle",i)]]$fisherPval,
-             rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["proteinCount"]])[[paste0("hurdle",i)]]$fisherAdjPval)
+tprFdpHurdle[[i]] <- tprFdp(rowData(pe[["protein"]])[[paste0("hurdle_",i)]]$fisherPval,
+             rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[paste0("hurdle_",i)]]$fisherAdjPval)
 hlp <- rbind(cbind(tprFdpDefault[[i]], method = "default"), cbind(tprFdpHurdle[[i]], method = "hurdle"))
 tprFdpPlots[[i]] <- hlp %>%
       ggplot(aes(x = fdp, y = tpr, color = method)) +
-      geom_path(aes(alpha = 0.7, size = 4)) + theme_classic(base_size = 14) + guides(size = FALSE, alpha = FALSE)
-      ggtitle(i)
+      geom_path() + theme_classic(base_size = 14) + #guides(size = FALSE, alpha = FALSE)
+      ggtitle(paste0(i," = 0"))
 }
 tprFdpPlots
 ```

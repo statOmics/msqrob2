@@ -9,9 +9,8 @@
 \S4method{msqrobQB}{SummarizedExperiment}(
   object,
   formula,
-  modelColumnName = "msqrobModels",
+  modelColumnName = "msqrobQbModels",
   overwrite = FALSE,
-  nFeat = "nPep",
   priorCount = 0.1,
   binomialBound = TRUE
 )
@@ -28,12 +27,6 @@ instance or of the assay of the Features instance. Default is "msqrobModels".}
 
 \item{overwrite}{\code{boolean(1)} to indicate if the column in the rowData has to
 be overwritten if the modelColumnName already exists. Default is FALSE.}
-
-\item{nFeat}{\code{character(1)} to indicate the name of the variable in the rowData
-of object that contains the maximum number of features (maximum count).
-E.g. when peptides are summarized to proteins by counting how many peptides
-that were observed for a protein in a sample, nFeat will indicate the maximum
-number of peptides that could be observed for a protein. The default is "nPep"}
 
 \item{priorCount}{A 'numeric(1)', which is a prior count to be added to the observations to shrink
 the estimated log-fold-changes towards zero. Default is 0.1.}
@@ -59,26 +52,18 @@ by modeling peptide counts using quasibinomial glm
 data(pe)
 
 # Aggregate by counting how many peptide we observe for each protein
-pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="proteinCount",fun=nObsPep)
-
-# Calculate the total number of peptides for each protein
-rowData(pe[["proteinCount"]])$nPep<- rowData(pe[["peptide"]]) \%>\%
-       data.frame(.$Proteins)  \%>\%
-       group_by(Proteins) \%>\%
-       summarise(nPep = length(Proteins)) \%>\%
-       column_to_rownames("Proteins") \%>\%
-       .$nPep
+pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
 
 # Fit MSqrob model to peptide counts using a quasi-binomial model
 # For summarized SummarizedExperiment
-se <- pe[["proteinCount"]]
+se <- pe[["protein"]]
 se
 colData(se) <- colData(pe)
 se <- msqrobQB(se,formula=~condition)
-getCoef(rowData(se)$msqrobModels[[1]])
+getCoef(rowData(se)$msqrobQbModels[[1]])
 
 # For features object
-pe <- msqrobQB(pe,i="proteinCount",formula=~condition)
+pe <- msqrobQB(pe,i="protein",formula=~condition)
 
 }
 \author{

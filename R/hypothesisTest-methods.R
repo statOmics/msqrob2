@@ -1,11 +1,11 @@
 #' Parameter estimates, standard errors and statistical inference on differential
-#' expression
+#' expression analysis
 #'
 #' @description Summary table of the estimates for differential expression of features
 #'
 #' @rdname hypothesisTest
 #'
-#' @aliases hypothesisTest hypothesisTest,SummarizedExperiment-method hypothesisTest,Features-method msqrobAggregate,Features-method
+#' @aliases hypothesisTest hypothesisTest,SummarizedExperiment-method hypothesisTest,Features-method hypothesisTestHurdle hypothesisTestHurdle,SummarizedExperiment-method hypothesisTestHurdle,Features-method
 #'
 #' @author Lieven Clement
 #'
@@ -49,6 +49,11 @@
 #' plot(-log10(pval)~logFC,rowData(pe[["protein"]])$"conditionc",col=(adjPval<0.05)+1,main="log2 FC c-a")
 #' plot(-log10(pval)~logFC,rowData(pe[["protein"]])$"conditionc - conditionb",col=(adjPval<0.05)+1,main="log2 FC c-b")
 #'
+#' #Hurdle method
+#' pe <- msqrobHurdle(pe,i="protein",formula=~condition)
+#' pe <- hypothesisTestHurdle(pe,i="protein",L)
+#' head(rowData(pe[["protein"]])$"hurdle_conditionb",10)
+#'
 #' @param object `SummarizedExperiment` or `Features` instance
 #' @param contrast `numeric` matrix specifying one or more contrasts of
 #'        the linear model coefficients to be tested equal to zero. If multiple
@@ -67,15 +72,18 @@
 #'        to controle the False Discovery Rate (FDR).
 #' @param modelColumn `character` to indicate the variable name that was used
 #'        to store the msqrob models in the rowData of the SummarizedExperiment
-#'        instance or of the assay of the Features instance. Default is "msqrobModels".
+#'        instance or of the assay of the Features instance. Default is "msqrobModels"
+#'        when the `hypothesisTest` function is used and "msqrobHurdle" for `hypothesisTestHurdle`.
 #' @param resultsColumnNamePrefix `character` to indicate the the prefix for the
 #'        variable name that will be used to store test results in the rowData of
 #'        the SummarizedExperiment instance or of the assay of the Features instance.
 #'        Default is "" so that the variable name with the results will be
 #'        the column name of the column in the contrast matrix L. If L is a matrix
 #'        with multiple columns, multiple results columns will be made, one for each
-#'        contrast. If L has no column names and if resultsColumnNamePrefix="" the
-#'        results will be stored in the column with name msqrobResults.
+#'        contrast. If L is a matrix with a single column which has no column names and if resultsColumnNamePrefix="" the
+#'        results will be stored in the column with name msqrobResults. For hypothesisTestHurdle
+#'        the default prefix is "hurdle_". If L is a matrix with one column and has no column names and if resultsColumnNamePrefix="hurdle_" the
+#'        results will be stored in the column with name hurdleResults.
 #'
 #' @export
 
@@ -98,6 +106,51 @@ setMethod("hypothesisTest","SummarizedExperiment",
             }
             return(object)
             })
+
+#' @export
+#' @rdname hypothesisTest
+
+setMethod("hypothesisTestHurdle", "SummarizedExperiment",
+          function(object,
+                   contrast,
+                   adjustMethod="BH",
+                   modelColumn="msqrobHurdle",
+                   resultsColumnNamePrefix="hurdle_",
+                   overwrite=FALSE){
+                   if(sum(paste0(modelColumn,c("Intensity","Count")) %in% colnames(rowData(object)))!=2) stop(paste0("There are no columns for the models of the hurdle components in the rowData of the SummarizedExperiment"))
+                   if(is.null(colnames(contrast)) & resultsColumnNamePrefix=="hurdle_") resultsColumnNamePrefix<-"hurdleResults"
+                   if(is.null(colnames(contrast)) & ncol(contrast)>1) colnames(contrast) <- 1:ncol(contrast)
+                   if((sum(paste0(resultsColumnNamePrefix,colnames(contrast)) %in% colnames(rowData(object)))>0)&!overwrite) stop(paste0("There is/are already column(s) named \'", paste(paste0(resultsColumnNamePrefix,colnames(contrast)),collapse="\' or \'"),"\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix"))
+                   for (j in 1:ncol(contrast))
+                   {
+                         contrHlp<-contrast[,j]
+                         names(contrHlp)<-rownames(contrast)
+                         intensityComponent <- topFeatures(rowData(object)[,paste0(modelColumn,"Intensity")],contrast=contrHlp,adjust.method=adjustMethod,sort=FALSE,alpha=1)
+                         countComponent <- topFeatures(rowData(object)[,paste0(modelColumn,"Count")],contrast=contrHlp,adjust.method=adjustMethod,sort=FALSE,alpha=1)
+
+                         sam <- cbind(intensityComponent[,1:5],
+                                      countComponent[,1:5])
+
+                         colnames(sam)[2:5] <- paste0("logFC", colnames(sam)[2:5])
+                         colnames(sam)[6] <- "logOR"
+                         colnames(sam)[7:10] <- paste0("logOR", colnames(sam)[7:10])
+
+                         sam$fisher <- -2*(log(sam[, 5]) + log(sam[, 10]))
+                         sam$fisherDf <- 4
+                         sam$fisherDf[is.na(sam$fisher)] <- 2
+                         id1 <- is.na(sam$fisher)&!is.na(sam[, 5])
+                         id2 <- is.na(sam$fisher)&!is.na(sam[, 10])
+                         sam$fisher[id1] <- -2 * log(sam[id1, 5])
+                         sam$fisher[id2] <- -2 * log(sam[id2, 10])
+
+                         sam$fisherPval <- pchisq(sam$fisher, sam$fisherDf, lower.tail = FALSE)
+                         sam$fisherAdjPval <- p.adjust(sam$fisherPval, adjustMethod)
+
+                         rowData(object)[[paste0(resultsColumnNamePrefix,colnames(contrast)[j])]] <- sam
+                   }
+                   return(object)
+                   })
+
 
 #' @param i `character` or `integer` to specify the element of the `Features` that
 #'        contains the log expression intensities that will be modelled.
@@ -130,18 +183,48 @@ setMethod("hypothesisTest","Features",
             return(object)
             })
 
-#setMethod("Hurdle", "Features"
-#          function(object,
-#                   i,
-#                   j,
-#                   contrast,
-#                   adjustMethod="BH",
-#                   modelColumni="msqrobModels",
-#                   modelColumnj="msqrobModels",
-#                   resultsColumnNamePrefix=c("hurdleComp1","hurdleComp2","hurdle"))
-#                   ){
-#    object <- hypothesisTest(object,i,contrast,adjustMethod="BH",modelColumn=modelColumni,resultsColumnNamePrefix=resultsColumnNamePrefix[1])
-#    object <- hypothesisTest(object,j,contrast,adjustMethod="BH",modelColumn=modelColumnj,resultsColumnNamePrefix=resultsColumnNamePrefix[1])
-#    object[[i]]
-#
-#}
+#' @export
+#' @rdname hypothesisTest
+
+setMethod("hypothesisTestHurdle", "Features",
+          function(object,
+                   i,
+                   contrast,
+                   adjustMethod="BH",
+                   modelColumn="msqrobHurdle",
+                   resultsColumnNamePrefix="hurdle_",
+                   overwrite=FALSE){
+                   if (is.null(object[[i]])) stop(paste0("Features object does not contain an assay with the name ",i))
+                   if(sum(paste0(modelColumn,c("Intensity","Count")) %in% colnames(rowData(object[[i]])))!=2) stop(paste0("There are no columns for the models of the hurdle components in the rowData of assay ",i,"of the Features object."))
+                   if(is.null(colnames(contrast)) & resultsColumnNamePrefix=="hurdle_") resultsColumnNamePrefix<-"hurdleResults"
+                   if(is.null(colnames(contrast)) & ncol(contrast)>1) colnames(contrast) <- 1:ncol(contrast)
+                   if((sum(paste0(resultsColumnNamePrefix,colnames(contrast)) %in% colnames(rowData(object[[i]])))>0)&!overwrite) stop(paste0("There is/are already column(s) named \'", paste(paste0(resultsColumnNamePrefix,colnames(contrast)),collapse="\' or \'"),"\' in the rowData of assay ",i," of the Features object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix"))
+                   for (j in 1:ncol(contrast))
+                   {
+                         contrHlp<-contrast[,j]
+                         names(contrHlp)<-rownames(contrast)
+                         intensityComponent <- topFeatures(rowData(object[[i]])[,paste0(modelColumn,"Intensity")],contrast=contrHlp,adjust.method=adjustMethod,sort=FALSE,alpha=1)
+                         countComponent <- topFeatures(rowData(object[[i]])[,paste0(modelColumn,"Count")],contrast=contrHlp,adjust.method=adjustMethod,sort=FALSE,alpha=1)
+
+                         sam <- cbind(intensityComponent[,1:5],
+                                      countComponent[,1:5])
+
+                         colnames(sam)[2:5] <- paste0("logFC", colnames(sam)[2:5])
+                         colnames(sam)[6] <- "logOR"
+                         colnames(sam)[7:10] <- paste0("logOR", colnames(sam)[7:10])
+
+                         sam$fisher <- -2*(log(sam[, 5]) + log(sam[, 10]))
+                         sam$fisherDf <- 4
+                         sam$fisherDf[is.na(sam$fisher)] <- 2
+                         id1 <- is.na(sam$fisher)&!is.na(sam[, 5])
+                         id2 <- is.na(sam$fisher)&!is.na(sam[, 10])
+                         sam$fisher[id1] <- -2 * log(sam[id1, 5])
+                         sam$fisher[id2] <- -2 * log(sam[id2, 10])
+
+                         sam$fisherPval <- pchisq(sam$fisher, sam$fisherDf, lower.tail = FALSE)
+                         sam$fisherAdjPval <- p.adjust(sam$fisherPval, adjustMethod)
+
+                         rowData(object[[i]])[[paste0(resultsColumnNamePrefix,colnames(contrast)[j])]] <- sam
+                   }
+                   return(object)
+                   })
