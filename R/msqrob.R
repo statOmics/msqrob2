@@ -398,7 +398,7 @@ msqrobLmer <- function(y,
     i <- -seq_len(ncol(X))
     vcovInv[i, i] <- vcovInv[i, i] + Ginv
     vcovInv <- Matrix::solve(vcovInv)
-    ranefLevels <- imap(model@flist,~{paste0(.y, levels(.x))})
+    ranefLevels <- imap(model@flist, ~{paste0(.y, levels(.x))})
     zNames <- unlist(lapply(1:length(model@cnms), 
                             function(x, cnms, levels) 
                               c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0)),
@@ -482,7 +482,7 @@ msqrobGlm <- function(y,
                     model <- list(coefficients = NA, vcovUnscaled = NA,
                                   sigma = NA, df.residual = NA, w = NULL)
                     if (npep[i] >= max(y[i, ])){
-                            mod <- try(glm.fit(y = cbind(y[i, ],npep[i] - y[i, ]) + priorCount,
+                            mod <- try(glm.fit(y = cbind(y[i, ], npep[i] - y[i, ]) + priorCount,
                                            x = myDesign,
                                            family = binomial())
                                       )
@@ -509,8 +509,8 @@ msqrobGlm <- function(y,
   hlp <- limma::squeezeVar(var = sapply(models, getVar), df = sapply(models, getDF))
   
   for (i in 1:length(models)) {
-    models[[i]]@varPosterior<-as.numeric(hlp$var.post[i])
-    models[[i]]@dfPosterior<-as.numeric(hlp$df.prior + getDF(models[[i]]))
+    models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
+    models[[i]]@dfPosterior <- as.numeric(hlp$df.prior + getDF(models[[i]]))
     
     if (!is.na(models[[i]]@varPosterior) & binomialBound)
         if (models[[i]]@varPosterior < 1) {
