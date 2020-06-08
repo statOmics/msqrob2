@@ -62,7 +62,7 @@
 #' data(pe)
 #'
 #' # Aggregate peptide intensities to protein expression values
-#' pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
+#' pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
 #'
 #' # Fit Hurdle MSqrob model
 #' # For summarized SummarizedExperiment
@@ -91,35 +91,35 @@
 setMethod("msqrobHurdle","SummarizedExperiment",
           function(object,
                    formula,
-                   modelColumnName="msqrobHurdle",
-                   overwrite=FALSE,
-                   robust=TRUE,
-                   ridge=FALSE,
-                   maxitRob=1,
-                   tol=1e-6,
+                   modelColumnName = "msqrobHurdle",
+                   overwrite = FALSE,
+                   robust = TRUE,
+                   ridge = FALSE,
+                   maxitRob = 1,
+                   tol = 1e-6,
                    doQR=TRUE,
-                   lmerArgs= list(control = lmerControl(calc.derivs = FALSE)),
-                   priorCount=.1,
-                   binomialBound=TRUE){
+                   lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
+                   priorCount = .1,
+                   binomialBound = TRUE){
 
-           if (ncol(colData(object))==0) stop("error: colData is empty")
-           if((sum(grep(pattern=modelColumnName,colnames(rowData(object))))>0)&!overwrite) stop(paste0("There are already columns with names starting with\'",
+           if (ncol(colData(object)) == 0) stop("error: colData is empty")
+           if((sum(grep(pattern = modelColumnName,colnames(rowData(object))))>0) &! overwrite) stop(paste0("There are already columns with names starting with\'",
                                                                                modelColumnName,
                                                                                "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the columns with the new results or use another name for the argument modelColumnName to store the results as novel columns in the rowData of SummarizedExperiment object"))
            if(!(".n" %in% colnames(rowData(object)))) stop("The assay does not seem to be aggregated so the number of features used for aggregation are not available")
-           if (!ridge)  rowData(object)[[paste0(modelColumnName,"Intensity")]]<-msqrobLm(y=assay(object),
-                                                                     formula=formula,
-                                                                     data=colData(object),
-                                                                     robust=robust,
-                                                                     maxitRob=maxitRob) else
-                        rowData(object)[[paste0(modelColumnName,"Intensity")]]<-msqrobLmer(y=assay(object),
-                                                                       formula=formula,
-                                                                       data=colData(object),
-                                                                       robust=robust,
-                                                                       maxitRob=maxitRob,
-                                                                       tol=tol,
-                                                                       doQR=doQR,
-                                                                       lmerArgs = lmerArgs)
+           if (!ridge)  rowData(object)[[paste0(modelColumnName,"Intensity")]] <- msqrobLm(y = assay(object),
+                                                                                           formula = formula,
+                                                                                           data = colData(object),
+                                                                                           robust = robust,
+                                                                                           maxitRob = maxitRob) else
+                        rowData(object)[[paste0(modelColumnName,"Intensity")]] <- msqrobLmer(y = assay(object),
+                                                                                             formula = formula,
+                                                                                             data = colData(object),
+                                                                                             robust = robust,
+                                                                                             maxitRob = maxitRob,
+                                                                                             tol = tol,
+                                                                                             doQR = doQR,
+                                                                                             lmerArgs = lmerArgs)
            rowData(object)[[paste0(modelColumnName,"Count")]] <- msqrobGlm(aggcounts(object),
                                                            rowData(object)[[".n"]],
                                                            formula,
@@ -138,42 +138,42 @@ setMethod("msqrobHurdle","Features",
           function(object,
                    i,
                    formula,
-                   modelColumnName="msqrobHurdle",
-                   overwrite=FALSE,
-                   robust=TRUE,
-                   ridge=FALSE,
-                   maxitRob=1,
-                   tol=1e-6,
-                   doQR=TRUE,
-                   lmerArgs= list(control = lmerControl(calc.derivs = FALSE)),
-                   priorCount=.1,
-                   binomialBound=TRUE){
+                   modelColumnName = "msqrobHurdle",
+                   overwrite = FALSE,
+                   robust = TRUE,
+                   ridge = FALSE,
+                   maxitRob = 1,
+                   tol = 1e-6,
+                   doQR = TRUE,
+                   lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
+                   priorCount = .1,
+                   binomialBound = TRUE){
 
            if (ncol(colData(object))==0) stop("error: colData is empty")
-           if((sum(grep(pattern=modelColumnName,colnames(rowData(object[[i]]))))>0)&!overwrite) stop(paste0("There are already columns with names starting with\'",
+           if((sum(grep(pattern=modelColumnName,colnames(rowData(object[[i]]))))>0) &! overwrite) stop(paste0("There are already columns with names starting with\'",
                                                                                modelColumnName,
                                                                                "\' in the rowData of assay ",
                                                                                i,
                                                                                " of the Features object, set the argument overwrite=TRUE to replace the columns with the new results or use another name for the argument modelColumnName to store the results as novel columns in the rowData"))
            if(!(".n" %in% colnames(rowData(object[[i]])))) stop("The assay does not seem to be aggregated so the number of features used for aggregation is not available")
-           if (!ridge)  rowData(object[[i]])[[paste0(modelColumnName,"Intensity")]]<-msqrobLm(y=assay(object[[i]]),
-                                                                     formula=formula,
-                                                                     data=colData(object),
-                                                                     robust=robust,
-                                                                     maxitRob=maxitRob) else
-                        rowData(object[[i]])[[paste0(modelColumnName,"Intensity")]]<-msqrobLmer(y=assay(object[[i]]),
-                                                                       formula=formula,
-                                                                       data=colData(object),
-                                                                       robust=robust,
-                                                                       maxitRob=maxitRob,
-                                                                       tol=tol,
-                                                                       doQR=doQR,
+           if (!ridge)  rowData(object[[i]])[[paste0(modelColumnName,"Intensity")]] <- msqrobLm(y = assay(object[[i]]),
+                                                                                                formula = formula,
+                                                                                                data = colData(object),
+                                                                                                robust = robust,
+                                                                                                maxitRob = maxitRob) else
+                        rowData(object[[i]])[[paste0(modelColumnName,"Intensity")]] <- msqrobLmer(y = assay(object[[i]]),
+                                                                       formula = formula,
+                                                                       data = colData(object),
+                                                                       robust = robust,
+                                                                       maxitRob = maxitRob,
+                                                                       tol = tol,
+                                                                       doQR = doQR,
                                                                        lmerArgs = lmerArgs)
            rowData(object[[i]])[[paste0(modelColumnName,"Count")]] <- msqrobGlm(aggcounts(object[[i]]),
-                                                           rowData(object[[i]])[[".n"]],
-                                                           formula,
-                                                           colData(object),
-                                                           priorCount=priorCount,
-                                                           binomialBound=binomialBound)
+                                                                                rowData(object[[i]])[[".n"]],
+                                                                                formula,
+                                                                                colData(object),
+                                                                                priorCount = priorCount,
+                                                                                binomialBound = binomialBound)
            return(object)
 })

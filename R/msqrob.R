@@ -452,7 +452,7 @@ msqrobLmer <- function(y,
 #' @param priorCount A 'numeric(1)', which is a prior count to be added to the observations to shrink
 #'          the estimated log-fold-changes towards zero.
 #'
-#' @param binomialBound: logical, if ‘TRUE’ then the quasibinomial variance estimator will
+#' @param binomialBound: logical, if ‘TRUE’ then the quasi-binomial variance estimator will
 #'        be never smaller than 1 (no underdispersion).
 #'
 #' @examples
