@@ -361,7 +361,7 @@ msqrobLmer <- function(y,
                                                  dfPosterior = as.numeric(NA)))
                          },
                          form = update.formula(form, y~.),
-                         data = df)
+                         data = df, BPPARAM = bpparam())
 
     hlp <- limma::squeezeVar(var = sapply(models, getVar), df = sapply(models, getDF))
     
