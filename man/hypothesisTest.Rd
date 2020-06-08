@@ -4,9 +4,11 @@
 \alias{hypothesisTest,SummarizedExperiment-method}
 \alias{hypothesisTest}
 \alias{hypothesisTest,Features-method}
-\alias{msqrobAggregate,Features-method}
+\alias{hypothesisTestHurdle}
+\alias{hypothesisTestHurdle,SummarizedExperiment-method}
+\alias{hypothesisTestHurdle,Features-method}
 \title{Parameter estimates, standard errors and statistical inference on differential
-expression}
+expression analysis}
 \usage{
 \S4method{hypothesisTest}{SummarizedExperiment}(
   object,
@@ -17,6 +19,15 @@ expression}
   overwrite = FALSE
 )
 
+\S4method{hypothesisTestHurdle}{SummarizedExperiment}(
+  object,
+  contrast,
+  adjustMethod = "BH",
+  modelColumn = "msqrobHurdle",
+  resultsColumnNamePrefix = "hurdle_",
+  overwrite = FALSE
+)
+
 \S4method{hypothesisTest}{Features}(
   object,
   i,
@@ -24,6 +35,16 @@ expression}
   adjust.method = "BH",
   modelColumn = "msqrobModels",
   resultsColumnNamePrefix = "",
+  overwrite = FALSE
+)
+
+\S4method{hypothesisTestHurdle}{Features}(
+  object,
+  i,
+  contrast,
+  adjustMethod = "BH",
+  modelColumn = "msqrobHurdle",
+  resultsColumnNamePrefix = "hurdle_",
   overwrite = FALSE
 )
 }
@@ -49,7 +70,8 @@ to controle the False Discovery Rate (FDR).}
 
 \item{modelColumn}{\code{character} to indicate the variable name that was used
 to store the msqrob models in the rowData of the SummarizedExperiment
-instance or of the assay of the Features instance. Default is "msqrobModels".}
+instance or of the assay of the Features instance. Default is "msqrobModels"
+when the \code{hypothesisTest} function is used and "msqrobHurdle" for \code{hypothesisTestHurdle}.}
 
 \item{resultsColumnNamePrefix}{\code{character} to indicate the the prefix for the
 variable name that will be used to store test results in the rowData of
@@ -57,8 +79,10 @@ the SummarizedExperiment instance or of the assay of the Features instance.
 Default is "" so that the variable name with the results will be
 the column name of the column in the contrast matrix L. If L is a matrix
 with multiple columns, multiple results columns will be made, one for each
-contrast. If L has no column names and if resultsColumnNamePrefix="" the
-results will be stored in the column with name msqrobResults.}
+contrast. If L is a matrix with a single column which has no column names and if resultsColumnNamePrefix="" the
+results will be stored in the column with name msqrobResults. For hypothesisTestHurdle
+the default prefix is "hurdle_". If L is a matrix with one column and has no column names and if resultsColumnNamePrefix="hurdle_" the
+results will be stored in the column with name hurdleResults.}
 
 \item{i}{\code{character} or \code{integer} to specify the element of the \code{Features} that
 contains the log expression intensities that will be modelled.}
@@ -109,6 +133,11 @@ par(mfrow=c(1,3))
 plot(-log10(pval)~logFC,rowData(pe[["protein"]])$"conditionb",col=(adjPval<0.05)+1,main="log2 FC b-a")
 plot(-log10(pval)~logFC,rowData(pe[["protein"]])$"conditionc",col=(adjPval<0.05)+1,main="log2 FC c-a")
 plot(-log10(pval)~logFC,rowData(pe[["protein"]])$"conditionc - conditionb",col=(adjPval<0.05)+1,main="log2 FC c-b")
+
+#Hurdle method
+pe <- msqrobHurdle(pe,i="protein",formula=~condition)
+pe <- hypothesisTestHurdle(pe,i="protein",L)
+head(rowData(pe[["protein"]])$"hurdle_conditionb",10)
 
 }
 \author{

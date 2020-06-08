@@ -32,3 +32,7 @@ setGeneric("hypothesisTest",function(object,...) standardGeneric("hypothesisTest
 setGeneric("getMsqrobResults",function(object,...) standardGeneric("getMsqrobResults"))
 #' @export
 setGeneric("msqrobQB",function(object,...) standardGeneric("msqrobQB"))
+#' @export
+setGeneric("msqrobHurdle",function(object,...) standardGeneric("msqrobHurdle"))
+#' @export
+setGeneric("hypothesisTestHurdle",function(object,...) standardGeneric("hypothesisTestHurdle"))

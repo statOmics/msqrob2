@@ -3,8 +3,6 @@
 #' @description Parameter estimation of msqrob models for `Features`
 #'              and `SummarizedExperiment` instance.
 #'
-#' @rdname msqrob
-#'
 #' @aliases msqrob msqrob,SummarizedExperiment-method msqrob,Features-method
 #'
 #' @author Lieven Clement

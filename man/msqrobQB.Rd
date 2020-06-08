@@ -11,9 +11,8 @@ msqrobGlm(y, npep, formula, data, priorCount = 0.1, binomialBound = TRUE)
   object,
   i,
   formula,
-  modelColumnName = "msqrobModels",
+  modelColumnName = "msqrobQbModels",
   overwrite = FALSE,
-  nFeat = "nPep",
   priorCount = 0.1,
   binomialBound = TRUE
 )
