@@ -11,7 +11,7 @@ output:
 In this vignette, we assess the performance of the MSqRob Hurdle workflow for
 differential expression analysis using a publicly available
 spike-in study (PRIDE identifier: PXD003881 Shen et al. [2018]). E. Coli lysates
-were spiked at five different concentrations (3%, 4.5%, 6%, 7.5% and 9% wt/wt)
+were spiked in at five different concentrations (3%, 4.5%, 6%, 7.5% and 9% wt/wt)
 in a stable human background (four replicates per treatment). The samples were
 run on an Orbitrap Fusion mass spectrometer. Raw data files were processed with
 MaxQuant (version 1.6.1.0, Cox and Mann [2008]) using default search settings
@@ -35,11 +35,12 @@ We first import the peptides.txt file. This is the file that contains your
 peptide-level intensities. For a MaxQuant search [6], this peptides.txt file can
 be found by default in the "path_to_raw_files/combined/txt/" folder from the
 MaxQuant output, with "path_to_raw_files" the folder where raw files were saved.
-In this tutorial, we will use a MaxQuant peptides file of the ecoli spike-in
-study that is stored in the msdata package. We use the Features package to import the data.
+In this tutorial, we will use a MaxQuant peptides file from the ecoli spike-in
+study that is stored in the msdata package. We use the `Features` package to
+import the data.
 
-With the grepEcols function we find the columns that are containing the
-expression data of the peptides in the peptides.txt file.
+With the `grepEcols` function we find the columns that contain the
+expression data of the peptides in the `peptides.txt` file.
 
 ```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
@@ -47,7 +48,7 @@ library(limma)
 library(Features)
 library(msqrob2)
 
-myurl<- "https://www.dropbox.com/s/62hhol96pz0sjbi/peptides.zip?dl=0"
+myurl <- "https://www.dropbox.com/s/62hhol96pz0sjbi/peptides.zip?dl=0"
 download.file(myurl, "peptides.zip", method = "curl", extra = "-L")
 unzip("peptides.zip")
 peptidesFile <- "peptides.txt"
@@ -57,15 +58,16 @@ pe <- readFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
 pe
 ```
 
-We can extract the spikein condition from the raw file name.
+We can extract the spike-in condition from the raw file name.
 
 ```{r}
-cond <- which(strsplit(colnames(pe)[[1]][1], split = "")[[1]] == "a") # find where condition is stored
+# find where condition is stored
+cond <- which(strsplit(colnames(pe)[[1]][1], split = "")[[1]] == "a")
 colData(pe)$condition <- substr(colnames(pe), cond, cond) %>% unlist %>%  as.factor
 ```
 
-We calculate how many non zero intensities we have per peptide.
-This will be useful for filtering.
+We calculate how many non zero intensities we have for each peptide.
+This is going to be useful for filtering.
 
 ```{r}
 rowData(pe[["peptideRaw"]])$nNonZero <- rowSums(assay(pe[["peptideRaw"]]) > 0)
@@ -80,11 +82,11 @@ pe <- zeroIsNA(pe, i = "peptideRaw")
 
 ## Information on species
 
-In the spikin-study there are peptides from ecoli and human proteins.
-The ecoli peptides are spiked.
+In the spikin-study, there are peptides from ecoli and human proteins.
+The ecoli peptides are spiked in.
 
 ```{r}
-myurl<- "https://www.dropbox.com/s/swhu9nqwktythtb/ecoli_up000000625_7_06_2018.fasta?dl=0"
+myurl <- "https://www.dropbox.com/s/swhu9nqwktythtb/ecoli_up000000625_7_06_2018.fasta?dl=0"
 download.file(myurl, "ecoli.fasta", method="curl", extra="-L")
 myurl<-"https://www.dropbox.com/s/n61n28wrcpwsb4a/human_up000005640_sp_7_06_2018.fasta?dl=0"
 download.file(myurl, "human.fasta", method="curl", extra="-L")
@@ -113,8 +115,8 @@ MSnbase::plotNA(assay(pe)) +
 
 # Preprocessing
 
-We  normalize the data using vsn normalisation. Note,
-that the data should not be log-transformed then.
+We  normalize the data using `vsn` normalisation. Note,
+that the data should not be log-transformed prior to using `vsn` normalisation.
 
 
 ## Filtering
@@ -140,7 +142,7 @@ Potential.contaminant!="+", ]
 
 ### Drop peptides that were only identified in one sample
 
-We want to keep peptide that were at least observed twice.
+We want to keep peptide that were observed at least twice.
 
 ```{r}
 pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$nNonZero >= 2, ]
@@ -173,7 +175,8 @@ limma::plotMDS(assay(pe[["peptideNorm"]]), col = as.numeric(colData(pe)$conditio
 
 The first axis in the plot is showing the leading log fold changes
 (differences on the log scale) between the samples. We notice that the
-leading differences (log FC) in the peptide data seems to be driven by the spike-in condition.
+leading differences (log FC) in the peptide data seems to be driven
+by the spike-in condition.
 
 
 ## Summarization to protein level
@@ -187,17 +190,19 @@ pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", na.rm = TRUE, 
 ```
 
 ```{r}
-plotMDS(assay(pe[["protein"]]),col = as.numeric(colData(pe)$condition))
+plotMDS(assay(pe[["protein"]]), col = as.numeric(colData(pe)$condition))
 ```
 
 # Data Analysis
 
 ## Estimation
 
-With the hurdle approach we model the protein level expression values using msqrob.
-By default the hurdle model estimates the model parameters for the model component that models the protein intensities using robust regression.
+With the hurdle approach, we model the protein level expression values using msqrob.
+By default the hurdle model estimates the model parameters using robust regression.
 By default, this model component is stored in the row data under name "msqrobHurdleIntensity".
-The number of peptides that were used to summarize to protein level expression values are modelled using a quasibinomial model. This model component is stored by default in the row data under the name "msqrobHurdleCount".
+The number of peptides that were used to summarize to protein level expression
+values are modelled using a quasi-binomial model. This model component is
+stored by default in the row data under the name "msqrobHurdleCount".
 
 ```{r, warning=FALSE}
 pe <- msqrobHurdle(object = pe, i = "protein", formula = ~condition)
@@ -206,7 +211,7 @@ pe <- msqrobHurdle(object = pe, i = "protein", formula = ~condition)
 
 ## Inference
 
-What are the parameter names of the model?
+The following chunk extracts the parameter names of the model.
 ```{r}
 getCoef(rowData(pe[["protein"]])$msqrobHurdleIntensity[[1]])
 ```
@@ -215,9 +220,9 @@ Spike-in condition a is the reference class.
 So the mean log2 expression for samples from condition a is
 '(Intercept). The mean log2 expression for samples from condition b-e is
 '(Intercept)+conditionb',...,'(Intercept)+conditione', respectively. Hence, the
-average log2 fold change (FC) between condition b and condition a is modelled using the parameter 'conditionb'.
-Thus, we assess the contrast 'conditionb = 0' with our statistical test.
-The same holds for comparison c-a, d-a, e-a.
+average log2 fold change (FC) between condition b and condition a is modelled
+using the parameter 'conditionb'. Thus, we assess the contrast 'conditionb = 0'
+with our statistical test. The same holds for comparison c-a, d-a, e-a.
 
 ```{r}
 comparisonsRef <- paste0(paste0("condition", letters[2:5]), " = 0")
@@ -256,7 +261,7 @@ pe <- hypothesisTestHurdle(object = pe, i = "protein", contrast = L)
 Compare it with inference on MSqRob native, i.e. the intensity component only
 
 ```{r}
-pe <- hypothesisTest(object = pe, i = "protein", contrast = L,modelColumn="msqrobHurdleIntensity")
+pe <- hypothesisTest(object = pe, i = "protein", contrast = L, modelColumn="msqrobHurdleIntensity")
 ```
 
 
@@ -269,16 +274,16 @@ pe <- hypothesisTest(object = pe, i = "protein", contrast = L,modelColumn="msqro
 ```{r}
 for (i in colnames(L)) {
 sigNames <- rowData(pe[["protein"]])[[paste0("hurdle_", i)]] %>%
-    rownames_to_column("protein") %>% filter(fisherAdjPval<0.01) %>% pull(protein)
-heatmap(assay(pe[["protein"]])[sigNames, ] , main=i)
+    rownames_to_column("protein") %>% filter(fisherAdjPval < 0.01) %>% pull(protein)
+heatmap(assay(pe[["protein"]])[sigNames, ], main=i)
 }
 ```
 
 ## Sensitivity FDP plots
 
-Because we are analysing a spike-in study we know the ground truth,
-i.e. we know that only the spike-in proteins (ecoli) are differentially expressed.
-We can therefore evaluate the performance of the method, i.e. we will assess
+Since we are analysing a spike-in study, we know the ground truth.
+That is, we know that only the spike-in proteins (ecoli) are differentially expressed.
+We can therefore evaluate the performance of the method, i.e. we assess
 
 - the sensitivity or true positive rate (TPR), the proportion of actual
 positives that are correctly identified, in the protein list that we return
@@ -291,7 +296,7 @@ in the protein list that we return:
 $$FPD=\frac{FP}{FP+TP},$$
 with FP the false positives. In our case the yeast proteins that are in our list.
 
-Instead of only calculating that for the protein list that is returned for the
+Instead of only calculating these quantities for the protein list that is returned for the
 chosen FDR level, we can do this for all possible FDR cutoffs so that we get
 an overview of the quality of the ranking of the proteins in the protein list.
 
