@@ -220,71 +220,8 @@ $(document).ready(function () {
 </div>
 <div id="data" class="section level1">
 <h1><span class="header-section-number">2</span> Data</h1>
-<pre class="r"><code>library(msqrob2)</code></pre>
-<pre><code>## Loading required package: Features</code></pre>
-<pre><code>## Loading required package: MultiAssayExperiment</code></pre>
-<pre><code>## Loading required package: SummarizedExperiment</code></pre>
-<pre><code>## Loading required package: GenomicRanges</code></pre>
-<pre><code>## Loading required package: stats4</code></pre>
-<pre><code>## Loading required package: BiocGenerics</code></pre>
-<pre><code>## Loading required package: parallel</code></pre>
-<pre><code>## 
-## Attaching package: 'BiocGenerics'</code></pre>
-<pre><code>## The following objects are masked from 'package:parallel':
-## 
-##     clusterApply, clusterApplyLB, clusterCall, clusterEvalQ,
-##     clusterExport, clusterMap, parApply, parCapply, parLapply,
-##     parLapplyLB, parRapply, parSapply, parSapplyLB</code></pre>
-<pre><code>## The following objects are masked from 'package:stats':
-## 
-##     IQR, mad, sd, var, xtabs</code></pre>
-<pre><code>## The following objects are masked from 'package:base':
-## 
-##     Filter, Find, Map, Position, Reduce, anyDuplicated, append,
-##     as.data.frame, basename, cbind, colnames, dirname, do.call,
-##     duplicated, eval, evalq, get, grep, grepl, intersect,
-##     is.unsorted, lapply, mapply, match, mget, order, paste, pmax,
-##     pmax.int, pmin, pmin.int, rank, rbind, rownames, sapply,
-##     setdiff, sort, table, tapply, union, unique, unsplit, which,
-##     which.max, which.min</code></pre>
-<pre><code>## Loading required package: S4Vectors</code></pre>
-<pre><code>## 
-## Attaching package: 'S4Vectors'</code></pre>
-<pre><code>## The following object is masked from 'package:base':
-## 
-##     expand.grid</code></pre>
-<pre><code>## Loading required package: IRanges</code></pre>
-<pre><code>## Loading required package: GenomeInfoDb</code></pre>
-<pre><code>## Loading required package: Biobase</code></pre>
-<pre><code>## Welcome to Bioconductor
-## 
-##     Vignettes contain introductory material; view with
-##     'browseVignettes()'. To cite Bioconductor, see
-##     'citation(&quot;Biobase&quot;)', and for packages 'citation(&quot;pkgname&quot;)'.</code></pre>
-<pre><code>## Loading required package: DelayedArray</code></pre>
-<pre><code>## Loading required package: matrixStats</code></pre>
-<pre><code>## 
-## Attaching package: 'matrixStats'</code></pre>
-<pre><code>## The following objects are masked from 'package:Biobase':
-## 
-##     anyMissing, rowMedians</code></pre>
-<pre><code>## Loading required package: BiocParallel</code></pre>
-<pre><code>## 
-## Attaching package: 'DelayedArray'</code></pre>
-<pre><code>## The following objects are masked from 'package:matrixStats':
-## 
-##     colMaxs, colMins, colRanges, rowMaxs, rowMins, rowRanges</code></pre>
-<pre><code>## The following objects are masked from 'package:base':
-## 
-##     aperm, apply, rowsum</code></pre>
-<pre><code>## Loading required package: lme4</code></pre>
-<pre><code>## Loading required package: Matrix</code></pre>
-<pre><code>## 
-## Attaching package: 'Matrix'</code></pre>
-<pre><code>## The following object is masked from 'package:S4Vectors':
-## 
-##     expand</code></pre>
-<pre class="r"><code>download.file(&quot;https://www.dropbox.com/s/v82idlt6wqp8l7t/TMT-Ecoli-spike-in.rds?dl=0&quot;, &quot;tmtEcoliSpikeIn.RDS&quot;, method=&quot;curl&quot;, extra = &quot;-L&quot;)
+<pre class="r"><code>library(msqrob2)
+download.file(&quot;https://www.dropbox.com/s/v82idlt6wqp8l7t/TMT-Ecoli-spike-in.rds?dl=0&quot;, &quot;tmtEcoliSpikeIn.RDS&quot;, method=&quot;curl&quot;, extra = &quot;-L&quot;)
 df &lt;- readRDS(&quot;tmtEcoliSpikeIn.RDS&quot;)</code></pre>
 <p>We make a unique name per psm and read in data. The intensities are in the columns starting with the string “tmt10plex”.</p>
 <pre class="r"><code>ecols&lt;-grep(&quot;tmt10plex&quot;,colnames(df))
@@ -294,8 +231,8 @@ colData(pe)$condition&lt;-as.factor(c(rep(&quot;a&quot;,3),rep(&quot;b&quot;,4),
 rm(df)
 gc()</code></pre>
 <pre><code>##            used  (Mb) gc trigger  (Mb) limit (Mb) max used  (Mb)
-## Ncells  5929150 316.7    9306657 497.1         NA  7889235 421.4
-## Vcells 23025138 175.7   38204688 291.5      16384 31540984 240.7</code></pre>
+## Ncells  6066910 324.1    9306657 497.1         NA  9306657 497.1
+## Vcells 24475070 186.8   72642107 554.3      16384 72642107 554.3</code></pre>
 <p>We calculate how many non zero intensities we have per peptide. This will be useful for filtering.</p>
 <pre class="r"><code>rowData(pe[[&quot;psmRaw&quot;]])$nNonZero &lt;- rowSums(assay(pe[[&quot;psmRaw&quot;]]) &gt; 0)</code></pre>
 <p>Peptides with zero intensities are missing peptides and should be represent with a <code>NA</code> value instead of <code>0</code>.</p>
@@ -336,9 +273,9 @@ pe &lt;- filterFeatures(pe,filtObserved)</code></pre>
 <div id="normalisation" class="section level2">
 <h2><span class="header-section-number">3.4</span> Normalisation</h2>
 <p>We use a DESeq2 style normalisation to correct for differences in mass loading in the different reporter channels.</p>
-<p><span class="math display">\[ s_j = median_i \left[\fract{y_{ij}}{median_k(y_ik)}}\right] \]</span></p>
+<p><span class="math display">\[ s_j = median_i \left[\frac{y_{ij}}{median_k(y_{ik})}\right] \]</span></p>
 <p>On a log scale this becomes an offset:</p>
-<p><span class="math display">\[ \log_2 s_j = median_i \left[ \left(\log_2 y_{ij} - median_k(\log2 y_{ik})\right)\right] \]</span></p>
+<p><span class="math display">\[ \log_2 s_j = median_i \left[ \left(\log_2 y_{ij} - median_k(\log_2 y_{ik})\right)\right] \]</span></p>
 <pre class="r"><code>offset &lt;- colMedians(assay(pe[[&quot;protein&quot;]])-rowMedians(assay(pe[[&quot;protein&quot;]]),na.rm=TRUE),na.rm=TRUE)
 assay(pe[[&quot;protein&quot;]]) &lt;- t(t(assay(pe[[&quot;protein&quot;]]))-offset)</code></pre>
 </div>

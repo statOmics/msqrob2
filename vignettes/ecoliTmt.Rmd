@@ -94,11 +94,11 @@ pe <- aggregateFeatures(pe,
 
 We use a DESeq2 style normalisation to correct for differences in mass loading in the different reporter channels.
 
-$$ s_j = median_i \left[\fract{y_{ij}}{median_k(y_ik)}}\right] $$
+$$ s_j = median_i \left[\frac{y_{ij}}{median_k(y_{ik})}\right] $$
 
 On a log scale this becomes an offset:
 
-$$ \log_2 s_j = median_i \left[ \left(\log_2 y_{ij} - median_k(\log2 y_{ik})\right)\right] $$
+$$ \log_2 s_j = median_i \left[ \left(\log_2 y_{ij} - median_k(\log_2 y_{ik})\right)\right] $$
 
 ```{r}
 offset <- colMedians(assay(pe[["protein"]])-rowMedians(assay(pe[["protein"]]),na.rm=TRUE),na.rm=TRUE)
