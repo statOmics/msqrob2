@@ -88,6 +88,7 @@ pe <- aggregateFeatures(pe,
                         fun=MsCoreUtils::medianPolish,
                         na.rm=TRUE
                         )
+limma::plotDensities(assay(pe[["protein"]]),col=colPal(10))
 ```
 
 ## Normalisation
@@ -103,6 +104,7 @@ $$ \log_2 s_j = median_i \left[ \left(\log_2 y_{ij} - median_k(\log_2 y_{ik})\ri
 ```{r}
 offset <- colMedians(assay(pe[["protein"]])-rowMedians(assay(pe[["protein"]]),na.rm=TRUE),na.rm=TRUE)
 assay(pe[["protein"]]) <- t(t(assay(pe[["protein"]]))-offset)
+limma::plotDensities(assay(pe[["protein"]]),col=colPal(10))
 ```
 
 # Analysis
