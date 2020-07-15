@@ -15,10 +15,10 @@ Authors@R:
 Description: Robust statistical inference for quantitative proteomics
    using the Feature infrastructure for quantitative mass spectrometry
    data.
-Depends: R (>= 3.6.0), Features (>= 0.6.1), methods, lme4
+Depends: R (>= 3.6.0), QFeatures (>= 0.6.1), methods, lme4
 Imports: MASS, limma
 Remotes:
-   RforMassSpectrometry/Features
+   RforMassSpectrometry/QFeatures
 License: Artistic-2.0
 Collate: 'msqrob-framework.R' 'allGenerics.R'
         'accessors.R' 'msqrob.R' 'msqrob-utils.R' 'StatModel-methods.R'
