@@ -2,12 +2,12 @@
 % Please edit documentation in R/msqrob.R, R/msqrobQB.R
 \name{msqrobGlm}
 \alias{msqrobGlm}
-\alias{msqrobQB,Features-method}
+\alias{msqrobQB,QFeatures-method}
 \title{Function to fit msqrob models to peptide counts using glm}
 \usage{
 msqrobGlm(y, npep, formula, data, priorCount = 0.1, binomialBound = TRUE)
 
-\S4method{msqrobQB}{Features}(
+\S4method{msqrobQB}{QFeatures}(
   object,
   i,
   formula,
@@ -31,7 +31,7 @@ the same number of rows as the number of columns (samples) of
 \item{priorCount}{A 'numeric(1)', which is a prior count to be added to the observations to shrink
 the estimated log-fold-changes towards zero.}
 
-\item{i}{\code{character} or \code{integer} to specify the element of the \code{Features} that
+\item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
 contains the log expression intensities that will be modelled.}
 
 \item{nPep}{A vector with number of peptides per protein. It has as length

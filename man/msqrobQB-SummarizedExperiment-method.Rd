@@ -3,7 +3,7 @@
 \name{msqrobQB,SummarizedExperiment-method}
 \alias{msqrobQB,SummarizedExperiment-method}
 \alias{msqrobQB}
-\alias{msqrobQB,Features-method}
+\alias{msqrobQB,QFeatures-method}
 \title{Function to fit msqrob models to peptide counts using glm}
 \usage{
 \S4method{msqrobQB}{SummarizedExperiment}(
@@ -16,14 +16,14 @@
 )
 }
 \arguments{
-\item{object}{\code{SummarizedExperiment} or \code{Features} instance}
+\item{object}{\code{SummarizedExperiment} or \code{QFeatures} instance}
 
 \item{formula}{Model formula. The model is built based on the
 covariates in the data object.}
 
 \item{modelColumnName}{\code{character} to indicate the variable name that is used
 to store the msqrob models in the rowData of the SummarizedExperiment
-instance or of the assay of the Features instance. Default is "msqrobModels".}
+instance or of the assay of the QFeatures instance. Default is "msqrobModels".}
 
 \item{overwrite}{\code{boolean(1)} to indicate if the column in the rowData has to
 be overwritten if the modelColumnName already exists. Default is FALSE.}
@@ -35,7 +35,7 @@ the estimated log-fold-changes towards zero. Default is 0.1.}
 be never smaller than 1 (no underdispersion). Default is TRUE.}
 }
 \value{
-SummarizedExperiment or Features instance
+SummarizedExperiment or QFeatures instance
 }
 \description{
 Low-level function for parameter estimation with msqrob

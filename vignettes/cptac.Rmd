@@ -29,7 +29,7 @@ this peptideRaws.txt file can be found by default in the
 with "path_to_raw_files" the folder where the raw files were saved.
 In this vignette, we use a MaxQuant peptideRaws file which is a subset
 of the cptac study. This data is available in the `msdata` package.
-To import the data we use the `Features` package.
+To import the data we use the `QFeatures` package.
 
 We generate the object peptideRawFile with the path to the peptideRaws.txt file.
 Using the `grepEcols` function, we find the columns that contain the expression
@@ -38,13 +38,13 @@ data of the peptideRaws in the peptideRaws.txt file.
 ```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(limma)
-library(Features)
+library(QFeatures)
 library(msqrob2)
 library(plotly)
 
 peptidesFile <- msdata::quant(pattern = "cptac_a_b_peptides", full.names = TRUE)
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
-pe <- readFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
+pe <- readQFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
                    name = "peptideRaw", sep="\t")
 ```
 
@@ -88,7 +88,7 @@ MSnbase::plotNA(assay(pe[["peptideRaw"]])) +
 
 # Preprocessing
 
-This section preforms standard preprocessing for the peptide data. This 
+This section preforms standard preprocessing for the peptide data. This
 include log transformation, filtering and summarisation of the data.
 
 ## Log transform the data
@@ -232,9 +232,9 @@ pe <- hypothesisTest(object = pe, i = "protein", contrast = L)
 
 
 ```{r,warning=FALSE}
-volcano <- ggplot(rowData(pe[["protein"]])$conditionB, 
+volcano <- ggplot(rowData(pe[["protein"]])$conditionB,
                   aes(x = logFC, y = -log10(pval), color = adjPval < 0.05)) +
-  geom_point(cex = 2.5) + 
+  geom_point(cex = 2.5) +
   scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal()
 volcano
 ```
@@ -276,7 +276,7 @@ print(p1)
 # plotting 2
 p2 <- ggplot(pePlotDf, aes(x = colname, y = value, fill = condition)) +
   geom_boxplot(outlier.shape = NA) + geom_point(position = position_jitter(width = .1),
-                                                aes(shape = rowname)) + 
+                                                aes(shape = rowname)) +
   scale_shape_manual(values = 1:nrow(pePlotDf)) +
   labs(title = protName, x = "sample", y = "peptide intensity (log2)") + theme_minimal()
   facet_grid(~assay)

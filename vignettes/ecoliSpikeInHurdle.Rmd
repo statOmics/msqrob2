@@ -25,7 +25,7 @@ runs was also enabled using default settings. The resulting peptide-to-spectrum
 matches (PSMs) were filtered by MaxQuant at 1% FDR.
 
 ```{r}
-concentrations <- seq.int(1:5) * 1.5
+concentrations <- (2:6) * 1.5
 names(concentrations) <- letters[1:5]
 ```
 
@@ -36,7 +36,7 @@ peptide-level intensities. For a MaxQuant search [6], this peptides.txt file can
 be found by default in the "path_to_raw_files/combined/txt/" folder from the
 MaxQuant output, with "path_to_raw_files" the folder where raw files were saved.
 In this tutorial, we will use a MaxQuant peptides file of the ecoli spike-in
-study that is stored in the msdata package. We use the Features package to import the data.
+study that is stored in the msdata package. We use the QFeatures package to import the data.
 
 With the grepEcols function we find the columns that are containing the
 expression data of the peptides in the peptides.txt file.
@@ -44,7 +44,7 @@ expression data of the peptides in the peptides.txt file.
 ```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(limma)
-library(Features)
+library(QFeatures)
 library(msqrob2)
 
 myurl<- "https://www.dropbox.com/s/62hhol96pz0sjbi/peptides.zip?dl=0"
@@ -52,7 +52,7 @@ download.file(myurl, "peptides.zip", method = "curl", extra = "-L")
 unzip("peptides.zip")
 peptidesFile <- "peptides.txt"
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
-pe <- readFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
+pe <- readQFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
                    name = "peptideRaw", sep = "\t")
 pe
 ```

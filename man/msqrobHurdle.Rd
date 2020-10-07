@@ -3,7 +3,7 @@
 \name{msqrobHurdle,SummarizedExperiment-method}
 \alias{msqrobHurdle,SummarizedExperiment-method}
 \alias{msqrobHurdle}
-\alias{msqrobHurdle,Features-method}
+\alias{msqrobHurdle,QFeatures-method}
 \title{Function to fit msqrob hurdle models}
 \usage{
 \S4method{msqrobHurdle}{SummarizedExperiment}(
@@ -21,7 +21,7 @@
   binomialBound = TRUE
 )
 
-\S4method{msqrobHurdle}{Features}(
+\S4method{msqrobHurdle}{QFeatures}(
   object,
   i,
   formula,
@@ -38,14 +38,14 @@
 )
 }
 \arguments{
-\item{object}{\code{SummarizedExperiment} or \code{Features} instance with an assay that is generated with the \code{aggreateFeatures} function from the \code{Features} package}
+\item{object}{\code{SummarizedExperiment} or \code{QFeatures} instance with an assay that is generated with the \code{aggreateFeatures} function from the \code{QFeatures} package}
 
 \item{formula}{Model formula. Both model components are built based on the
 covariates in the data object.}
 
 \item{modelColumnName}{\code{character} to indicate the variable name that is used
 to store the msqrob models in the rowData of the SummarizedExperiment
-instance or of the assay of the Features instance. Default is "msqrobHurdle".}
+instance or of the assay of the QFeatures instance. Default is "msqrobHurdle".}
 
 \item{overwrite}{\code{boolean(1)} to indicate if the column in the rowData has to
 be overwritten if the modelColumnName already exists. Default is FALSE.}
@@ -79,14 +79,14 @@ Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
 \item{priorCount}{A 'numeric(1)', which is a prior count to be added to the observations to shrink
 the estimated odds ratios of the count component towards zero. Default is 0.1.}
 
-\item{i}{\code{character} or \code{integer} to specify the element of the \code{Features} that
+\item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
 contains the log expression intensities that will be modelled.}
 
 \item{binomialBound:}{logical, if ‘TRUE’ then the quasibinomial variance estimator will
 be never smaller than 1 (no underdispersion). Default is TRUE.}
 }
 \value{
-SummarizedExperiment or Features instance
+SummarizedExperiment or QFeatures instance
 }
 \description{
 Fitting a hurdle msqrob model with an intensity component for

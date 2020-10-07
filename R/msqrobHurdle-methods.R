@@ -134,7 +134,7 @@ setMethod("msqrobHurdle","SummarizedExperiment",
 #' @export
 #' @rdname msqrobHurdle
 
-setMethod("msqrobHurdle","Features",
+setMethod("msqrobHurdle","QFeatures",
           function(object,
                    i,
                    formula,

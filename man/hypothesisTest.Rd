@@ -3,10 +3,10 @@
 \name{hypothesisTest,SummarizedExperiment-method}
 \alias{hypothesisTest,SummarizedExperiment-method}
 \alias{hypothesisTest}
-\alias{hypothesisTest,Features-method}
+\alias{hypothesisTest,QFeatures-method}
 \alias{hypothesisTestHurdle}
 \alias{hypothesisTestHurdle,SummarizedExperiment-method}
-\alias{hypothesisTestHurdle,Features-method}
+\alias{hypothesisTestHurdle,QFeatures-method}
 \title{Parameter estimates, standard errors and statistical inference on differential
 expression analysis}
 \usage{
@@ -28,7 +28,7 @@ expression analysis}
   overwrite = FALSE
 )
 
-\S4method{hypothesisTest}{Features}(
+\S4method{hypothesisTest}{QFeatures}(
   object,
   i,
   contrast,
@@ -38,7 +38,7 @@ expression analysis}
   overwrite = FALSE
 )
 
-\S4method{hypothesisTestHurdle}{Features}(
+\S4method{hypothesisTestHurdle}{QFeatures}(
   object,
   i,
   contrast,
@@ -49,7 +49,7 @@ expression analysis}
 )
 }
 \arguments{
-\item{object}{\code{SummarizedExperiment} or \code{Features} instance}
+\item{object}{\code{SummarizedExperiment} or \code{QFeatures} instance}
 
 \item{contrast}{\code{numeric} matrix specifying one or more contrasts of
 the linear model coefficients to be tested equal to zero. If multiple
@@ -58,7 +58,7 @@ each contrast. The rownames of the matrix should be equal to the names
 of parameters of the model that are involved in the contrast.
 The column names of the matrix will be used to construct names to store
 the results in the rowData of the SummarizedExperiment or of the assay of
-the Features object. The contrast matrix can be made using the \code{makeContrast}
+the QFeatures object. The contrast matrix can be made using the \code{makeContrast}
 function.}
 
 \item{adjust.method}{\code{character} specifying the method to adjust
@@ -70,12 +70,12 @@ to controle the False Discovery Rate (FDR).}
 
 \item{modelColumn}{\code{character} to indicate the variable name that was used
 to store the msqrob models in the rowData of the SummarizedExperiment
-instance or of the assay of the Features instance. Default is "msqrobModels"
+instance or of the assay of the QFeatures instance. Default is "msqrobModels"
 when the \code{hypothesisTest} function is used and "msqrobHurdle" for \code{hypothesisTestHurdle}.}
 
 \item{resultsColumnNamePrefix}{\code{character} to indicate the the prefix for the
 variable name that will be used to store test results in the rowData of
-the SummarizedExperiment instance or of the assay of the Features instance.
+the SummarizedExperiment instance or of the assay of the QFeatures instance.
 Default is "" so that the variable name with the results will be
 the column name of the column in the contrast matrix L. If L is a matrix
 with multiple columns, multiple results columns will be made, one for each
@@ -84,11 +84,11 @@ results will be stored in the column with name msqrobResults. For hypothesisTest
 the default prefix is "hurdle_". If L is a matrix with one column and has no column names and if resultsColumnNamePrefix="hurdle_" the
 results will be stored in the column with name hurdleResults.}
 
-\item{i}{\code{character} or \code{integer} to specify the element of the \code{Features} that
+\item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
 contains the log expression intensities that will be modelled.}
 }
 \value{
-A SummarizedExperiment or a \code{Features} instance augmented with the test
+A SummarizedExperiment or a \code{QFeatures} instance augmented with the test
 results.
 }
 \description{
@@ -122,7 +122,7 @@ head(rowData(se)$"conditionc - conditionb",10)
 #Volcano plot
 plot(-log10(pval)~logFC,rowData(se)$"conditionc - conditionb",col=(adjPval<0.05)+1)
 
-# Example for Features instance
+# Example for QFeatures instance
 # Assess log2 fold change between condition b and condition a (reference class),
 # condition c and condition a, and, condition c and condition b.
 L <-  makeContrast(c("conditionb=0","conditionc=0","conditionc - conditionb=0"),c("conditionb","conditionc"))

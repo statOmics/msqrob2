@@ -30,7 +30,7 @@ this peptideRaws.txt file can be found by default in the
 with "path_to_raw_files" the folder where the raw files were saved.
 In this vignette, we use a MaxQuant peptideRaws file which is a subset
 of the cptac study. This data is available in the `msdata` package.
-To import the data we use the `Features` package.
+To import the data we use the `QFeatures` package.
 
 We generate the object peptideRawFile with the path to the peptideRaws.txt file.
 Using the `grepEcols` function, we find the columns that contain the expression
@@ -39,13 +39,13 @@ data of the peptideRaws in the peptideRaws.txt file.
 ```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(limma)
-library(Features)
+library(QFeatures)
 library(msqrob2)
 library(BiocParallel)
 
 peptidesFile <- msdata::quant(pattern = "cptac_a_b_peptides", full.names = TRUE)
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
-pe <- readFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
+pe <- readQFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
                    name = "peptideRaw", sep="\t")
 ```
 
@@ -92,7 +92,7 @@ MSnbase::plotNA(assay(pe[["peptideRaw"]]))  +
 
 # Preprocessing
 
-This section preforms standard preprocessing for the peptide data. This 
+This section preforms standard preprocessing for the peptide data. This
 include log transformation, filtering and summarisation of the data.
 
 ## Log transform the data
@@ -110,7 +110,7 @@ In our approach a peptide can map to multiple proteins, as long as there is none
 of these proteins present in a smaller subgroup.
 
 ```{r}
-pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Proteins %in% 
+pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Proteins %in%
                                            smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins), ]
 ```
 
@@ -164,7 +164,7 @@ boxplot(assay(pe[["peptideNorm"]]), col = palette()[-1],
 ```
 
 
-We can visualize our data using a Multi Dimensional Scaling plot, 
+We can visualize our data using a Multi Dimensional Scaling plot,
 eg. as provided by the limma package.
 
 ```{r}
@@ -174,7 +174,7 @@ limma::plotMDS(assay(pe[["peptideNorm"]]), col = as.numeric(colData(pe)$conditio
 The first axis in the plot is showing the leading log fold changes
 (differences on the log scale) between the samples. We notice that the leading
 differences (log FC) in the peptideRaw data seems to be driven by technical
-variability. Indeed, the samples do not seem to be clearly 
+variability. Indeed, the samples do not seem to be clearly
 separated according to the spike-in condition.
 
 
@@ -260,7 +260,7 @@ limma::plotMDS(assay(pe[["proteinMedian"]]),
 Note, that upon median summarisation the separation between
 the samples according to the spike-in condition is much less clear
 than when using robust summarisation. This is because median summarisation
-does not account for a differences in observed peptides per protein. 
+does not account for a differences in observed peptides per protein.
 Indeed, for DE proteins more peptides will go missing in the low spike-in
 condition a.
 
@@ -287,7 +287,7 @@ The performance of ridge regression generally improves for more complex designs 
 Note, that the parameter names for ridge regression always start with the string "ridge".
 
 ```{r}
-try(pe <- msqrob(object = pe,i = "protein", formula = ~condition, 
+try(pe <- msqrob(object = pe,i = "protein", formula = ~condition,
                  modelColumnName = "ridge", ridge = TRUE)) # note: intentional error
 ```
 
@@ -351,7 +351,7 @@ logFC %>% ggplot(aes(x = method, y = log2FC, fill = ups)) + geom_boxplot() +
 
 Note, that methods based on robust summarisation (default and ridge) have
 unbiased fold change estimates for both the ecoli (real log2 FC = 0)
-and spiked UPS proteins 
+and spiked UPS proteins
 (real log2 FC = `r round(log2(.74/.25),2)` red horizontal line).
 Ridge regression provides a strong shrinkage of the fold change
 estimates of the non-DE (ecoli) proteins towards zero.

@@ -3,7 +3,7 @@
 \name{msqrob,SummarizedExperiment-method}
 \alias{msqrob,SummarizedExperiment-method}
 \alias{msqrob}
-\alias{msqrob,Features-method}
+\alias{msqrob,QFeatures-method}
 \title{Methods to fit msqrob models with ridge regression and/or random effects using lme4}
 \usage{
 \S4method{msqrob}{SummarizedExperiment}(
@@ -19,7 +19,7 @@
   lmerArgs = list(control = lmerControl(calc.derivs = FALSE))
 )
 
-\S4method{msqrob}{Features}(
+\S4method{msqrob}{QFeatures}(
   object,
   i,
   formula,
@@ -34,14 +34,14 @@
 )
 }
 \arguments{
-\item{object}{\code{SummarizedExperiment} or \code{Features} instance}
+\item{object}{\code{SummarizedExperiment} or \code{QFeatures} instance}
 
 \item{formula}{Model formula. The model is built based on the
 covariates in the data object.}
 
 \item{modelColumnName}{\code{character} to indicate the variable name that is used
 to store the msqrob models in the rowData of the SummarizedExperiment
-instance or of the assay of the Features instance. Default is "msqrobModels".}
+instance or of the assay of the QFeatures instance. Default is "msqrobModels".}
 
 \item{overwrite}{\code{boolean(1)} to indicate if the column in the rowData has to
 be overwritten if the modelColumnName already exists. Default is FALSE.}
@@ -71,14 +71,14 @@ and parameters to be passed through to the nonlinear optimizer, see the
 ‘lmerControl’ documentation of the lme4 package for more details.
 Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
 
-\item{i}{\code{character} or \code{integer} to specify the element of the \code{Features} that
+\item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
 contains the log expression intensities that will be modelled.}
 }
 \value{
-A SummarizedExperiment or a \code{Features} instance with the models.
+A SummarizedExperiment or a \code{QFeatures} instance with the models.
 }
 \description{
-Parameter estimation of msqrob models for \code{Features}
+Parameter estimation of msqrob models for \code{QFeatures}
 and \code{SummarizedExperiment} instance.
 }
 \examples{

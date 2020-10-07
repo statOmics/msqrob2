@@ -32,7 +32,7 @@ The intensities are in the columns starting with the string "tmt10plex".
 
 ```{r}
 ecols<-grep("tmt10plex",colnames(df))
-pe <- readFeatures(df,ecol=ecols,name="psmRaw")
+pe <- readQFeatures(df,ecol=ecols,name="psmRaw")
 
 colData(pe)$condition<-as.factor(c(rep("a",3),rep("b",4),rep("c",3)))
 rm(df)
