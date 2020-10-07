@@ -7,14 +7,14 @@
 #'              detection of the number of features that were not missing and used
 #'              for aggregation
 #'
-#' @param object `SummarizedExperiment` or `Features` instance with an assay that is generated with the `aggreateFeatures` function from the `Features` package
+#' @param object `SummarizedExperiment` or `QFeatures` instance with an assay that is generated with the `aggreateFeatures` function from the `QFeatures` package
 #'
 #' @param formula Model formula. Both model components are built based on the
 #'        covariates in the data object.
 #'
 #' @param modelColumnName `character` to indicate the variable name that is used
 #'        to store the msqrob models in the rowData of the SummarizedExperiment
-#'        instance or of the assay of the Features instance. Default is "msqrobHurdle".
+#'        instance or of the assay of the QFeatures instance. Default is "msqrobHurdle".
 #'
 #' @param overwrite `boolean(1)` to indicate if the column in the rowData has to
 #'        be overwritten if the modelColumnName already exists. Default is FALSE.
@@ -78,11 +78,11 @@
 #' getCoef(rowData(pe[["protein"]])$msqrobHurdleIntensity[[1]])
 #' getCoef(rowData(pe[["protein"]])$msqrobHurdleCount[[1]])
 #'
-#' @return SummarizedExperiment or Features instance
+#' @return SummarizedExperiment or QFeatures instance
 #'
 #' @rdname msqrobHurdle
 #'
-#' @aliases msqrobHurdle msqrobHurdle,SummarizedExperiment-method msqrobHurdle,Features-method
+#' @aliases msqrobHurdle msqrobHurdle,SummarizedExperiment-method msqrobHurdle,QFeatures-method
 #'
 #' @author Lieven Clement
 #'
@@ -129,7 +129,7 @@ setMethod("msqrobHurdle","SummarizedExperiment",
            return(object)
 })
 
-#' @param i `character` or `integer` to specify the element of the `Features` that
+#' @param i `character` or `integer` to specify the element of the `QFeatures` that
 #'        contains the log expression intensities that will be modelled.
 #' @export
 #' @rdname msqrobHurdle
@@ -154,7 +154,7 @@ setMethod("msqrobHurdle","Features",
                                                                                modelColumnName,
                                                                                "\' in the rowData of assay ",
                                                                                i,
-                                                                               " of the Features object, set the argument overwrite=TRUE to replace the columns with the new results or use another name for the argument modelColumnName to store the results as novel columns in the rowData"))
+                                                                               " of the QFeatures object, set the argument overwrite=TRUE to replace the columns with the new results or use another name for the argument modelColumnName to store the results as novel columns in the rowData"))
            if(!(".n" %in% colnames(rowData(object[[i]])))) stop("The assay does not seem to be aggregated so the number of features used for aggregation is not available")
            if (!ridge)  rowData(object[[i]])[[paste0(modelColumnName,"Intensity")]]<-msqrobLm(y=assay(object[[i]]),
                                                                      formula=formula,

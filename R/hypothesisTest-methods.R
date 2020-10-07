@@ -5,7 +5,7 @@
 #'
 #' @rdname hypothesisTest
 #'
-#' @aliases hypothesisTest hypothesisTest,SummarizedExperiment-method hypothesisTest,Features-method hypothesisTestHurdle hypothesisTestHurdle,SummarizedExperiment-method hypothesisTestHurdle,Features-method
+#' @aliases hypothesisTest hypothesisTest,SummarizedExperiment-method hypothesisTest,QFeatures-method hypothesisTestHurdle hypothesisTestHurdle,SummarizedExperiment-method hypothesisTestHurdle,QFeatures-method
 #'
 #' @author Lieven Clement
 #'
@@ -37,7 +37,7 @@
 #' #Volcano plot
 #' plot(-log10(pval)~logFC,rowData(se)$"conditionc - conditionb",col=(adjPval<0.05)+1)
 #'
-#' # Example for Features instance
+#' # Example for QFeatures instance
 #' # Assess log2 fold change between condition b and condition a (reference class),
 #' # condition c and condition a, and, condition c and condition b.
 #' L <-  makeContrast(c("conditionb=0","conditionc=0","conditionc - conditionb=0"),c("conditionb","conditionc"))
@@ -54,7 +54,7 @@
 #' pe <- hypothesisTestHurdle(pe,i="protein",L)
 #' head(rowData(pe[["protein"]])$"hurdle_conditionb",10)
 #'
-#' @param object `SummarizedExperiment` or `Features` instance
+#' @param object `SummarizedExperiment` or `QFeatures` instance
 #' @param contrast `numeric` matrix specifying one or more contrasts of
 #'        the linear model coefficients to be tested equal to zero. If multiple
 #'        contrasts are given (multiple columns) then results will be returned for
@@ -62,7 +62,7 @@
 #'        of parameters of the model that are involved in the contrast.
 #'        The column names of the matrix will be used to construct names to store
 #'        the results in the rowData of the SummarizedExperiment or of the assay of
-#'        the Features object. The contrast matrix can be made using the `makeContrast`
+#'        the QFeatures object. The contrast matrix can be made using the `makeContrast`
 #'        function.
 #' @param adjust.method `character` specifying the method to adjust
 #'        the p-values for multiple testing.
@@ -72,11 +72,11 @@
 #'        to controle the False Discovery Rate (FDR).
 #' @param modelColumn `character` to indicate the variable name that was used
 #'        to store the msqrob models in the rowData of the SummarizedExperiment
-#'        instance or of the assay of the Features instance. Default is "msqrobModels"
+#'        instance or of the assay of the QFeatures instance. Default is "msqrobModels"
 #'        when the `hypothesisTest` function is used and "msqrobHurdle" for `hypothesisTestHurdle`.
 #' @param resultsColumnNamePrefix `character` to indicate the the prefix for the
 #'        variable name that will be used to store test results in the rowData of
-#'        the SummarizedExperiment instance or of the assay of the Features instance.
+#'        the SummarizedExperiment instance or of the assay of the QFeatures instance.
 #'        Default is "" so that the variable name with the results will be
 #'        the column name of the column in the contrast matrix L. If L is a matrix
 #'        with multiple columns, multiple results columns will be made, one for each
@@ -152,16 +152,16 @@ setMethod("hypothesisTestHurdle", "SummarizedExperiment",
                    })
 
 
-#' @param i `character` or `integer` to specify the element of the `Features` that
+#' @param i `character` or `integer` to specify the element of the `QFeatures` that
 #'        contains the log expression intensities that will be modelled.
 #'
-#' @return A SummarizedExperiment or a `Features` instance augmented with the test
+#' @return A SummarizedExperiment or a `QFeatures` instance augmented with the test
 #'         results.
 #'
 #' @export
 #' @rdname hypothesisTest
 
-setMethod("hypothesisTest","Features",
+setMethod("hypothesisTest","QFeatures",
           function(object,
                    i,
                    contrast,
@@ -169,11 +169,11 @@ setMethod("hypothesisTest","Features",
                    modelColumn="msqrobModels",
                    resultsColumnNamePrefix="",
                    overwrite=FALSE){
-            if (is.null(object[[i]])) stop(paste0("Features object does not contain an assay with the name ",i))
-            if(!(modelColumn %in% colnames(rowData(object[[i]])))) stop(paste0("There is no column named \'", modelColumn,"\' with stored models of an msqrob fit in the rowData of assay ",i,"of the Features object."))
+            if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain an assay with the name ",i))
+            if(!(modelColumn %in% colnames(rowData(object[[i]])))) stop(paste0("There is no column named \'", modelColumn,"\' with stored models of an msqrob fit in the rowData of assay ",i,"of the QFeatures object."))
             if(is.null(colnames(contrast)) & resultsColumnNamePrefix=="") resultsColumnNamePrefix<-"msqrobResults"
             if(is.null(colnames(contrast)) & ncol(contrast)>1) colnames(contrast) <- 1:ncol(contrast)
-            if((sum(paste0(resultsColumnNamePrefix,colnames(contrast)) %in% colnames(rowData(object[[i]])))>0)&!overwrite) stop(paste0("There is/are already column(s) named \'", paste(paste0(resultsColumnNamePrefix,colnames(contrast)),collapse="\' or \'"),"\' in the rowData of assay ",i," of the Features object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix"))
+            if((sum(paste0(resultsColumnNamePrefix,colnames(contrast)) %in% colnames(rowData(object[[i]])))>0)&!overwrite) stop(paste0("There is/are already column(s) named \'", paste(paste0(resultsColumnNamePrefix,colnames(contrast)),collapse="\' or \'"),"\' in the rowData of assay ",i," of the QFeatures object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix"))
             for (j in 1:ncol(contrast))
             {
                   contrHlp<-contrast[,j]
@@ -186,7 +186,7 @@ setMethod("hypothesisTest","Features",
 #' @export
 #' @rdname hypothesisTest
 
-setMethod("hypothesisTestHurdle", "Features",
+setMethod("hypothesisTestHurdle", "QFeatures",
           function(object,
                    i,
                    contrast,
@@ -194,11 +194,11 @@ setMethod("hypothesisTestHurdle", "Features",
                    modelColumn="msqrobHurdle",
                    resultsColumnNamePrefix="hurdle_",
                    overwrite=FALSE){
-                   if (is.null(object[[i]])) stop(paste0("Features object does not contain an assay with the name ",i))
-                   if(sum(paste0(modelColumn,c("Intensity","Count")) %in% colnames(rowData(object[[i]])))!=2) stop(paste0("There are no columns for the models of the hurdle components in the rowData of assay ",i,"of the Features object."))
+                   if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain an assay with the name ",i))
+                   if(sum(paste0(modelColumn,c("Intensity","Count")) %in% colnames(rowData(object[[i]])))!=2) stop(paste0("There are no columns for the models of the hurdle components in the rowData of assay ",i,"of the QFeatures object."))
                    if(is.null(colnames(contrast)) & resultsColumnNamePrefix=="hurdle_") resultsColumnNamePrefix<-"hurdleResults"
                    if(is.null(colnames(contrast)) & ncol(contrast)>1) colnames(contrast) <- 1:ncol(contrast)
-                   if((sum(paste0(resultsColumnNamePrefix,colnames(contrast)) %in% colnames(rowData(object[[i]])))>0)&!overwrite) stop(paste0("There is/are already column(s) named \'", paste(paste0(resultsColumnNamePrefix,colnames(contrast)),collapse="\' or \'"),"\' in the rowData of assay ",i," of the Features object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix"))
+                   if((sum(paste0(resultsColumnNamePrefix,colnames(contrast)) %in% colnames(rowData(object[[i]])))>0)&!overwrite) stop(paste0("There is/are already column(s) named \'", paste(paste0(resultsColumnNamePrefix,colnames(contrast)),collapse="\' or \'"),"\' in the rowData of assay ",i," of the QFeatures object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix"))
                    for (j in 1:ncol(contrast))
                    {
                          contrHlp<-contrast[,j]

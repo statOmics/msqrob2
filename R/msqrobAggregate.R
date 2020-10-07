@@ -1,7 +1,7 @@
 #' Method to fit msqrob models with robust regression and/or ridge regression and/or random effects
 #' It models multiple features simultaneously, e.g. multiple peptides from the same protein.
 #'
-#' @description Parameter estimation of msqrob models for `Features`instance.
+#' @description Parameter estimation of msqrob models for `QFeatures`instance.
 #'              The method aggregates features within the model e.g. from peptides to proteins.
 #'              It provides fold change estimates and their associated uncertainty at the aggregated
 #'              level (e.g. protein level) while correcting for the peptide species that are observed
@@ -9,7 +9,7 @@
 #'              for the same protein in a sample are correlate because they originate from the same
 #'              protein pool. The method however does not return aggregated expression values for each sample.
 #'              For visualisation purposes aggregated expression values are provide by the `aggregateFeatures`
-#'              function from the `Features` Package
+#'              function from the `QFeatures` Package
 #'
 #' @author Lieven Clement
 #'
@@ -29,12 +29,12 @@
 #' pe<-msqrobAggregate(pe,i="peptide",fcol="Protein",formula=~condition)
 #' getCoef(rowData(pe[["msqrobAgregate"]])$msqrobModels[["P00956"]])
 #'
-#' @param object `Features` instance
+#' @param object `QFeatures` instance
 #'
 #' @param formula Model formula. The model is built based on the
 #'     covariates in the data object.
 #'
-#' @param i `character` or `integer` to specify the element of the `Features` that
+#' @param i `character` or `integer` to specify the element of the `QFeatures` that
 #'        contains the log expression intensities that will be modelled.
 #'
 #' @param fcol The feature variable of assay ‘i’ defining how to summerise
@@ -44,11 +44,11 @@
 #'       with ‘name’.
 #' @param aggregateFun A function used for quantitative feature aggregation.
 #'        Details can be found in the documentation of the `aggregateFeatures`
-#'        of the `Features` package.
+#'        of the `QFeatures` package.
 #'
 #' @param modelColumnName `character` to indicate the variable name that is used
 #'        to store the msqrob models in the rowData of the SummarizedExperiment
-#'        instance or of the assay of the Features instance. Default is "msqrobModels".
+#'        instance or of the assay of the QFeatures instance. Default is "msqrobModels".
 #'
 #' @param overwrite `boolean(1)` to indicate if the column in the rowData has to
 #'        be overwritten if the modelColumnName already exists. Default is FALSE.
@@ -78,16 +78,16 @@
 #'        ‘lmerControl’ documentation of the lme4 package for more details.
 #'        Default is `list(control = lmerControl(calc.derivs = FALSE))`
 #'
-#' @return A ‘Features’ object with an additional assay.
+#' @return A ‘QFeatures’ object with an additional assay.
 #'
 #' @rdname msqrobAggregate
 #'
-#' @aliases msqrobAggregate msqrobAggregate,Features-method
+#' @aliases msqrobAggregate msqrobAggregate,QFeatures-method
 #'
 #' @export
 
 
-setMethod("msqrobAggregate","Features",
+setMethod("msqrobAggregate","QFeatures",
           function(object,
                    formula,
                    i,
@@ -100,9 +100,9 @@ setMethod("msqrobAggregate","Features",
                    tol=1e-6,
                    doQR=TRUE,
                    lmerArgs= list(control = lmerControl(calc.derivs = FALSE))){
-              if (is.null(object[[i]])) stop(paste0("Features object does not contain assay ",i))
-              if (!(fcol %in% colnames(rowData(object[[i]])))) stop(paste0("The rowData of Assay ",i," of the Features object does not contain variable",fcol))
-              object<-Features::aggregateFeatures(object=object,
+              if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain assay ",i))
+              if (!(fcol %in% colnames(rowData(object[[i]])))) stop(paste0("The rowData of Assay ",i," of the QFeatures object does not contain variable",fcol))
+              object<-QFeatures::aggregateFeatures(object=object,
                                                   i=i,
                                                   fcol=fcol,
                                                   name=name,

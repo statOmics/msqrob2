@@ -4,14 +4,14 @@
 #' @description Low-level function for parameter estimation with msqrob
 #'              by modeling peptide counts using quasibinomial glm
 #'
-#' @param object `SummarizedExperiment` or `Features` instance
+#' @param object `SummarizedExperiment` or `QFeatures` instance
 #'
 #' @param formula Model formula. The model is built based on the
 #'        covariates in the data object.
 #'
 #' @param modelColumnName `character` to indicate the variable name that is used
 #'        to store the msqrob models in the rowData of the SummarizedExperiment
-#'        instance or of the assay of the Features instance. Default is "msqrobModels".
+#'        instance or of the assay of the QFeatures instance. Default is "msqrobModels".
 #'
 #' @param overwrite `boolean(1)` to indicate if the column in the rowData has to
 #'        be overwritten if the modelColumnName already exists. Default is FALSE.
@@ -46,9 +46,9 @@
 #' # For features object
 #' pe <- msqrobQB(pe,i="protein",formula=~condition)
 #'
-#' @return SummarizedExperiment or Features instance
+#' @return SummarizedExperiment or QFeatures instance
 #'
-#' @aliases msqrobQB msqrobQB,SummarizedExperiment-method msqrobQB,Features-method
+#' @aliases msqrobQB msqrobQB,SummarizedExperiment-method msqrobQB,QFeatures-method
 #'
 #' @author Lieven Clement
 #'
@@ -76,12 +76,12 @@ setMethod("msqrobQB","SummarizedExperiment",
            return(object)
 })
 
-#' @param i `character` or `integer` to specify the element of the `Features` that
+#' @param i `character` or `integer` to specify the element of the `QFeatures` that
 #'        contains the log expression intensities that will be modelled.
 #' @export
 #' @rdname msqrobQB
 
-setMethod("msqrobQB","Features",
+setMethod("msqrobQB","QFeatures",
           function(object,
                    i,
                    formula,
@@ -89,7 +89,7 @@ setMethod("msqrobQB","Features",
                    overwrite=FALSE,
                    priorCount=.1,
                    binomialBound=TRUE){
-           if (is.null(object[[i]])) stop(paste0("Features object does not contain an assay with the name ",i))
+           if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain an assay with the name ",i))
            if((modelColumnName %in% colnames(rowData(object[[i]])))&!overwrite) stop(paste0("There is already a column named \'",
                                                                                modelColumnName,
                                                                                "\' in the rowData of assay \'",

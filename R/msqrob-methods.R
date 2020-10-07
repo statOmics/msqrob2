@@ -1,9 +1,9 @@
 #' Methods to fit msqrob models with ridge regression and/or random effects using lme4
 #'
-#' @description Parameter estimation of msqrob models for `Features`
+#' @description Parameter estimation of msqrob models for `QFeatures`
 #'              and `SummarizedExperiment` instance.
 #'
-#' @aliases msqrob msqrob,SummarizedExperiment-method msqrob,Features-method
+#' @aliases msqrob msqrob,SummarizedExperiment-method msqrob,QFeatures-method
 #'
 #' @author Lieven Clement
 #'
@@ -41,14 +41,14 @@
 #' #compare for ecoli protein (DE)==> almost no shrinkage to zero
 #' cbind(getCoef(rowData(pe[["protein"]])$rlm[["P00956"]]),getCoef(rowData(pe[["protein"]])$ridge[["P00956"]]))
 #'
-#' @param object `SummarizedExperiment` or `Features` instance
+#' @param object `SummarizedExperiment` or `QFeatures` instance
 #'
 #' @param formula Model formula. The model is built based on the
 #'     covariates in the data object.
 #'
 #' @param modelColumnName `character` to indicate the variable name that is used
 #'        to store the msqrob models in the rowData of the SummarizedExperiment
-#'        instance or of the assay of the Features instance. Default is "msqrobModels".
+#'        instance or of the assay of the QFeatures instance. Default is "msqrobModels".
 #'
 #' @param overwrite `boolean(1)` to indicate if the column in the rowData has to
 #'        be overwritten if the modelColumnName already exists. Default is FALSE.
@@ -111,13 +111,13 @@ setMethod("msqrob","SummarizedExperiment",
            return(object)
            })
 
-#' @param i `character` or `integer` to specify the element of the `Features` that
+#' @param i `character` or `integer` to specify the element of the `QFeatures` that
 #'        contains the log expression intensities that will be modelled.
 #'
-#' @return A SummarizedExperiment or a `Features` instance with the models.
+#' @return A SummarizedExperiment or a `QFeatures` instance with the models.
 #' @export
 #' @rdname msqrob
-setMethod("msqrob","Features",
+setMethod("msqrob","QFeatures",
           function(object,
                    i,
                    formula,
@@ -129,12 +129,12 @@ setMethod("msqrob","Features",
                    tol=1e-6,
                    doQR=TRUE,
                    lmerArgs= list(control = lmerControl(calc.derivs = FALSE))){
-            if (is.null(object[[i]])) stop(paste0("Features object does not contain an assay with the name ",i))
+            if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain an assay with the name ",i))
             if((modelColumnName %in% colnames(rowData(object[[i]])))&!overwrite) stop(paste0("There is already a column named \'",
                                                                                       modelColumnName,
                                                                                       "\' in the rowData of the assay",
                                                                                       i,
-                                                                                      "of the Features object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of assay of the Features object")
+                                                                                      "of the QFeatures object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of assay of the QFeatures object")
                                                                                       )
             if (!ridge)  rowData(object[[i]])[[modelColumnName]]<-msqrobLm(y=assay(object[[i]]),
                                                                            formula=formula,
