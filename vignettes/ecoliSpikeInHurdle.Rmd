@@ -47,7 +47,8 @@ library(limma)
 library(QFeatures)
 library(msqrob2)
 
-myurl<- "https://www.dropbox.com/s/62hhol96pz0sjbi/peptides.zip?dl=0"
+myurl<-
+"https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/maxquant/peptides.zip"
 download.file(myurl, "peptides.zip", method = "curl", extra = "-L")
 unzip("peptides.zip")
 peptidesFile <- "peptides.txt"
@@ -84,9 +85,10 @@ In the spikin-study there are peptides from ecoli and human proteins.
 The ecoli peptides are spiked.
 
 ```{r}
-myurl<- "https://www.dropbox.com/s/swhu9nqwktythtb/ecoli_up000000625_7_06_2018.fasta?dl=0"
+myurl<-
+"https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/ecoli_up000000625_7_06_2018.fasta"
 download.file(myurl, "ecoli.fasta", method="curl", extra="-L")
-myurl<-"https://www.dropbox.com/s/n61n28wrcpwsb4a/human_up000005640_sp_7_06_2018.fasta?dl=0"
+myurl<-"https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/human_up000005640_sp_7_06_2018.fasta"
 download.file(myurl, "human.fasta", method="curl", extra="-L")
 ```
 

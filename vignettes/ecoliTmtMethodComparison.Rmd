@@ -6,6 +6,8 @@ output:
   BiocStyle::html_document
 ---
 
+*Disclaimer*: we only have a workflow for labelled proteomics when all samples were quantified within the same run. We are currently developing bespoke workflows for labelled proteomics experiments with multiple runs.
+
 
 # Background
 In this vignette, we assess the performance of MSqRob for differential
@@ -20,11 +22,13 @@ were TMT-10plex on lysines and peptide N-termini, and carbamidomethylation on cy
 protein database used for search was Uniprot (2018_04) human protein databases with E.coli protein database concatenated (78807 protein sequences) allowing for one tryptic miss-cleavage. PSMs and proteins were filtered at 1% FDR resulting in 308,001 PSMs; 122,235 unique peptides and 11,216 proteins.
 
 # Data
+
 ```{r}
 library(msqrob2)
-library(tidyverse)
-download.file("https://www.dropbox.com/s/v82idlt6wqp8l7t/TMT-Ecoli-spike-in.rds?dl=0", "tmtEcoliSpikeIn.RDS", method="curl", extra = "-L")
-df <- readRDS("tmtEcoliSpikeIn.RDS")
+url <- "ftp://jpost.pharm.kyoto-u.ac.jp/repository/JPST000562/target_psmtable.txt"
+download.file(url, destfile = "./target_psmtable.txt",method = "auto")
+
+df <- read.table("target_psmtable.txt",stringsAsFactors = FALSE, header = TRUE, quote = "", comment.char = "",sep = "\t")
 ```
 
 We make a unique name per psm and read in data.
