@@ -1,8 +1,8 @@
 Package: msqrob2
 Title: Robust statistical inference for quantitative LC-MS proteomics
 Version: 0.0.9
-Author:
-    c(person(given = "Lieven",
+Authors@R: c(
+      person(given = "Lieven",
            family = "Clement",
            role = c("aut", "cre"),
            email = "lieven.clement@ugent.be",
@@ -25,13 +25,18 @@ Author:
              family = "Goeminne",
              email = " ludgergoeminne@gmail.com",
              role = "ctb"))
-Maintainer: Lieven Clement <lieven.clement@ugent.be>
-Description: Robust statistical inference for quantitative proteomics
-   using the Feature infrastructure for quantitative mass spectrometry
-   data.
+Description: msqrob2 provides a robust linear mixed model framework for assessing differential abundance in
+    MS-based Quantitative proteomics experiments. Our workflows can start from raw peptide intensities or
+    summarised protein expression values. The model parameter estimates can be stabilized by ridge regression,
+    empirical Bayes variance estimation and robust M-estimation. msqrob2's hurde workflow can handle missing
+    data without having to rely on hard-to-verify imputation assumptions, and, outcompetes state-of-the-art
+    methods with and without imputation for both high and low missingness. It builds on QFeature infrastructure
+    for quantitative mass spectrometry data to store the model results together with the raw data and preprocessed
+    data.
 Depends:
     R (>= 4.0),
-    QFeatures (>= 1.1.2),
+    QFeatures (>= 1.1.2)
+Imports:
     stats,
     methods,
     lme4,
@@ -61,6 +66,17 @@ Collate: 'msqrob-framework.R' 'allGenerics.R'
         'topFeatures.R' 'data.R' 'msqrobQB.R' 'msqrobHurdle-methods.R'
 Encoding: UTF-8
 VignetteBuilder: knitr
-LazyData: true
 Roxygen: list(markdown=TRUE)
 RoxygenNote: 7.1.1
+biocViews:
+    Proteomics,
+    MassSpectrometry,
+    DifferentialExpression,
+    MultipleComparison,
+    Regression,
+    ExperimentalDesign,
+    Software,
+    ImmunoOncology,
+    Normalization,
+    Timecourse,
+    Preprocessing

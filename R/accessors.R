@@ -19,6 +19,18 @@
 #' @rdname statModelAccessors
 #' @aliases statModelAccessors getCoef getDF getDfPosterior getFitMethod getModel getSigma getSigmaPosterior getVar getVarPosterior getVcovUnscaled
 #'
+#' @examples
+#' data(pe)
+#'
+#' # Aggregate peptide intensities in protein expression values
+#' pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
+#'
+#' # Fit msqrob model
+#' pe <- msqrob(pe, i = "protein", formula = ~condition)
+#' getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
+#' getModel(rowData(pe[["protein"]])$msqrobModels[[1]])
+#' getFitMethod(rowData(pe[["protein"]])$msqrobModels[[1]])
+#' # Similar for the remaining accessors
 #' @param object `StatModel` object
 
 setMethod("getModel",

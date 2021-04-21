@@ -4,7 +4,9 @@
 #' @param proteins A vector of characters or factors containing single proteins and/or protein groups (i.e. proteins separated by a separator symbol).
 #' @param split The character string that is used to separate the indivudual protein names in each protein group.
 #' @return A character vector containing the names of the protein groups for which none of its proteins is present in a smaller protein group.
-#' @examples # TODO
+#' @examples
+#' data(pe)
+#' smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins)
 #' @export
 smallestUniqueGroups <- function(proteins,
     split = ";") {
@@ -211,9 +213,9 @@ makeContrast <- function(contrasts, parameterNames) {
             message("eval", ": cparms = ", w$enum(dumped))
         }
         res <- try(do.call(as.character(v[[1]]), as.list(cparms)),
-            silent = T
+            silent = TRUE
         )
-        if (class(res) == "try-error") {
+        if (is(res, "try-error")) {
             w$fatal(
                 "eval", "the evaluation of the expression ",
                 sQuote(deparse(v)), " ", "failed with ", dQuote(attr(

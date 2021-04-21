@@ -11,7 +11,21 @@
 #'        the linear model coefficients to be tested equal to zero.
 #'        The rownames of the matrix should be equal to the names of
 #'        parameters of the model.
-#' @examples # TODO
+#' @examples
+#' data(pe)
+#' # Aggregate peptide intensities in protein expression values
+#' pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
+#'
+#' # Fit msqrob model
+#' pe <- msqrob(pe, i = "protein", formula = ~condition)
+#'
+#' # Define contrast
+#' getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
+#' # Define contrast for log2 fold change between condition c and condition b:
+#' L <- makeContrast("conditionc - conditionb=0", c("conditionb", "conditionc"))
+#'
+#' getContrast(rowData(pe[["protein"]])$msqrobModels[[1]], L)
+#' varContrast(rowData(pe[["protein"]])$msqrobModels[[1]], L)
 #' @rdname statModelMethods
 #' @return A matrix with the calculated contrasts or variance-covariance matrix of contrasts
 #' @aliases statModelMethods StatModel-method getContrast varContrast
@@ -19,12 +33,12 @@
 setMethod(
     "getContrast", "StatModel",
     function(object, L) {
-        if (class(L) != "matrix") L <- as.matrix(L)
+        if (!is(L, "matrix")) L <- as.matrix(L)
         coefs <- getCoef(object)
         out <- matrix(rep(NA, ncol(L)))
         rownames(out) <- colnames(L)
         hlp <- try(t(L) %*% coefs[rownames(L)], silent = TRUE)
-        if (class(out)[1] != "try-error") out[] <- hlp
+        if (!is(hlp, "try-error")) out[] <- hlp
         return(out)
     }
 )
@@ -33,12 +47,12 @@ setMethod(
 setMethod(
     "varContrast", "StatModel",
     function(object, L) {
-        if (class(L) != "matrix") L <- as.matrix(L)
+        if (!is(L, "matrix")) L <- as.matrix(L)
         out <- matrix(NA, ncol(L), ncol(L))
         rownames(out) <- colnames(out) <- colnames(L)
         vcovTmp <- getVcovUnscaled(object) * object@varPosterior
         hlp <- try(t(L) %*% vcovTmp[rownames(L), rownames(L)] %*% L, silent = TRUE)
-        if (class(hlp)[1] != "try-error") out[] <- hlp
+        if (!is(hlp, "try-error")) out[] <- hlp
         return(out)
     }
 )

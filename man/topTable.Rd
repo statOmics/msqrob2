@@ -38,7 +38,20 @@ adjust.method in the p.adjust function of the stats package.
 Summary table of the differentially expressed Features
 }
 \examples{
-# TODO
+data(pe)
+
+# Aggregate peptide intensities in protein expression values
+pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
+
+# Fit msqrob model
+pe <- msqrob(pe, i = "protein", formula = ~condition)
+
+# Define contrast
+getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
+
+# Assess log2 fold change between condition c and condition b:
+L <- makeContrast("conditionc - conditionb=0", c("conditionb", "conditionc"))
+topDeProteins <- topFeatures(rowData(pe[["protein"]])$msqrobModels, L)
 }
 \author{
 Lieven Clement

@@ -19,7 +19,21 @@
 #' @param alpha `numeric` specifying the cutoff value for adjusted p-values.
 #'        Only features with lower p-values are listed.
 #'
-#' @examples # TODO
+#' @examples
+#' data(pe)
+#'
+#' # Aggregate peptide intensities in protein expression values
+#' pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
+#'
+#' # Fit msqrob model
+#' pe <- msqrob(pe, i = "protein", formula = ~condition)
+#'
+#' # Define contrast
+#' getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
+#'
+#' # Assess log2 fold change between condition c and condition b:
+#' L <- makeContrast("conditionc - conditionb=0", c("conditionb", "conditionc"))
+#' topDeProteins <- topFeatures(rowData(pe[["protein"]])$msqrobModels, L)
 #' @return A dataframe with log2 fold changes (logFC), standard errors (se),
 #'         degrees of freedom of the test (df), t-test statistic (t),
 #'         p-values (pval) and adjusted pvalues (adjPval) using the specified

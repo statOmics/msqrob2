@@ -79,15 +79,15 @@ msqrobLm <- function(y,
                     ),
                     silent = TRUE
                     )
-                    if (class(mod)[1] != "try-error") {
-                          type <- "rlm"
-                      }
+                    if (!is(mod, "try-error")) {
+                        type <- "rlm"
+                    }
                 } else {
                     ## if robust regression is not performed use standard linear fit
                     mod <- try(lm.fit(X, y))
-                    if (class(mod)[1] != "try-error" & mod$rank == ncol(X)) {
-                          type <- "lm"
-                      }
+                    if ((!is(mod, "try-error")) & mod$rank == ncol(X)) {
+                        type <- "lm"
+                    }
                 }
 
                 if (type == "rlm") {
@@ -105,14 +105,14 @@ msqrobLm <- function(y,
                 }
 
                 if (type != "fitError") {
-                      model <- list(
-                          coefficients = mod$coef,
-                          vcovUnscaled = .vcovUnscaled(mod),
-                          sigma = sigma,
-                          df.residual = df.residual,
-                          w = w
-                      )
-                  }
+                    model <- list(
+                        coefficients = mod$coef,
+                        vcovUnscaled = .vcovUnscaled(mod),
+                        sigma = sigma,
+                        df.residual = df.residual,
+                        w = w
+                    )
+                }
             }
             ## return object of class Statmodel (from apply)
             .StatModel(
@@ -229,7 +229,7 @@ msqrobLm <- function(y,
 #' @importFrom methods as
 #' @import lme4
 #' @import Matrix
-#' @import BiocParallel
+#' @importFrom BiocParallel bplapply
 #'
 #' @export
 msqrobLmer <- function(y,
@@ -242,19 +242,19 @@ msqrobLmer <- function(y,
     featureGroups = NULL,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
     if (length(formula) == 3) {
-          formula <- formula[-2]
-      }
+        formula <- formula[-2]
+    }
 
     fixed <- model.matrix(nobars(formula), data)
     df <- data
     df$fixed <- fixed
 
     if (sum(!grepl("(Intercept)", colnames(fixed))) < 2 & nobars(formula)[[2]] != 1) {
-          stop("Error: the mean model must have more than two parameters for ridge regression.
+        stop("Error: the mean model must have more than two parameters for ridge regression.
               if you really want to adopt ridge regression when your factor has only two levels
               rerun the function with a formula where you drop the intercept. e.g. ~-1+condition
             ")
-      }
+    }
 
     if (is.null(findbars(formula))) {
         form <- formula(y ~ (1 | ridge))
@@ -298,33 +298,33 @@ msqrobLmer <- function(y,
 
                 ## Fooling lmer to adopt ridge regression using Fabian Scheipl's trick
                 if (qrFixed$rank == ncol(data$fixed)) {
-                      try(
-                          {
-                              colnames(Q) <- colnames(data$fixed)
-                              if (colnames(data$fixed)[1] == "(Intercept)") Q <- Q[, -1]
+                    try(
+                        {
+                            colnames(Q) <- colnames(data$fixed)
+                            if (colnames(data$fixed)[1] == "(Intercept)") Q <- Q[, -1]
 
-                              data$ridge <- as.factor(rep(colnames(Q), length = nrow(data)))
-                              parsedFormulaC <- lFormula(form, data = as.list(data))
-                              parsedFormulaC$reTrms$cnms$ridge <- ""
-                              ridgeId <- grep(names(parsedFormulaC$reTrms$Ztlist), pattern = "ridge")
-                              parsedFormulaC$reTrms$Ztlist[[ridgeId]] <- as(Matrix(t(Q)), class(parsedFormulaC$reTrms$Ztlist[[ridgeId]]))
-                              parsedFormulaC$reTrms$Zt <- do.call(rbind, parsedFormulaC$reTrms$Ztlist)
+                            data$ridge <- as.factor(rep(colnames(Q), length = nrow(data)))
+                            parsedFormulaC <- lme4::lFormula(form, data = as.list(data))
+                            parsedFormulaC$reTrms$cnms$ridge <- ""
+                            ridgeId <- grep(names(parsedFormulaC$reTrms$Ztlist), pattern = "ridge")
+                            parsedFormulaC$reTrms$Ztlist[[ridgeId]] <- as(Matrix::Matrix(t(Q)), class(parsedFormulaC$reTrms$Ztlist[[ridgeId]]))
+                            parsedFormulaC$reTrms$Zt <- do.call(rbind, parsedFormulaC$reTrms$Ztlist)
 
-                              devianceFunctionC <- do.call(mkLmerDevfun, parsedFormulaC)
-                              optimizerOutputC <- optimizeLmer(devianceFunctionC)
-                              model <- mkMerMod(
-                                  rho = environment(devianceFunctionC),
-                                  opt = optimizerOutputC,
-                                  reTrms = parsedFormulaC$reTrms,
-                                  fr = parsedFormulaC$fr
-                              )
-                          },
-                          silent = TRUE
-                      )
-                  }
+                            devianceFunctionC <- do.call(mkLmerDevfun, parsedFormulaC)
+                            optimizerOutputC <- lme4::optimizeLmer(devianceFunctionC)
+                            model <- lme4::mkMerMod(
+                                rho = environment(devianceFunctionC),
+                                opt = optimizerOutputC,
+                                reTrms = parsedFormulaC$reTrms,
+                                fr = parsedFormulaC$fr
+                            )
+                        },
+                        silent = TRUE
+                    )
+                }
             } else {
                 ## For advanced users who opted to perform ridge regression by specifying all effects as random effects
-                try(model <- lmer(form, as.list(data)), silent = TRUE)
+                try(model <- lme4::lmer(form, as.list(data)), silent = TRUE)
             }
 
             if (is.null(model)) {
@@ -416,12 +416,13 @@ msqrobLmer <- function(y,
 }
 
 #' @import lme4
+#' @import Matrix
 #' @importFrom methods cbind2
 
 
 .getVcovBetaBUnscaled <- function(model) {
-    X <- getME(model, "X")
-    Z <- getME(model, "Z")
+    X <- lme4::getME(model, "X")
+    Z <- lme4::getME(model, "Z")
     vcovInv <- Matrix::crossprod(cbind2(X, Z))
     Ginv <- Matrix::solve(
         Matrix::tcrossprod(getME(model, "Lambda")) +
@@ -436,8 +437,8 @@ msqrobLmer <- function(y,
     })
     zNames <- unlist(lapply(1:length(model@cnms),
         function(x, cnms, levels) {
-              c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0))
-          },
+            c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0))
+        },
         cnms = model@cnms,
         levels = ranefLevels
     ))
@@ -449,20 +450,19 @@ msqrobLmer <- function(y,
 #' @import purrr
 #' @import lme4
 .getBetaB <- function(model) {
-    betaB <- c(as.vector(getME(model, "beta")), as.vector(getME(model, "b")))
-    ranefLevels <- imap(model@flist, ~ {
+    betaB <- c(as.vector(lme4::getME(model, "beta")), as.vector(lme4::getME(model, "b")))
+    ranefLevels <- purrr::imap(model@flist, ~ {
         paste0(.y, levels(.x))
     })
     zNames <- unlist(lapply(1:length(model@cnms), function(x, cnms, levels) {
-          c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0))
-      },
+        c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0))
+    },
     cnms = model@cnms, levels = ranefLevels
     ))
     names(betaB) <- c(colnames(model@pp$X), zNames)
     betaB
 }
 
-#' @import lme4
 #' @importFrom stats resid
 .getDfLmer <- function(object) {
     w <- object@frame$"(weights)"
@@ -545,23 +545,23 @@ msqrobGlm <- function(y,
                     x = myDesign,
                     family = binomial()
                 ))
-                if (class(mod)[1] != "try-error" & mod$rank == ncol(myDesign)) {
-                      type <- "quasibinomial"
-                  }
+                if ((!is(mod, "try-error")) & mod$rank == ncol(myDesign)) {
+                    type <- "quasibinomial"
+                }
             }
-            if (class(mod)[1] != "try-error") {
+            if (!is(mod, "try-error")) {
                 if (mod$deviance < 0) mod$deviance <- sum(pmax(mod$family$dev.resids(mod$y, mod$fitted.values, mod$prior.weights), 0))
                 if (mod$df.residual < 2L) type <- "fitError"
             }
             if (type != "fitError") {
-                  model <- list(
-                      coefficients = mod$coef,
-                      vcovUnscaled = .vcovUnscaled(mod),
-                      sigma = sqrt(mod$deviance / mod$df.residual),
-                      df.residual = mod$df.residual,
-                      w = mod$w
-                  )
-              }
+                model <- list(
+                    coefficients = mod$coef,
+                    vcovUnscaled = .vcovUnscaled(mod),
+                    sigma = sqrt(mod$deviance / mod$df.residual),
+                    df.residual = mod$df.residual,
+                    w = mod$w
+                )
+            }
 
             ## return object of class Statmodel (from apply)
             .StatModel(
@@ -580,11 +580,11 @@ msqrobGlm <- function(y,
         models[[i]]@dfPosterior <- as.numeric(hlp$df.prior + getDF(models[[i]]))
 
         if (!is.na(models[[i]]@varPosterior) & binomialBound) {
-              if (models[[i]]@varPosterior < 1) {
-                  models[[i]]@varPosterior <- 1
-                  models[[i]]@dfPosterior <- Inf
-              }
-          }
+            if (models[[i]]@varPosterior < 1) {
+                models[[i]]@varPosterior <- 1
+                models[[i]]@dfPosterior <- Inf
+            }
+        }
     }
 
     return(models)

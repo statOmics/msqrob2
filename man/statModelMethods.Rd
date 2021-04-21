@@ -33,5 +33,18 @@ Methods for StatModel class
 }
 }
 \examples{
-# TODO
+data(pe)
+# Aggregate peptide intensities in protein expression values
+pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
+
+# Fit msqrob model
+pe <- msqrob(pe, i = "protein", formula = ~condition)
+
+# Define contrast
+getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
+# Define contrast for log2 fold change between condition c and condition b:
+L <- makeContrast("conditionc - conditionb=0", c("conditionb", "conditionc"))
+
+getContrast(rowData(pe[["protein"]])$msqrobModels[[1]], L)
+varContrast(rowData(pe[["protein"]])$msqrobModels[[1]], L)
 }
