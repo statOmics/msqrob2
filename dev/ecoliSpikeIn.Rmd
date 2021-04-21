@@ -614,7 +614,7 @@ for (i in contrastNames)
         geom_vline(xintercept = log2(FCs[i]), col = "red") +
         ggtitle(paste("robust ridge", i))
 }
-grid.arrange(grobs = volcanoRidge, nrow = 2)
+grid.arrange(grobs = volcanoRidge, nrow = 3)
 ```
 
 ### Sensitivity FDP plot
