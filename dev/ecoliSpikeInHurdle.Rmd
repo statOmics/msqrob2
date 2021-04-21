@@ -4,6 +4,11 @@ author:
 - name: Lieven Clement
 output:
   BiocStyle::html_document
+bibliography: msqrob2.bib
+vignette: >
+  %\VignetteIndexEntry{D. Label-free Hurdle workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 
@@ -47,14 +52,16 @@ library(limma)
 library(QFeatures)
 library(msqrob2)
 
-myurl<-
-"https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/maxquant/peptides.zip"
+myurl <-
+    "https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/maxquant/peptides.zip"
 download.file(myurl, "peptides.zip", method = "curl", extra = "-L")
 unzip("peptides.zip")
 peptidesFile <- "peptides.txt"
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
-pe <- readQFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
-                   name = "peptideRaw", sep = "\t")
+pe <- readQFeatures(
+    table = peptidesFile, fnames = 1, ecol = ecols,
+    name = "peptideRaw", sep = "\t"
+)
 pe
 ```
 
@@ -62,7 +69,9 @@ We can extract the spikein condition from the raw file name.
 
 ```{r}
 cond <- which(strsplit(colnames(pe)[[1]][1], split = "")[[1]] == "a") # find where condition is stored
-colData(pe)$condition <- substr(colnames(pe), cond, cond) %>% unlist %>%  as.factor
+colData(pe)$condition <- substr(colnames(pe), cond, cond) %>%
+    unlist() %>%
+    as.factor()
 ```
 
 We calculate how many non zero intensities we have per peptide.
@@ -85,19 +94,25 @@ In the spikin-study there are peptides from ecoli and human proteins.
 The ecoli peptides are spiked.
 
 ```{r}
-myurl<-
-"https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/ecoli_up000000625_7_06_2018.fasta"
-download.file(myurl, "ecoli.fasta", method="curl", extra="-L")
-myurl<-"https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/human_up000005640_sp_7_06_2018.fasta"
-download.file(myurl, "human.fasta", method="curl", extra="-L")
+myurl <-
+    "https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/ecoli_up000000625_7_06_2018.fasta"
+download.file(myurl, "ecoli.fasta", method = "curl", extra = "-L")
+myurl <- "https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/human_up000005640_sp_7_06_2018.fasta"
+download.file(myurl, "human.fasta", method = "curl", extra = "-L")
 ```
 
 ```{r}
-id <- list(ecoli = 'ecoli.fasta',
-          human = 'human.fasta') %>%
-  map(~{read_lines(.x) %>%
-          {.[str_detect(.,'^>')]} %>%
-          str_extract(.,'(?<=\\|).*(?=\\|)')})
+id <- list(
+    ecoli = "ecoli.fasta",
+    human = "human.fasta"
+) %>%
+    map(~ {
+        read_lines(.x) %>%
+            {
+                .[str_detect(., "^>")]
+            } %>%
+            str_extract(., "(?<=\\|).*(?=\\|)")
+    })
 ```
 ## Data exploration
 
@@ -109,7 +124,7 @@ even measure a signal in any sample. The missingness is similar across samples.
 
 ```{r, cache= TRUE, eval=FALSE}
 MSnbase::plotNA(assay(pe)) +
-  xlab("Peptide index (ordered by data completeness)")
+    xlab("Peptide index (ordered by data completeness)")
 ```
 
 
@@ -126,7 +141,7 @@ In our approach a peptide can map to multiple proteins,
 as long as there is none of these proteins present in a smaller subgroup.
 
 ```{r}
-pe[["peptideRaw"]]<-pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Proteins %in% smallestUniqueGroups(rowData(pe[["peptideRaw"]])$Proteins),]
+pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Proteins %in% smallestUniqueGroups(rowData(pe[["peptideRaw"]])$Proteins), ]
 ```
 
 ### Remove reverse sequences (decoys) and contaminants
@@ -135,9 +150,9 @@ We now remove the contaminants, peptides that map to decoy sequences and protein
 which were only identified by peptides with modifications.
 
 ```{r}
-pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Reverse!= "+", ]
+pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Reverse != "+", ]
 pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$
-Potential.contaminant!="+", ]
+    Potential.contaminant != "+", ]
 ```
 
 ### Drop peptides that were only identified in one sample
@@ -189,7 +204,7 @@ pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", na.rm = TRUE, 
 ```
 
 ```{r}
-plotMDS(assay(pe[["protein"]]),col = as.numeric(colData(pe)$condition))
+plotMDS(assay(pe[["protein"]]), col = as.numeric(colData(pe)$condition))
 ```
 
 # Data Analysis
@@ -232,11 +247,13 @@ assess the contrast 'conditionc - conditionb = 0', ...
 ```{r}
 comparisonsOther <- paste0(
     apply(
-          combn(paste0("condition", letters[2:5]), 2)[2:1, ],
-          2,
-          paste,
-          collapse = " - ")
-          ," = 0")
+        combn(paste0("condition", letters[2:5]), 2)[2:1, ],
+        2,
+        paste,
+        collapse = " - "
+    ),
+    " = 0"
+)
 comparisonsOther
 
 comparisons <- c(comparisonsRef, comparisonsOther)
@@ -258,7 +275,7 @@ pe <- hypothesisTestHurdle(object = pe, i = "protein", contrast = L)
 Compare it with inference on MSqRob native, i.e. the intensity component only
 
 ```{r}
-pe <- hypothesisTest(object = pe, i = "protein", contrast = L,modelColumn="msqrobHurdleIntensity")
+pe <- hypothesisTest(object = pe, i = "protein", contrast = L, modelColumn = "msqrobHurdleIntensity")
 ```
 
 
@@ -270,9 +287,11 @@ pe <- hypothesisTest(object = pe, i = "protein", contrast = L,modelColumn="msqro
 
 ```{r}
 for (i in colnames(L)) {
-sigNames <- rowData(pe[["protein"]])[[paste0("hurdle_", i)]] %>%
-    rownames_to_column("protein") %>% filter(fisherAdjPval<0.01) %>% pull(protein)
-heatmap(assay(pe[["protein"]])[sigNames, ] , main=i)
+    sigNames <- rowData(pe[["protein"]])[[paste0("hurdle_", i)]] %>%
+        rownames_to_column("protein") %>%
+        filter(fisherAdjPval < 0.01) %>%
+        pull(protein)
+    heatmap(assay(pe[["protein"]])[sigNames, ], main = i)
 }
 ```
 
@@ -305,9 +324,9 @@ accessions <- rownames(pe[["protein"]]) %>%
     data_frame(protein = .)
 
 accessions <- accessions %>%
-    transmute(protein = as.character(protein), proteins = strsplit(protein, ';')) %>%
-    unnest %>%
-    mutate(human = proteins %in% id$human, ecoli =  proteins %in% id$ecoli) %>%
+    transmute(protein = as.character(protein), proteins = strsplit(protein, ";")) %>%
+    unnest() %>%
+    mutate(human = proteins %in% id$human, ecoli = proteins %in% id$ecoli) %>%
     group_by(protein) %>%
     summarise(human = any(human), ecoli = any(ecoli)) %>%
     right_join(accessions)
@@ -325,13 +344,14 @@ sum(accessions$human) + sum(accessions$ecoli)
 
 Function to calculate TPR and FDP
 ```{r}
-tprFdp <- function(pval, tp, adjPval){
-ord <- order(pval)
-return(data.frame(
-  pval = pval[ord],
-  adjPval = adjPval[ord],
-  tpr = cumsum(tp[ord])/sum(tp),
-  fdp = cumsum(!tp[ord])/1:length(tp)))
+tprFdp <- function(pval, tp, adjPval) {
+    ord <- order(pval)
+    return(data.frame(
+        pval = pval[ord],
+        adjPval = adjPval[ord],
+        tpr = cumsum(tp[ord]) / sum(tp),
+        fdp = cumsum(!tp[ord]) / 1:length(tp)
+    ))
 }
 ```
 
@@ -340,15 +360,20 @@ tprFdpDefault <- list()
 tprFdpHurdle <- list()
 tprFdpPlots <- list()
 for (i in colnames(L)) {
-tprFdpDefault[[i]] <- tprFdp(rowData(pe[["protein"]])[[i]]$pval,
-             rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[i]]$adjPval)
-tprFdpHurdle[[i]] <- tprFdp(rowData(pe[["protein"]])[[paste0("hurdle_",i)]]$fisherPval,
-             rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[paste0("hurdle_",i)]]$fisherAdjPval)
-hlp <- rbind(cbind(tprFdpDefault[[i]], method = "default"), cbind(tprFdpHurdle[[i]], method = "hurdle"))
-tprFdpPlots[[i]] <- hlp %>%
-      ggplot(aes(x = fdp, y = tpr, color = method)) +
-      geom_path() + theme_classic(base_size = 14) + #guides(size = FALSE, alpha = FALSE)
-      ggtitle(paste0(i," = 0"))
+    tprFdpDefault[[i]] <- tprFdp(
+        rowData(pe[["protein"]])[[i]]$pval,
+        rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[i]]$adjPval
+    )
+    tprFdpHurdle[[i]] <- tprFdp(
+        rowData(pe[["protein"]])[[paste0("hurdle_", i)]]$fisherPval,
+        rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[paste0("hurdle_", i)]]$fisherAdjPval
+    )
+    hlp <- rbind(cbind(tprFdpDefault[[i]], method = "default"), cbind(tprFdpHurdle[[i]], method = "hurdle"))
+    tprFdpPlots[[i]] <- hlp %>%
+        ggplot(aes(x = fdp, y = tpr, color = method)) +
+        geom_path() +
+        theme_classic(base_size = 14) + # guides(size = FALSE, alpha = FALSE)
+        ggtitle(paste0(i, " = 0"))
 }
 tprFdpPlots
 ```

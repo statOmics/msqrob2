@@ -7,9 +7,9 @@
 makeContrast(contrasts, parameterNames)
 }
 \arguments{
-\item{contrasts:}{character vector specifying contrasts, i.e. the linear combination of the modelparameters that equals to zero.}
+\item{contrasts}{character vector specifying contrasts, i.e. the linear combination of the modelparameters that equals to zero.}
 
-\item{parameterNames:}{character vector specifying the model parameters that are involved in the contrasts, e.g if we model data of
+\item{parameterNames}{character vector specifying the model parameters that are involved in the contrasts, e.g if we model data of
 three conditions using a factor condition with three levels a, b and c then our model will have 3 mean parameters named (Intercept),
 conditionb and conditionc. Hence the log2 fold change between  b and a is conditionb. Under the null hypothesis the log2 fold change
 equals 0. Which is to be encoded as "conditionb=0". If we would like to test for log2 fold change between condition c and b we assess if
@@ -23,8 +23,7 @@ Construct the contrast matrix corresponding to specified contrasts
 of a set of parameters.
 }
 \examples{
-makeContrast(c("conditionb=0"),parameterNames=c("(Intercept)","conditionb","conditionc"))
-makeContrast(c("conditionc=0"),parameterNames=c("conditionc"))
-makeContrast(c("conditionb=0","conditionc=0","conditionc-conditionb=0"),parameterNames=c("conditionb","conditionc"))
-
+makeContrast(c("conditionb=0"), parameterNames = c("(Intercept)", "conditionb", "conditionc"))
+makeContrast(c("conditionc=0"), parameterNames = c("conditionc"))
+makeContrast(c("conditionb=0", "conditionc=0", "conditionc-conditionb=0"), parameterNames = c("conditionb", "conditionc"))
 }

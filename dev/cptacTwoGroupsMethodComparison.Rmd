@@ -4,6 +4,11 @@ author:
 - name: Lieven Clement
 output:
   BiocStyle::html_document
+bibliography: msqrob2.bib
+vignette: >
+  %\VignetteIndexEntry{B. label-free workflow with two group design}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 
@@ -45,8 +50,10 @@ library(BiocParallel)
 
 peptidesFile <- msdata::quant(pattern = "cptac_a_b_peptides", full.names = TRUE)
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
-pe <- readQFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
-                   name = "peptideRaw", sep="\t")
+pe <- readQFeatures(
+    table = peptidesFile, fnames = 1, ecol = ecols,
+    name = "peptideRaw", sep = "\t"
+)
 ```
 
 We can extract the spike-in condition from the raw file name.
@@ -54,8 +61,8 @@ We can extract the spike-in condition from the raw file name.
 ```{r}
 cond <- which(strsplit(colnames(pe)[[1]][1], split = "")[[1]] == "A") # find where condition is stored
 colData(pe)$condition <- substr(colnames(pe), cond, cond) %>%
-  unlist %>%  
-  as.factor
+    unlist() %>%
+    as.factor()
 ```
 
 
@@ -85,8 +92,8 @@ even measure a signal in any sample. The missingness is similar across samples.
 
 
 ```{r, cache= TRUE, eval=FALSE}
-MSnbase::plotNA(assay(pe[["peptideRaw"]]))  +
-  xlab("Peptide index (ordered by data completeness)")
+MSnbase::plotNA(assay(pe[["peptideRaw"]])) +
+    xlab("Peptide index (ordered by data completeness)")
 ```
 
 
@@ -98,7 +105,7 @@ include log transformation, filtering and summarisation of the data.
 ## Log transform the data
 
 ```{r}
-pe <- logTransform(pe, base = 2,i="peptideRaw",name="peptideLog")
+pe <- logTransform(pe, base = 2, i = "peptideRaw", name = "peptideLog")
 limma::plotDensities(assay(pe[["peptideLog"]]))
 ```
 
@@ -111,7 +118,7 @@ of these proteins present in a smaller subgroup.
 
 ```{r}
 pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Proteins %in%
-                                           smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins), ]
+    smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins), ]
 ```
 
 ### Remove reverse sequences (decoys) and contaminants
@@ -122,7 +129,7 @@ none of these proteins present in a smaller subgroup.
 ```{r}
 pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Reverse != "+", ]
 pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$
-Potential.contaminant != "+", ]
+    Potential.contaminant != "+", ]
 ```
 
 ### Remove peptides of proteins that were only identified with modified peptides
@@ -158,9 +165,10 @@ limma::plotDensities(assay(pe[["peptideNorm"]]))
 This is more clearly seen is a boxplot.
 
 ```{r,}
-boxplot(assay(pe[["peptideNorm"]]), col = palette()[-1],
-        main = "Peptide distribtutions after normalisation", ylab = "intensity")
-
+boxplot(assay(pe[["peptideNorm"]]),
+    col = palette()[-1],
+    main = "Peptide distribtutions after normalisation", ylab = "intensity"
+)
 ```
 
 
@@ -184,8 +192,10 @@ We use the standard sumarisation in aggregateFeatures, which is a
 robust summarisation method.
 
 ```{r,warning=FALSE}
-pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins",
-                        na.rm = TRUE, name = "protein")
+pe <- aggregateFeatures(pe,
+    i = "peptideNorm", fcol = "Proteins",
+    na.rm = TRUE, name = "protein"
+)
 ```
 
 We notice that the leading differences (log FC) in the protein data
@@ -206,7 +216,7 @@ We model the protein level expression values using msqrob.
 By default msqrob2 estimates the model parameters using robust regression.  
 
 ```{r, warning=FALSE}
-pe <- msqrob(object = pe,i = "protein", formula = ~condition)
+pe <- msqrob(object = pe, i = "protein", formula = ~condition)
 ```
 
 ## Inference
@@ -233,9 +243,13 @@ pe <- hypothesisTest(object = pe, i = "protein", contrast = L)
 ### Volcano-plot
 
 ```{r,warning=FALSE}
-volcano <- ggplot(rowData(pe[["protein"]])$conditionB,
-                  aes(x = logFC, y = -log10(pval), color = adjPval < 0.05)) +
-  geom_point(cex = 2.5) + scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal()
+volcano <- ggplot(
+    rowData(pe[["protein"]])$conditionB,
+    aes(x = logFC, y = -log10(pval), color = adjPval < 0.05)
+) +
+    geom_point(cex = 2.5) +
+    scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
+    theme_minimal()
 volcano
 ```
 
@@ -244,8 +258,10 @@ volcano
 ## Median summarisation
 
 ```{r}
-pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", na.rm = TRUE,
-                        name = "proteinMedian", fun = matrixStats::colMedians)
+pe <- aggregateFeatures(pe,
+    i = "peptideNorm", fcol = "Proteins", na.rm = TRUE,
+    name = "proteinMedian", fun = matrixStats::colMedians
+)
 pe <- msqrob(object = pe, i = "proteinMedian", formula = ~condition)
 pe <- hypothesisTest(object = pe, i = "proteinMedian", contrast = L)
 ```
@@ -254,7 +270,8 @@ pe <- hypothesisTest(object = pe, i = "proteinMedian", contrast = L)
 
 ```{r}
 limma::plotMDS(assay(pe[["proteinMedian"]]),
-               col = as.numeric(colData(pe)$condition))
+    col = as.numeric(colData(pe)$condition)
+)
 ```
 
 Note, that upon median summarisation the separation between
@@ -270,8 +287,9 @@ condition a.
 volcanoMed <- rowData(pe[["proteinMedian"]])[[colnames(L)]] %>%
     ggplot(aes(x = logFC, y = -log10(pval), color = adjPval < 0.01)) +
     geom_point(cex = 2.5) +
-    scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal() +
-    geom_vline(xintercept = log2(0.74/.25),col="red") +
+    scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
+    theme_minimal() +
+    geom_vline(xintercept = log2(0.74 / .25), col = "red") +
     ggtitle("median summarisation")
 volcanoMed
 ```
@@ -287,8 +305,10 @@ The performance of ridge regression generally improves for more complex designs 
 Note, that the parameter names for ridge regression always start with the string "ridge".
 
 ```{r}
-try(pe <- msqrob(object = pe,i = "protein", formula = ~condition,
-                 modelColumnName = "ridge", ridge = TRUE)) # note: intentional error
+try(pe <- msqrob(
+    object = pe, i = "protein", formula = ~condition,
+    modelColumnName = "ridge", ridge = TRUE
+)) # note: intentional error
 ```
 
 Note, that by default ridge regression does not work for two group comparisons
@@ -297,12 +317,18 @@ because it typically performs better the more parameters there are in the mean m
 group comparison using a formula without intercept.
 
 ```{r}
-pe <- msqrob(object = pe, i = "protein", formula = ~-1 + condition,
-             modelColumnName = "ridge", ridge = TRUE)
-Lridge <- makeContrast("ridgeconditionB - ridgeconditionA = 0",
-                       c("ridgeconditionB", "ridgeconditionA"))
-pe <- hypothesisTest(object = pe , i = "protein", contrast = Lridge,
-                      modelColumn = "ridge")
+pe <- msqrob(
+    object = pe, i = "protein", formula = ~ -1 + condition,
+    modelColumnName = "ridge", ridge = TRUE
+)
+Lridge <- makeContrast(
+    "ridgeconditionB - ridgeconditionA = 0",
+    c("ridgeconditionB", "ridgeconditionA")
+)
+pe <- hypothesisTest(
+    object = pe, i = "protein", contrast = Lridge,
+    modelColumn = "ridge"
+)
 ```
 
 
@@ -310,11 +336,14 @@ pe <- hypothesisTest(object = pe , i = "protein", contrast = Lridge,
 
 ```{r,warning=FALSE}
 volcanoRidge <- rowData(pe[["protein"]])[[colnames(Lridge)]] %>%
-    ggplot(aes(x = logFC, y = -log10(pval),
-           color = adjPval < 0.01)) +
+    ggplot(aes(
+        x = logFC, y = -log10(pval),
+        color = adjPval < 0.01
+    )) +
     geom_point(cex = 2.5) +
-    scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal() +
-    geom_vline(xintercept = log2(0.74/0.25), col = "red") +
+    scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
+    theme_minimal() +
+    geom_vline(xintercept = log2(0.74 / 0.25), col = "red") +
     ggtitle(paste("robust ridge"))
 volcanoRidge
 ```
@@ -338,15 +367,18 @@ rowData(pe[["proteinMedian"]])$ups <- grepl("UPS", rownames(pe[["proteinMedian"]
 ## log2 Fold Change Estimation
 
 ```{r}
-logFC <- data.frame(default = rowData(pe[["protein"]])[[colnames(L)]][, 1],
-                    median = rowData(pe[["proteinMedian"]])[[colnames(L)]][, 1],
-                    ridge = rowData(pe[["protein"]])[[colnames(Lridge)]][, 1],
-                    ups = rowData(pe[["protein"]])$ups)
+logFC <- data.frame(
+    default = rowData(pe[["protein"]])[[colnames(L)]][, 1],
+    median = rowData(pe[["proteinMedian"]])[[colnames(L)]][, 1],
+    ridge = rowData(pe[["protein"]])[[colnames(Lridge)]][, 1],
+    ups = rowData(pe[["protein"]])$ups
+)
 
-logFC <-logFC %>% gather(method, log2FC, c("default", "median", "ridge"))
+logFC <- logFC %>% gather(method, log2FC, c("default", "median", "ridge"))
 logFC$ups <- as.factor(logFC$ups)
-logFC %>% ggplot(aes(x = method, y = log2FC, fill = ups)) + geom_boxplot() +
-  geom_hline(yintercept = log2(0.74/.25), color = "red")
+logFC %>% ggplot(aes(x = method, y = log2FC, fill = ups)) +
+    geom_boxplot() +
+    geom_hline(yintercept = log2(0.74 / .25), color = "red")
 ```
 
 Note, that methods based on robust summarisation (default and ridge) have
@@ -387,34 +419,43 @@ in the protein list.
 
 Function to calculate TPR and FDP
 ```{r}
-tprFdp <- function(pval, tp, adjPval){
-ord <- order(pval)
-return(data.frame(
-  pval = pval[ord],
-  adjPval = adjPval[ord],
-  tpr = cumsum(tp[ord])/sum(tp),
-  fdp = cumsum(!tp[ord])/1:length(tp)))
+tprFdp <- function(pval, tp, adjPval) {
+    ord <- order(pval)
+    return(data.frame(
+        pval = pval[ord],
+        adjPval = adjPval[ord],
+        tpr = cumsum(tp[ord]) / sum(tp),
+        fdp = cumsum(!tp[ord]) / 1:length(tp)
+    ))
 }
 ```
 
 ```{r}
-tprFdpDefault <- tprFdp(rowData(pe[["protein"]])[[colnames(L)]]$pval,
-             rowData(pe[["protein"]])$ups,
-             rowData(pe[["protein"]])[[colnames(L)]]$adjPval)
-tprFdpMedian <- tprFdp(rowData(pe[["proteinMedian"]])[[colnames(L)]]$pval,
-             rowData(pe[["proteinMedian"]])$ups,
-             rowData(pe[["proteinMedian"]])[[colnames(L)]]$adjPval)
+tprFdpDefault <- tprFdp(
+    rowData(pe[["protein"]])[[colnames(L)]]$pval,
+    rowData(pe[["protein"]])$ups,
+    rowData(pe[["protein"]])[[colnames(L)]]$adjPval
+)
+tprFdpMedian <- tprFdp(
+    rowData(pe[["proteinMedian"]])[[colnames(L)]]$pval,
+    rowData(pe[["proteinMedian"]])$ups,
+    rowData(pe[["proteinMedian"]])[[colnames(L)]]$adjPval
+)
 
-tprFdpRidge <- tprFdp(rowData(pe[["protein"]])[[colnames(Lridge)]]$pval,
-             rowData(pe[["protein"]])$ups,
-             rowData(pe[["protein"]])[[colnames(Lridge)]]$adjPval)
+tprFdpRidge <- tprFdp(
+    rowData(pe[["protein"]])[[colnames(Lridge)]]$pval,
+    rowData(pe[["protein"]])$ups,
+    rowData(pe[["protein"]])[[colnames(Lridge)]]$adjPval
+)
 
-hlp <- rbind(cbind(tprFdpDefault, method = "default"),
-             cbind(tprFdpMedian, method = "median"),
-             cbind(tprFdpRidge, method = "ridge"))
+hlp <- rbind(
+    cbind(tprFdpDefault, method = "default"),
+    cbind(tprFdpMedian, method = "median"),
+    cbind(tprFdpRidge, method = "ridge")
+)
 tprFdpPlot <- hlp %>%
-      ggplot(aes(x = fdp, y = tpr, color = method)) +
-      geom_path()
+    ggplot(aes(x = fdp, y = tpr, color = method)) +
+    geom_path()
 tprFdpPlot
 ```
 

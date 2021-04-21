@@ -65,13 +65,6 @@ containing control parameters, including the nonlinear optimizer to be used
 and parameters to be passed through to the nonlinear optimizer, see the
 ‘lmerControl’ documentation of the lme4 package for more details.
 Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
-
-\item{overwrite}{\code{boolean(1)} to indicate if the column in the rowData has to
-be overwritten if the modelColumnName already exists. Default is FALSE.}
-
-\item{ridge}{\code{boolean(1)} to indicate if ridge regression is
-performed. Default is \code{FALSE}. If \code{TRUE} the fixed effects are
-estimated via penalized regression and shrunken to zero.}
 }
 \value{
 A ‘QFeatures’ object with an additional assay.
@@ -100,9 +93,8 @@ data(pe)
 # The fold changes are calculated at the protein level while correcting for
 # the different peptide species in each sample and the correlation between
 # peptide intensities of peptides of the same protein in the same sample.
-pe <- msqrobAggregate(pe,i="peptide",fcol="Proteins",formula=~condition)
+pe <- msqrobAggregate(pe, i = "peptide", fcol = "Proteins", formula = ~condition)
 getCoef(rowData(pe[["msqrobAggregate"]])$msqrobModels[["P00956"]])
-
 }
 \author{
 Lieven Clement

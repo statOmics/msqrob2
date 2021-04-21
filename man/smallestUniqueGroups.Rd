@@ -18,5 +18,5 @@ A character vector containing the names of the protein groups for which none of 
 For a given vector of protein group names, outputs the names of those protein groups for which none of its member proteins is present in a smaller protein group.
 }
 \examples{
-#TODO
+# TODO
 }

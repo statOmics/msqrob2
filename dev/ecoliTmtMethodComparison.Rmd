@@ -1,0 +1,488 @@
+---
+title: "Ecoli-Human Spike-in TMT Study (PRIDE ID  PXD013277) - Comparison"
+author:
+- name: Lieven Clement, Oliver M. Crook
+output:
+  BiocStyle::html_document
+bibliography: msqrob2.bib
+vignette: >
+    %\VignetteIndexEntry{F. labelled workflow with method comparison}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteEncoding{UTF-8}
+---
+
+*Disclaimer*: we only have a workflow for labelled proteomics when all samples were quantified within the same run. We are currently developing bespoke workflows for labelled proteomics experiments with multiple runs.
+
+
+# Background
+In this vignette, we assess the performance of MSqRob for differential
+expression analysis using a publicly available spike-in study
+(PRIDE identifier: PXD013277).
+One MCF-7 and one E.coli K-12 cell pellet were lysed and
+sonicated in a buffer containing 4% SDS, 25 mM HEPES pH 7.6 and 1mM DTT. Total
+protein amount was estimated (Bio-Rad DC). Samples with different spiked in amounts of E.coli protein extract (3 replicates with 7.5 µg, 4 with 15 µg and 3 with 45 µg) in MCF-7 background (70 µg of protein extract) were prepared. Protein digestion (LysC and trypsin, sequencing grade modified, Pierce) was performed using a modified SP3-protocol.
+
+Spectra data was converted to mzML files using ProteoWizard release: 3.0.10827 (2017-5-11) and searched with MS-GF+ (2016.10.26) and Percolator. Precursor mass tolerance used was 10 ppm, fragment mass tolerance 0.11 Da, fixed modifications
+were TMT-10plex on lysines and peptide N-termini, and carbamidomethylation on cysteine residues, oxidation on methionine was used as a variable modification. The
+protein database used for search was Uniprot (2018_04) human protein databases with E.coli protein database concatenated (78807 protein sequences) allowing for one tryptic miss-cleavage. PSMs and proteins were filtered at 1% FDR resulting in 308,001 PSMs; 122,235 unique peptides and 11,216 proteins.
+
+# Data
+
+```{r}
+library(msqrob2)
+url <- "ftp://jpost.pharm.kyoto-u.ac.jp/repository/JPST000562/target_psmtable.txt"
+download.file(url, destfile = "./target_psmtable.txt", method = "auto")
+
+df <- read.table("target_psmtable.txt", stringsAsFactors = FALSE, header = TRUE, quote = "", comment.char = "", sep = "\t")
+```
+
+We make a unique name per psm and read in data.
+The intensities are in the columns starting with the string "tmt10plex".
+
+```{r}
+ecols <- grep("tmt10plex", colnames(df))
+pe <- readQFeatures(df, ecol = ecols, name = "psmRaw")
+
+colData(pe)$condition <- as.factor(c(rep("a", 3), rep("b", 4), rep("c", 3)))
+rm(df)
+gc()
+```
+
+
+We calculate how many non zero intensities we have per peptide.
+This will be useful for filtering.
+
+```{r}
+rowData(pe[["psmRaw"]])$nNonZero <- rowSums(assay(pe[["psmRaw"]]) > 0)
+```
+
+
+Peptides with zero intensities are missing peptides and should be
+represent with a `NA` value instead of `0`.
+```{r}
+pe <- zeroIsNA(pe, i = "psmRaw")
+```
+
+# Preprocessing
+## Filtering
+
+We will retain the psms that are picked up in at least four channels
+
+```{r}
+filtObserved <- VariableFilter(
+    field = "nNonZero",
+    value = 4,
+    condition = ">="
+)
+pe <- filterFeatures(pe, filtObserved)
+```
+
+Filter ambiguous proteins
+
+```{r}
+rowData(pe[["psmRaw"]])$ecoli <- grepl("ECOLI", rowData(pe[["psmRaw"]])$Master.protein.s.)
+rowData(pe[["psmRaw"]])$human <- grepl("HUMAN", rowData(pe[["psmRaw"]])$Master.protein.s.)
+rowData(pe[["psmRaw"]])$ambiguous <- rowData(pe[["psmRaw"]])$ecoli * rowData(pe[["psmRaw"]])$human
+filtAmbi <- VariableFilter(
+    field = "ambiguous",
+    value = 0,
+    condition = "=="
+)
+pe <- filterFeatures(pe, filtAmbi)
+```
+## Log transform the data
+
+```{r}
+pe <- logTransform(pe, base = 2, i = "psmRaw", name = "psmLog")
+colPal <- colorRampPalette(c("red", "green", "blue"),
+    space = "rgb"
+)
+limma::plotDensities(assay(pe[["psmLog"]]), col = colPal(10))
+```
+
+
+## Summarization
+
+### Median Sweeping
+
+Herbrich et al. 2013 introduced median sweeping to summarize psm level data to
+protein level data and to normalize the data.
+
+It consists of three steps:
+
+1) Rowcentering: Substract the rowMedian of
+2) Summarize PSM to protein by taking the median of the centered data
+3) Normalize for differences in loading by median column centering.
+
+Steps 1 and 2 basically boil down to a kind of a median polish
+summarization with one iteration.
+
+```{r}
+pe <- logTransform(pe, base = 2, i = "psmRaw", name = "psmLogCentered")
+assay(pe[["psmLogCentered"]]) <- assay(pe[["psmLogCentered"]]) - rowMedians(assay(pe[["psmLogCentered"]]), na.rm = TRUE)
+pe <- aggregateFeatures(pe,
+    i = "psmLogCentered",
+    fcol = "Master.protein.s.",
+    name = "proteinSweepHlp",
+    fun = colMedians,
+    na.rm = TRUE
+)
+pe <- normalize(pe, "proteinSweepHlp", method = "center.median", name = "proteinSweep")
+limma::plotDensities(assay(pe[["proteinSweep"]]), col = colPal(10))
+```
+
+Note, that we can now clearly see the differences between the treatments.
+The spike-in approach has a vast impact on the distributions of the data.
+Note, that ecoli proteins are DE and human proteins are nonDE.
+We see a large impact of the spike-in treatment on both distributions.
+
+```{r}
+rowData(pe[["proteinSweep"]])$ecoli <- grepl("ECOLI", rownames(pe[["proteinSweep"]]))
+limma::plotDensities(assay(pe[["proteinSweep"]])[rowData(pe[["proteinSweep"]])$ecoli, ], col = colPal(10), main = "Ecoli (spike-in)")
+limma::plotDensities(assay(pe[["proteinSweep"]])[!rowData(pe[["proteinSweep"]])$ecoli, ], col = colPal(10), main = "Human (nonDE)")
+```
+
+The resulting summaries should be equivalent to those of the DEqMS median sweep function
+
+```{r}
+library(DEqMS)
+df <- data.frame(peptide = rowData(pe[["psmLog"]])$Peptide, protein = rowData(pe[["psmLog"]])$"Master.protein.s.", assay(pe[["psmLog"]]))
+proteinMedianSweeping <- medianSweeping(df)
+range(assay(pe[["proteinSweep"]]) - proteinMedianSweeping, na.rm = TRUE)
+```
+
+### Conventional MSqRob workflow
+We will summarize the psms to proteins by using the median polish algorithm.
+We do not normalize the psm data first because this would break the connection between the reporter ions.
+
+```{r}
+pe <- aggregateFeatures(pe,
+    i = "psmLog",
+    fcol = "Master.protein.s.",
+    name = "protein",
+    fun = MsCoreUtils::medianPolish,
+    na.rm = TRUE
+)
+limma::plotDensities(assay(pe[["protein"]]), col = colPal(10))
+```
+
+#### Normalisation
+
+We use a DESeq2 style normalisation to correct for differences in mass loading in the different reporter channels.
+
+$$ s_j = median_i \left[\frac{y_{ij}}{median_k(y_{ik})}\right] $$
+
+On a log scale this becomes an offset:
+
+$$ \log_2 s_j = median_i \left[ \left(\log_2 y_{ij} - median_k(\log_2 y_{ik})\right)\right] $$
+
+```{r}
+offset <- colMedians(assay(pe[["protein"]]) - rowMedians(assay(pe[["protein"]]), na.rm = TRUE), na.rm = TRUE)
+assay(pe[["protein"]]) <- t(t(assay(pe[["protein"]])) - offset)
+limma::plotDensities(assay(pe[["protein"]]), col = colPal(10))
+```
+
+# Analysis
+
+## MSqRob Estimation
+
+We model the protein level expression values using msqrob.
+By default msqrob2 estimates the model parameters using robust regression. We do this for both types of preprocessing
+
+```{r, warning=FALSE}
+pe <- msqrob(object = pe, i = "protein", formula = ~condition)
+pe <- msqrob(object = pe, i = "proteinSweep", formula = ~condition)
+```
+
+## MSqRob Inference
+
+What are the parameter names of the model?
+```{r}
+getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
+```
+
+Spike-in condition a is the reference class. So the mean log2 expression for
+samples from condition a is `(Intercept)`.
+The mean log2 expression for samples from condition b-e is
+'(Intercept)+conditionb',...,'(Intercept)+conditione', respectively.
+Hence, the average log2 fold change (FC) between condition b and condition a is modelled using the parameter 'conditionb'. Thus, we assess the contrast
+'conditionb = 0' with our statistical test. The same holds for comparison c-a.
+
+
+```{r}
+L <- makeContrast(c("conditionb = 0", "conditionc = 0", "conditionc - conditionb = 0"), parameterNames = c("conditionb", "conditionc"))
+pe <- hypothesisTest(pe, "protein", L)
+pe <- hypothesisTest(pe, "proteinSweep", L)
+```
+
+##DEqMS
+
+```{r}
+design <- model.matrix(~ -1 + condition, colData(pe))
+fit1 <- limma::lmFit(assay(pe[["proteinSweep"]]), design)
+cont <- limma::makeContrasts(conditionb - conditiona, conditionc - conditiona, conditionc - conditionb, levels = design)
+fit2 <- limma::contrasts.fit(fit1, contrasts = cont)
+fit3 <- limma::eBayes(fit2)
+fit3$count <- rowData(pe[["proteinSweep"]])[[".n"]]
+fit4 <- spectraCounteBayes(fit3)
+res <- lapply(colnames(cont), outputResult, fit = fit4)
+names(res) <- colnames(L)
+```
+
+##MSqRob trended Dispersion
+
+```{r}
+plot(log2(rowData(pe[["protein"]])[[".n"]]),
+    log(sapply(rowData(pe[["protein"]])$msqrobModels, getVar)),
+    xlab = "log2 number of psms",
+    ylab = "log variance"
+)
+```
+
+```{r}
+models <- rowData(pe[["protein"]])$msqrobModels
+
+trendedDisp <- limma::squeezeVar(
+    sapply(models, getVar),
+    sapply(models, getDF),
+    covariate = log2(rowData(pe[["protein"]])[[".n"]])
+)
+
+plot(log2(rowData(pe[["protein"]])[[".n"]]),
+    log(sapply(rowData(pe[["protein"]])$msqrobModels, getVar)),
+    xlab = "log2 number of psms",
+    ylab = "log variance"
+)
+
+points(log2(rowData(pe[["protein"]])[[".n"]]), log(trendedDisp$var.prior), col = 2, pch = 19)
+```
+
+The trend is well captured by the prior variance.
+
+We now update the models with the new posterior variance.
+
+```{r}
+for (i in 1:length(models))
+{
+    mydf <- trendedDisp$df.prior + getDF(models[[i]])
+    models[[i]]@varPosterior <- as.numeric(trendedDisp$var.post[i])
+    models[[i]]@dfPosterior <- as.numeric(mydf)
+}
+rowData(pe[["protein"]])$msqrobModelsTrendedDisp <- models
+pe <- hypothesisTest(pe,
+    "protein",
+    L,
+    modelColumn = "msqrobModelsTrendedDisp",
+    resultsColumnNamePrefix = "trendedDisp_"
+)
+```
+
+We do the same for the median Swept data:
+
+```{r}
+models <- rowData(pe[["proteinSweep"]])$msqrobModels
+
+trendedDisp <- limma::squeezeVar(
+    sapply(models, getVar),
+    sapply(models, getDF),
+    covariate = log2(rowData(pe[["protein"]])[[".n"]])
+)
+
+for (i in 1:length(models))
+{
+    mydf <- trendedDisp$df.prior + getDF(models[[i]])
+    models[[i]]@varPosterior <- as.numeric(trendedDisp$var.post[i])
+    models[[i]]@dfPosterior <- as.numeric(mydf)
+}
+rowData(pe[["proteinSweep"]])$msqrobModelsTrendedDisp <- models
+pe <- hypothesisTest(pe,
+    "proteinSweep",
+    L,
+    modelColumn = "msqrobModelsTrendedDisp",
+    resultsColumnNamePrefix = "trendedDisp_"
+)
+```
+
+# Performance
+
+We know the ground truth. All ecoli proteins are DE, human proteins not.
+
+Function to calculate TPR and FDP
+```{r}
+tprFdp <- function(pval, tp, adjPval) {
+    ord <- order(pval)
+    return(data.frame(
+        pval = pval[ord],
+        adjPval = adjPval[ord],
+        tpr = cumsum(tp[ord]) / sum(tp),
+        fdp = cumsum(!tp[ord]) / 1:length(tp),
+        fpr = cumsum(!tp[ord]) / sum(!tp)
+    ))
+}
+```
+
+## comparisons
+
+```{r}
+tprFdpDefault <- list()
+tprFdpSweep <- list()
+tprFdpDEqMS <- list()
+tprFdpLimma <- list()
+tprFdpDefaultT <- list()
+tprFdpSweepT <- list()
+tprFdpPlots <- list()
+
+for (i in colnames(L)) {
+    tprFdpDefault[[i]] <- tprFdp(
+        rowData(pe[["protein"]])[[i]]$pval,
+        grepl("ECOLI", rownames(pe[["protein"]])), rowData(pe[["protein"]])[[i]]$adjPval
+    )
+    tprFdpSweep[[i]] <- tprFdp(
+        rowData(pe[["proteinSweep"]])[[i]]$pval,
+        grepl("ECOLI", rownames(pe[["proteinSweep"]])), rowData(pe[["proteinSweep"]])[[i]]$adjPval
+    )
+    tprFdpDefaultT[[i]] <- tprFdp(
+        rowData(pe[["protein"]])[[paste0("trendedDisp_", i)]]$pval,
+        grepl("ECOLI", rownames(pe[["proteinSweep"]])), rowData(pe[["protein"]])[[paste0("trendedDisp_", i)]]$adjPval
+    )
+    tprFdpSweepT[[i]] <- tprFdp(
+        rowData(pe[["proteinSweep"]])[[paste0("trendedDisp_", i)]]$pval,
+        grepl("ECOLI", rownames(pe[["proteinSweep"]])), rowData(pe[["proteinSweep"]])[[paste0("trendedDisp_", i)]]$adjPval
+    )
+    tprFdpDEqMS[[i]] <- tprFdp(
+        res[[i]]$sca.P.Value,
+        grepl("ECOLI", rownames(res[[i]])),
+        res[[i]]$sca.adj.pval
+    )
+    tprFdpLimma[[i]] <- tprFdp(
+        res[[i]]$P.Value,
+        grepl("ECOLI", rownames(res[[i]])),
+        res[[i]]$adj.P.Val
+    )
+    hlp <- rbind(
+        cbind(tprFdpDefault[[i]], method = "default"),
+        cbind(tprFdpSweep[[i]], method = "sweep"),
+        cbind(tprFdpLimma[[i]], method = "limma"),
+        cbind(tprFdpDEqMS[[i]], method = "DEqMS"),
+        cbind(tprFdpDefaultT[[i]], method = "defaultT"),
+        cbind(tprFdpSweepT[[i]], method = "sweepT")
+    )
+    tprFdpPlots[[i]] <- hlp %>%
+        ggplot(aes(x = fdp, y = tpr, color = method)) +
+        geom_path() +
+        theme_classic(base_size = 14) + # guides(size = FALSE, alpha = FALSE)
+        ggtitle(paste0(i, " = 0"))
+}
+tprFdpPlots
+
+for (i in 1:length(tprFdpPlots)) {
+      print(tprFdpPlots[[i]] + xlim(0, .2))
+  }
+```
+
+The default method ranks a few human proteins very highly.
+ We will explore the first 5.
+
+```{r}
+humConCb <- rowData(pe[["protein"]])[["conditionc - conditionb"]][rowData(pe[["protein"]])$human, ]
+falsePos <- rownames(humConCb)[order(humConCb$pval)]
+```
+
+```{r}
+for (i in falsePos[1:5])
+{
+    subset <- pe[i, ]
+    matplot(
+        t(
+            log2(
+                assay(subset[["psmRaw"]])
+            )
+        ),
+        type = "l",
+        main = paste(i, "default")
+    )
+    points(1:10, assay(subset[["protein"]]), pch = "X")
+}
+```
+
+We do the same for the sweeping summarization/normalization.
+
+```{r}
+humConCb <- rowData(pe[["proteinSweep"]])[["conditionc - conditionb"]][rowData(pe[["proteinSweep"]])$human, ]
+falsePos <- rownames(humConCb)[order(humConCb$pval)]
+```
+
+```{r}
+for (i in falsePos[1:5])
+{
+    subset <- pe[i, ]
+    matplot(
+        t(
+            assay(subset[["psmLogCentered"]])
+        ),
+        type = "l",
+        main = paste(i, "Sweep")
+    )
+    points(1:10, assay(subset[["proteinSweep"]]), pch = "X")
+}
+```
+
+Top false positives all seem to have signal.
+
+
+## ROC plots
+
+```{r}
+rocDefault <- list()
+rocSweep <- list()
+rocDEqMS <- list()
+rocLimma <- list()
+rocDefaultT <- list()
+rocSweepT <- list()
+rocPlots <- list()
+
+for (i in colnames(L)) {
+    rocDefault[[i]] <- tprFdp(
+        rowData(pe[["protein"]])[[i]]$pval,
+        grepl("ECOLI", rownames(pe[["protein"]])), rowData(pe[["protein"]])[[i]]$adjPval
+    )
+    rocSweep[[i]] <- tprFdp(
+        rowData(pe[["proteinSweep"]])[[i]]$pval,
+        grepl("ECOLI", rownames(pe[["proteinSweep"]])), rowData(pe[["proteinSweep"]])[[i]]$adjPval
+    )
+    rocDefaultT[[i]] <- tprFdp(
+        rowData(pe[["protein"]])[[paste0("trendedDisp_", i)]]$pval,
+        grepl("ECOLI", rownames(pe[["proteinSweep"]])), rowData(pe[["protein"]])[[paste0("trendedDisp_", i)]]$adjPval
+    )
+    rocSweepT[[i]] <- tprFdp(
+        rowData(pe[["proteinSweep"]])[[paste0("trendedDisp_", i)]]$pval,
+        grepl("ECOLI", rownames(pe[["proteinSweep"]])), rowData(pe[["proteinSweep"]])[[paste0("trendedDisp_", i)]]$adjPval
+    )
+    rocDEqMS[[i]] <- tprFdp(
+        res[[i]]$sca.P.Value,
+        grepl("ECOLI", rownames(res[[i]])),
+        res[[i]]$sca.adj.pval
+    )
+    rocLimma[[i]] <- tprFdp(
+        res[[i]]$P.Value,
+        grepl("ECOLI", rownames(res[[i]])),
+        res[[i]]$adj.P.Val
+    )
+    hlp <- rbind(
+        cbind(rocDefault[[i]], method = "default"),
+        cbind(rocSweep[[i]], method = "sweep"),
+        cbind(rocLimma[[i]], method = "limma"),
+        cbind(rocDEqMS[[i]], method = "DEqMS"),
+        cbind(rocDefaultT[[i]], method = "defaultT"),
+        cbind(rocSweepT[[i]], method = "sweepT")
+    )
+    rocPlots[[i]] <- hlp %>%
+        ggplot(aes(x = fpr, y = tpr, color = method)) +
+        geom_path() +
+        theme_classic(base_size = 14) + # guides(size = FALSE, alpha = FALSE)
+        ggtitle(paste0(i, " = 0"))
+}
+rocPlots
+```
+
+# References

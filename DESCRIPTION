@@ -1,6 +1,6 @@
 Package: msqrob2
 Title: Robust statistical inference for quantitative LC-MS proteomics
-Version: 0.0.1
+Version: 0.0.9
 Author:
     c(person(given = "Lieven",
            family = "Clement",
@@ -29,9 +29,27 @@ Maintainer: Lieven Clement <lieven.clement@ugent.be>
 Description: Robust statistical inference for quantitative proteomics
    using the Feature infrastructure for quantitative mass spectrometry
    data.
-Depends: R (>= 4.0), QFeatures (>= 1.1.2), methods, lme4, purrr, BiocParallel
-Imports: MASS, limma, knitr, testthat
-Suggests: Matrix, multcomp
+Depends:
+    R (>= 4.0),
+    QFeatures (>= 1.1.2),
+    stats,
+    methods,
+    lme4,
+    purrr,
+    BiocParallel,
+    Matrix,
+    MASS,
+    limma,
+    SummarizedExperiment,
+    codetools
+Suggests:
+    multcomp,
+    knitr,
+    BiocStyle,
+    RefManageR,
+    sessioninfo,
+    rmarkdown,
+    testthat
 License: Artistic-2.0
 Collate: 'msqrob-framework.R' 'allGenerics.R'
         'accessors.R' 'msqrob.R' 'msqrob-utils.R' 'StatModel-methods.R'

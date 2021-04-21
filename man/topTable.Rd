@@ -22,11 +22,11 @@ Options, in increasing conservatism, include ‘"none"’,
 list of options. Default is "BH" the Benjamini-Hochberg method
 to controle the False Discovery Rate (FDR).}
 
+\item{sort}{\code{boolean(1)} to indicate if the features have to be sorted according
+to statistical significance.}
+
 \item{alpha}{\code{numeric} specifying the cutoff value for adjusted p-values.
 Only features with lower p-values are listed.}
-
-\item{`boolean(1)`}{to indicate if the features have to be sorted according
-to statistical significance.}
 }
 \value{
 A dataframe with log2 fold changes (logFC), standard errors (se),
@@ -38,7 +38,7 @@ adjust.method in the p.adjust function of the stats package.
 Summary table of the differentially expressed Features
 }
 \examples{
-#TODO
+# TODO
 }
 \author{
 Lieven Clement

@@ -17,51 +17,66 @@
 #'              }
 #'
 #' @rdname statModelAccessors
-#' @aliases statModelAccessors getModel getFitMethod getCoef getDF getDfPosterior getVarPosterior getSigmaPosterior getVar getSigma getVcovUnscaled
+#' @aliases statModelAccessors getCoef getDF getDfPosterior getFitMethod getModel getSigma getSigmaPosterior getVar getVarPosterior getVcovUnscaled
 #'
 #' @param object `StatModel` object
-setMethod("getModel",signature="StatModel",
-          definition=function(object) object@params)
 
-setMethod("getFitMethod",signature="StatModel",
-          definition=function(object) object@type)
+setMethod("getModel",
+    signature = "StatModel",
+    definition = function(object) object@params
+)
 
+
+#' @rdname statModelAccessors
+setMethod("getFitMethod",
+    signature = "StatModel",
+    definition = function(object) object@type
+)
+
+#' @rdname statModelAccessors
 setMethod("getCoef",
-          signature="StatModel",
-          definition=function(object) object@params$coefficients)
+    signature = "StatModel",
+    definition = function(object) object@params$coefficients
+)
 
+#' @rdname statModelAccessors
 setMethod("getDfPosterior",
-          signature="StatModel",
-          definition=function(object) object@dfPosterior)
+    signature = "StatModel",
+    definition = function(object) object@dfPosterior
+)
 
+#' @rdname statModelAccessors
 setMethod("getVarPosterior",
-          signature="StatModel",
-          definition=function(object) object@varPosterior)
+    signature = "StatModel",
+    definition = function(object) object@varPosterior
+)
 
+#' @rdname statModelAccessors
 setMethod("getSigmaPosterior",
-          signature="StatModel",
-          definition=function(object) object@varPosterior^.5)
+    signature = "StatModel",
+    definition = function(object) object@varPosterior^.5
+)
 
+#' @rdname statModelAccessors
 setMethod("getDF",
-          signature="StatModel",
-          definition=function(object) object@params$df.residual)
+    signature = "StatModel",
+    definition = function(object) object@params$df.residual
+)
 
+#' @rdname statModelAccessors
 setMethod("getVar",
-          signature="StatModel",
-          definition=function(object)object@params$sigma^2)
+    signature = "StatModel",
+    definition = function(object) object@params$sigma^2
+)
 
+#' @rdname statModelAccessors
 setMethod("getSigma",
-          signature="StatModel",
-          definition=function(object)object@params$sigma)
+    signature = "StatModel",
+    definition = function(object) object@params$sigma
+)
 
+#' @rdname statModelAccessors
 setMethod("getVcovUnscaled",
-          signature="StatModel",
-          definition=function(object) object@params$vcovUnscaled)
-
-#setMethod("getResults", "QFeatures",
-#          function(object, i, columnName){
-#              if (!(i in names(object))) stop(paste0(i," is no assay of the QFeatures object"))
-#              if (is.null(columnName)) return(rowData(object[[i]]))
-#              if (!(columnName %in% colnames(rowData(object[[i]])))) stop(paste0(columnName," is not a column of the rowData of the assay ",i," of the QFeatures object"))
-#              rowData(object[[i]])[[columnName]]
-#              })
+    signature = "StatModel",
+    definition = function(object) object@params$vcovUnscaled
+)

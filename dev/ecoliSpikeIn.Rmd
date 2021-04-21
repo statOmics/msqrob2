@@ -4,6 +4,11 @@ author:
 - name: Lieven Clement, Oliver M. Crook
 output:
   BiocStyle::html_document
+bibliography: msqrob2.bib
+vignette: >
+  %\VignetteIndexEntry{C. label-free workflow with five groups design}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 
@@ -50,14 +55,16 @@ library(QFeatures)
 library(msqrob2)
 library(BiocParallel)
 
-myurl<-
-"https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/maxquant/peptides.zip"
+myurl <-
+    "https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/maxquant/peptides.zip"
 download.file(myurl, "peptides.zip", method = "curl", extra = "-L")
 unzip("peptides.zip")
 peptidesFile <- "peptides.txt"
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
-pe <- readQFeatures(table = peptidesFile, fnames = 1, ecol = ecols,
-                   name = "peptideRaw", sep="\t")
+pe <- readQFeatures(
+    table = peptidesFile, fnames = 1, ecol = ecols,
+    name = "peptideRaw", sep = "\t"
+)
 pe
 ```
 
@@ -65,7 +72,9 @@ We can extract the spikein condition from the raw file name.
 
 ```{r}
 cond <- which(strsplit(colnames(pe)[[1]][1], split = "")[[1]] == "a") # find where condition is stored
-colData(pe)$condition <- substr(colnames(pe), cond, cond) %>% unlist %>%  as.factor
+colData(pe)$condition <- substr(colnames(pe), cond, cond) %>%
+    unlist() %>%
+    as.factor()
 ```
 
 We calculate how many non zero intensities we have per peptide.
@@ -79,7 +88,7 @@ rowData(pe[["peptideRaw"]])$nNonZero <- rowSums(assay(pe[["peptideRaw"]]) > 0)
 Peptides with zero intensities are missing peptides and
 should be represent with a `NA` value instead of `0`.
 ```{r}
-pe <- zeroIsNA(pe,"peptideRaw")
+pe <- zeroIsNA(pe, "peptideRaw")
 ```
 
 ## Information on species
@@ -88,19 +97,25 @@ In the spik-in study there are peptides from e.coli and human proteins.
 The ecoli peptides are added at different concerntrations.
 
 ```{r}
-myurl<-
-"https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/ecoli_up000000625_7_06_2018.fasta"
-download.file(myurl, "ecoli.fasta", method="curl", extra="-L")
-myurl<-"https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/human_up000005640_sp_7_06_2018.fasta"
-download.file(myurl, "human.fasta", method="curl", extra="-L")
+myurl <-
+    "https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/ecoli_up000000625_7_06_2018.fasta"
+download.file(myurl, "ecoli.fasta", method = "curl", extra = "-L")
+myurl <- "https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/human_up000005640_sp_7_06_2018.fasta"
+download.file(myurl, "human.fasta", method = "curl", extra = "-L")
 ```
 
 ```{r}
-id <- list(ecoli = 'ecoli.fasta',
-          human = 'human.fasta') %>%
-  purrr::map(~{read_lines(.x) %>%
-          {.[str_detect(.,'^>')]} %>%
-          str_extract(.,'(?<=\\|).*(?=\\|)')})
+id <- list(
+    ecoli = "ecoli.fasta",
+    human = "human.fasta"
+) %>%
+    purrr::map(~ {
+        read_lines(.x) %>%
+            {
+                .[str_detect(., "^>")]
+            } %>%
+            str_extract(., "(?<=\\|).*(?=\\|)")
+    })
 ```
 ## Data exploration
 
@@ -111,8 +126,8 @@ even measure a signal in any sample. The missingness is similar across samples.
 
 
 ```{r, cache= TRUE, eval=FALSE}
-MSnbase::plotNA(assay(pe))  +
-  xlab("Peptide index (ordered by data completeness)")
+MSnbase::plotNA(assay(pe)) +
+    xlab("Peptide index (ordered by data completeness)")
 ```
 
 
@@ -130,7 +145,7 @@ none of these proteins present in a smaller subgroup.
 
 ```{r}
 pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Proteins %in%
-                                           smallestUniqueGroups(rowData(pe[["peptideRaw"]])$Proteins), ]
+    smallestUniqueGroups(rowData(pe[["peptideRaw"]])$Proteins), ]
 ```
 
 ### Remove reverse sequences (decoys) and contaminants
@@ -141,7 +156,7 @@ and proteins, which were only identified by peptides with modifications.
 ```{r}
 pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Reverse != "+", ]
 pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$
-Potential.contaminant != "+", ]
+    Potential.contaminant != "+", ]
 ```
 
 ### Drop peptides that were only identified in one sample
@@ -172,9 +187,10 @@ limma::plotDensities(assay(pe[["peptideNorm"]]))
 This is more easily seen in a boxplot.
 
 ```{r,}
-boxplot(assay(pe[["peptideNorm"]]), col = palette()[-1],
-        main = "Peptide distribtutions after normalisation", ylab = "intensity")
-
+boxplot(assay(pe[["peptideNorm"]]),
+    col = palette()[-1],
+    main = "Peptide distribtutions after normalisation", ylab = "intensity"
+)
 ```
 
 
@@ -198,8 +214,10 @@ We use the standard sumarisation in aggregateFeatures, which is a
 robust summarisation method.
 
 ```{r warning=FALSE}
-pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", na.rm = TRUE,
-                        name = "protein")
+pe <- aggregateFeatures(pe,
+    i = "peptideNorm", fcol = "Proteins", na.rm = TRUE,
+    name = "protein"
+)
 ```
 
 ```{r}
@@ -245,11 +263,13 @@ c and b will assess the contrast 'conditionc - conditionb = 0', ...
 ```{r}
 comparisonsOther <- paste0(
     apply(
-          combn(paste0("condition", letters[2:5]), 2)[2:1, ],
-          2,
-          paste,
-          collapse = " - ")
-          , " = 0")
+        combn(paste0("condition", letters[2:5]), 2)[2:1, ],
+        2,
+        paste,
+        collapse = " - "
+    ),
+    " = 0"
+)
 comparisonsOther
 
 comparisons <- c(comparisonsRef, comparisonsOther)
@@ -274,22 +294,22 @@ Here, we show the 6 most DE proteins for the comparison b-a.
 
 ```{r}
 rowData(pe[["protein"]]) %>%
-          .$"conditionb" %>%
-          rownames_to_column("protein") %>%
-          arrange(pval) %>%
-          column_to_rownames("protein") %>%
-          head
+    .$"conditionb" %>%
+    rownames_to_column("protein") %>%
+    arrange(pval) %>%
+    column_to_rownames("protein") %>%
+    head()
 ```
 
 We do the same for comparison c-b.
 
 ```{r}
 rowData(pe[["protein"]]) %>%
-          .$"conditionc - conditionb" %>%
-          rownames_to_column("protein") %>%
-          arrange(pval) %>%
-          column_to_rownames("protein") %>%
-          head
+    .$"conditionc - conditionb" %>%
+    rownames_to_column("protein") %>%
+    arrange(pval) %>%
+    column_to_rownames("protein") %>%
+    head()
 ```
 ## Plots
 
@@ -298,12 +318,15 @@ rowData(pe[["protein"]]) %>%
 
 ```{r,warning=FALSE}
 volcano <- rowData(pe[["protein"]]) %>%
-    .$"conditionb"%>%
-    ggplot(aes(x = logFC, y = -log10(pval),
-           color = adjPval < 0.01)) +
+    .$"conditionb" %>%
+    ggplot(aes(
+        x = logFC, y = -log10(pval),
+        color = adjPval < 0.01
+    )) +
     geom_point(cex = 2.5) +
-    scale_color_manual(values = alpha(c("black", "red"), 0.5)) + theme_minimal() +
-    geom_vline(xintercept = log2(concentrations["b"]/concentrations["a"]), col = "red")
+    scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
+    theme_minimal() +
+    geom_vline(xintercept = log2(concentrations["b"] / concentrations["a"]), col = "red")
 volcano
 ```
 
@@ -323,8 +346,8 @@ We first select the names of the significant proteins.
 sigNames <- rowData(pe[["protein"]]) %>%
     .$"conditionb" %>%
     rownames_to_column("protein") %>%
-  filter(adjPval<0.01) %>%
-  pull(protein)
+    filter(adjPval < 0.01) %>%
+    pull(protein)
 heatmap(assay(pe[["protein"]])[sigNames, ])
 ```
 
@@ -338,29 +361,38 @@ for a particular protein.
 
 ```{r, warning=FALSE, message=FALSE}
 for (protName in sigNames[1:5]) {
+    pePlot <- pe[protName, , c("peptideNorm", "protein")]
+    pePlotDf <- data.frame(longFormat(pePlot))
+    pePlotDf$assay <- factor(pePlotDf$assay,
+        levels = c("peptideNorm", "protein")
+    )
+    pePlotDf$condition <- as.factor(colData(pePlot)[pePlotDf$colname, "condition"])
 
-pePlot <- pe[protName, , c("peptideNorm", "protein")]
-pePlotDf <- data.frame(longFormat(pePlot))
-pePlotDf$assay <- factor(pePlotDf$assay,
-                        levels = c("peptideNorm", "protein"))
-pePlotDf$condition <- as.factor(colData(pePlot)[pePlotDf$colname, "condition"])
+    p1 <- ggplot(
+        data = pePlotDf,
+        aes(
+            x = colname,
+            y = value,
+            group = rowname
+        )
+    ) +
+        geom_line() +
+        geom_point() +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+        facet_grid(~assay) +
+        ggtitle(protName)
+    print(p1)
 
-p1 <- ggplot(data = pePlotDf,
-       aes(x = colname,
-           y = value,
-           group = rowname)) +
-    geom_line() + geom_point() +  theme_minimal() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-    facet_grid(~ assay) + ggtitle(protName)
-print(p1)
-
-p2 <- ggplot(pePlotDf, aes(x = colname, y = value, fill = condition)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_point(position = position_jitter(width = .1), aes(shape = rowname)) +
-  scale_shape_manual(values = 1:nrow(pePlotDf)) +
-  labs(title = protName, x = "sample", y = "Peptide intensity (log2)") +
-  theme_minimal() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  facet_grid(~assay)
-print(p2)
+    p2 <- ggplot(pePlotDf, aes(x = colname, y = value, fill = condition)) +
+        geom_boxplot(outlier.shape = NA) +
+        geom_point(position = position_jitter(width = .1), aes(shape = rowname)) +
+        scale_shape_manual(values = 1:nrow(pePlotDf)) +
+        labs(title = protName, x = "sample", y = "Peptide intensity (log2)") +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+        facet_grid(~assay)
+    print(p2)
 }
 ```
 
@@ -392,12 +424,12 @@ We first add the ground truth data to the rowData of the object.
 
 ```{r}
 accessions <- rownames(pe[["protein"]]) %>%
-    data_frame(protein=.)
+    data_frame(protein = .)
 
 accessions <- accessions %>%
-    transmute(protein=as.character(protein),proteins = strsplit(protein, ';')) %>%
-    unnest %>%
-    mutate(human = proteins %in% id$human, ecoli =  proteins %in% id$ecoli) %>%
+    transmute(protein = as.character(protein), proteins = strsplit(protein, ";")) %>%
+    unnest() %>%
+    mutate(human = proteins %in% id$human, ecoli = proteins %in% id$ecoli) %>%
     group_by(protein) %>%
     summarise(human = any(human), ecoli = any(ecoli)) %>%
     right_join(accessions)
@@ -415,29 +447,34 @@ sum(accessions$human) + sum(accessions$ecoli)
 
 Function to calculate TPR and FDP
 ```{r}
-tprFdp <- function(pval, tp, adjPval){
-ord <- order(pval)
-return(data.frame(
-  pval = pval[ord],
-  adjPval = adjPval[ord],
-  tpr = cumsum(tp[ord])/sum(tp),
-  fdp = cumsum(!tp[ord])/1:length(tp)))
+tprFdp <- function(pval, tp, adjPval) {
+    ord <- order(pval)
+    return(data.frame(
+        pval = pval[ord],
+        adjPval = adjPval[ord],
+        tpr = cumsum(tp[ord]) / sum(tp),
+        fdp = cumsum(!tp[ord]) / 1:length(tp)
+    ))
 }
 ```
 
 Performance Plot
 
 ```{r}
-tprFdpCompBa <- tprFdp(rowData(pe[["protein"]])$"conditionb"$pval,
-             rowData(pe[["protein"]])$accession$ecoli,rowData(pe[["protein"]])$"conditionb"$adjPval)
+tprFdpCompBa <- tprFdp(
+    rowData(pe[["protein"]])$"conditionb"$pval,
+    rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])$"conditionb"$adjPval
+)
 tprFdpPlotBa <- tprFdpCompBa %>%
-      ggplot(aes(x = fdp, y = tpr)) +
-      geom_path() +
-      geom_vline(xintercept=0.01,lty=2) +
-  geom_point(data = tprFdpCompBa[sum(tprFdpCompBa$adjPval < 0.01, na.rm = TRUE), ],
-             aes(x = fdp, y = tpr), cex = 2)
+    ggplot(aes(x = fdp, y = tpr)) +
+    geom_path() +
+    geom_vline(xintercept = 0.01, lty = 2) +
+    geom_point(
+        data = tprFdpCompBa[sum(tprFdpCompBa$adjPval < 0.01, na.rm = TRUE), ],
+        aes(x = fdp, y = tpr), cex = 2
+    )
 tprFdpPlotBa
-tprFdpPlotBa + xlim(0,.25)
+tprFdpPlotBa + xlim(0, .25)
 ```
 
  The toplist that is returned at the 1% FDR level is indeed close to 1% FDP,
@@ -448,10 +485,10 @@ tprFdpPlotBa + xlim(0,.25)
 ```{r}
 contrastNames <- colnames(L)
 FCs <- apply(
-           combn(letters[1:5], 2),
-           2,
-           function(x) concentrations[x[2]]/concentrations[x[1]]
-          )
+    combn(letters[1:5], 2),
+    2,
+    function(x) concentrations[x[2]] / concentrations[x[1]]
+)
 names(FCs) <- contrastNames
 ```
 #### Volcano-plots
@@ -460,14 +497,16 @@ names(FCs) <- contrastNames
 volcano <- list()
 for (i in contrastNames)
 {
-volcano[[i]] <- rowData(pe[["protein"]])[[i]] %>%
-    ggplot(aes(x = logFC, y = -log10(pval),
-           color = adjPval < 0.01)) +
-    geom_point(cex = 2.5) +
-    scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
-    theme_minimal() +
-    geom_vline(xintercept=log2(FCs[i]),col="red") +
-    ggtitle(i)
+    volcano[[i]] <- rowData(pe[["protein"]])[[i]] %>%
+        ggplot(aes(
+            x = logFC, y = -log10(pval),
+            color = adjPval < 0.01
+        )) +
+        geom_point(cex = 2.5) +
+        scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
+        theme_minimal() +
+        geom_vline(xintercept = log2(FCs[i]), col = "red") +
+        ggtitle(i)
 }
 volcano
 ```
@@ -477,9 +516,11 @@ volcano
 ```{r}
 for (i in contrastNames)
 {
-sigNames <- rowData(pe[["protein"]])[[i]] %>%
-    rownames_to_column("protein") %>% filter(adjPval < 0.01) %>% pull(protein)
-heatmap(assay(pe[["protein"]])[sigNames, ], main = i)
+    sigNames <- rowData(pe[["protein"]])[[i]] %>%
+        rownames_to_column("protein") %>%
+        filter(adjPval < 0.01) %>%
+        pull(protein)
+    heatmap(assay(pe[["protein"]])[sigNames, ], main = i)
 }
 ```
 
@@ -490,18 +531,20 @@ in all comparisons are spike-in proteins.
 
 
 ```{r}
-tprFdps<-list()
+tprFdps <- list()
 tprFdpPlots <- list()
 for (i in contrastNames)
 {
-tprFdps[[i]] <- tprFdp(rowData(pe[["protein"]])[[i]]$pval,
-             rowData(pe[["protein"]])$accession$ecoli,rowData(pe[["protein"]])[[i]]$adjPval)
-tprFdpPlots[[i]] <- tprFdps[[i]] %>%
-      ggplot(aes(x = fdp, y = tpr)) +
-      geom_path() +
-      geom_vline(xintercept = 0.01, lty = 2) +
-      geom_point(data = tprFdps[[i]][sum(tprFdps[[i]]$adjPval < 0.01, na.rm=TRUE), ], aes(x = fdp, y = tpr), cex = 2) +
-      ggtitle(i)
+    tprFdps[[i]] <- tprFdp(
+        rowData(pe[["protein"]])[[i]]$pval,
+        rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[i]]$adjPval
+    )
+    tprFdpPlots[[i]] <- tprFdps[[i]] %>%
+        ggplot(aes(x = fdp, y = tpr)) +
+        geom_path() +
+        geom_vline(xintercept = 0.01, lty = 2) +
+        geom_point(data = tprFdps[[i]][sum(tprFdps[[i]]$adjPval < 0.01, na.rm = TRUE), ], aes(x = fdp, y = tpr), cex = 2) +
+        ggtitle(i)
 }
 tprFdpPlots
 ```
@@ -517,8 +560,10 @@ because of spiking the ecoli proteins in at a relative high concentration.
 # Comparison with other workflows
 ## Median summarisation
 ```{r warning=FALSE}
-pe <- aggregateFeatures(pe, "peptideNorm", fcol = "Proteins", na.rm = TRUE,
-                        name = "proteinMedian", fun = matrixStats::colMedians)
+pe <- aggregateFeatures(pe, "peptideNorm",
+    fcol = "Proteins", na.rm = TRUE,
+    name = "proteinMedian", fun = matrixStats::colMedians
+)
 pe <- msqrob(object = pe, i = "proteinMedian", formula = ~condition)
 pe <- hypothesisTest(object = pe, i = "proteinMedian", contrast = L)
 ```
@@ -526,17 +571,19 @@ pe <- hypothesisTest(object = pe, i = "proteinMedian", contrast = L)
 ### Volcano-plots
 
 ```{r,warning=FALSE}
-volcanoMed<-list()
+volcanoMed <- list()
 for (i in contrastNames)
 {
-volcanoMed[[i]] <- rowData(pe[["proteinMedian"]])[[i]] %>%
-    ggplot(aes(x = logFC, y = -log10(pval),
-           color = adjPval < 0.01)) +
-    geom_point(cex = 2.5) +
-    scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
-    theme_minimal() +
-    geom_vline(xintercept = log2(FCs[i]), col = "red") +
-    ggtitle(paste("median summarisation",i))
+    volcanoMed[[i]] <- rowData(pe[["proteinMedian"]])[[i]] %>%
+        ggplot(aes(
+            x = logFC, y = -log10(pval),
+            color = adjPval < 0.01
+        )) +
+        geom_point(cex = 2.5) +
+        scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
+        theme_minimal() +
+        geom_vline(xintercept = log2(FCs[i]), col = "red") +
+        ggtitle(paste("median summarisation", i))
 }
 volcanoMed
 ```
@@ -555,20 +602,24 @@ rowData(pe[["proteinMedian"]])$accession <- rowData(pe[["protein"]])$accession
 ```
 
 ```{r}
-tprFdpMed<-list()
+tprFdpMed <- list()
 tprFdpPlotMed <- list()
 for (i in contrastNames)
 {
-tprFdpMed[[i]] <- tprFdp(rowData(pe[["proteinMedian"]])[[i]]$pval,
-             rowData(pe[["proteinMedian"]])$accession$ecoli,
-             rowData(pe[["proteinMedian"]])[[i]]$adjPval)
+    tprFdpMed[[i]] <- tprFdp(
+        rowData(pe[["proteinMedian"]])[[i]]$pval,
+        rowData(pe[["proteinMedian"]])$accession$ecoli,
+        rowData(pe[["proteinMedian"]])[[i]]$adjPval
+    )
 
-hlp <- rbind(cbind(tprFdps[[i]], method = "robustRlm"),
-             cbind(tprFdpMed[[i]], method = "medianRlm"))
-tprFdpPlotMed[[i]] <- hlp %>%
-      ggplot(aes(x = fdp, y = tpr, color = method)) +
-      geom_path() +
-      ggtitle(i)
+    hlp <- rbind(
+        cbind(tprFdps[[i]], method = "robustRlm"),
+        cbind(tprFdpMed[[i]], method = "medianRlm")
+    )
+    tprFdpPlotMed[[i]] <- hlp %>%
+        ggplot(aes(x = fdp, y = tpr, color = method)) +
+        geom_path() +
+        ggtitle(i)
 }
 tprFdpPlotMed
 ```
@@ -587,28 +638,32 @@ Note, that the parameter names for ridge regression always start with the string
 So we have to adjust the contrast matrix.
 
 ```{r}
-pe <- msqrob(object = pe, i = "protein", formula = ~condition,
-             modelColumnName = "ridge", ridge = TRUE)
+pe <- msqrob(
+    object = pe, i = "protein", formula = ~condition,
+    modelColumnName = "ridge", ridge = TRUE
+)
 Lridge <- L
 rownames(Lridge) <- paste0("ridge", rownames(L))
-pe <- hypothesisTest(object = pe, i = "protein", contrast = Lridge,
-                     modelColumn = "ridge", resultsColumnNamePrefix = "ridge")
+pe <- hypothesisTest(
+    object = pe, i = "protein", contrast = Lridge,
+    modelColumn = "ridge", resultsColumnNamePrefix = "ridge"
+)
 ```
 
 
 ### Volcano-plots
 
 ```{r,warning=FALSE}
-volcanoRidge<-list()
+volcanoRidge <- list()
 for (i in contrastNames)
 {
-volcanoRidge[[i]] <- rowData(pe[["protein"]])[[paste0("ridge",i)]] %>%
-    ggplot(aes(x = logFC, y = -log10(pval), color = adjPval < 0.01)) +
-    geom_point(cex = 2.5) +
-    scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
-    theme_minimal() +
-    geom_vline(xintercept=log2(FCs[i]),col="red") +
-    ggtitle(paste("robust ridge",i))
+    volcanoRidge[[i]] <- rowData(pe[["protein"]])[[paste0("ridge", i)]] %>%
+        ggplot(aes(x = logFC, y = -log10(pval), color = adjPval < 0.01)) +
+        geom_point(cex = 2.5) +
+        scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
+        theme_minimal() +
+        geom_vline(xintercept = log2(FCs[i]), col = "red") +
+        ggtitle(paste("robust ridge", i))
 }
 volcanoRidge
 ```
@@ -620,16 +675,20 @@ tprFdpRidge <- list()
 tprFdpPlotRidge <- list()
 for (i in contrastNames)
 {
-tprFdpRidge[[i]] <- tprFdp(rowData(pe[["protein"]])[[paste0("ridge",i)]]$pval,
-             rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[paste0("ridge", i)]]$adjPval)
+    tprFdpRidge[[i]] <- tprFdp(
+        rowData(pe[["protein"]])[[paste0("ridge", i)]]$pval,
+        rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[paste0("ridge", i)]]$adjPval
+    )
 
-hlp <- rbind(cbind(tprFdps[[i]], method = "robustRlm"),
-             cbind(tprFdpMed[[i]], method = "medianRlm"),
-             cbind(tprFdpRidge[[i]], method = "robustRidge"))
-tprFdpPlotRidge[[i]] <- hlp %>%
-      ggplot(aes(x = fdp, y = tpr, color = method)) +
-      geom_path() +
-      ggtitle(i)
+    hlp <- rbind(
+        cbind(tprFdps[[i]], method = "robustRlm"),
+        cbind(tprFdpMed[[i]], method = "medianRlm"),
+        cbind(tprFdpRidge[[i]], method = "robustRidge")
+    )
+    tprFdpPlotRidge[[i]] <- hlp %>%
+        ggplot(aes(x = fdp, y = tpr, color = method)) +
+        geom_path() +
+        ggtitle(i)
 }
 tprFdpPlotRidge
 ```
@@ -650,8 +709,10 @@ lowest spike-in condition a are missing.
 
 ### Extract assay data for proteins with fitErrors
 ```{r}
-fitErrors <- which(sapply(rowData(pe[["protein"]])$msqrobModels,
-                          getFitMethod) == "fitError")
+fitErrors <- which(sapply(
+    rowData(pe[["protein"]])$msqrobModels,
+    getFitMethod
+) == "fitError")
 yFitErrors <- assay(pe[["protein"]])[fitErrors, ]
 ```
 
@@ -672,38 +733,43 @@ Next, we estimate the models by dropping the levels of the factor
 for which all observations are missing.
 
 ```{r warning=FALSE}
-modelsFitErrors <- apply(yFitErrors, 1, function(y, data, formula){
+modelsFitErrors <- apply(yFitErrors, 1, function(y, data, formula) {
 
-# Remove information for which we have missing values
-sel <- !is.na(y)
-y <- y[sel]
-y <- matrix(y, nrow = 1)
-data <- subset(data, sel)
+    # Remove information for which we have missing values
+    sel <- !is.na(y)
+    y <- y[sel]
+    y <- matrix(y, nrow = 1)
+    data <- subset(data, sel)
 
-# Drop unused levels of factors of the data
-factorColumns <- which(sapply(data, class) == "factor")
-for (j in factorColumns)
-  data[[j]] <- droplevels(data[[j]])
+    # Drop unused levels of factors of the data
+    factorColumns <- which(sapply(data, class) == "factor")
+    for (j in factorColumns) {
+          data[[j]] <- droplevels(data[[j]])
+      }
 
-# Fit the model and adopt Empirical Bayes variance estimation
-out <- try(msqrobLm(y, formula, data)[[1]], silent=TRUE)
-if  (class(out)=="try-error") {
+    # Fit the model and adopt Empirical Bayes variance estimation
+    out <- try(msqrobLm(y, formula, data)[[1]], silent = TRUE)
+    if (class(out) == "try-error") {
+        out <- StatModel(
+            type = "fitError",
+            params = list(
+                coefficients = NA,
+                vcovUnscaled = NA,
+                sigma = NA, df.residual = NA, w = NULL
+            ),
+            varPosterior = as.numeric(NA),
+            dfPosterior = as.numeric(NA)
+        )
+    } else {
+        slot(out, "varPosterior") <- limma:::.squeezeVar(
+            getVar(out), getDF(out),
+            priorEst$scale, priorEst$df2
+        )
+        slot(out, "dfPosterior") <- getDF(out) + priorEst$df2
+    }
 
-        out <- StatModel(type = "fitError",
-                          params = list(coefficients = NA,         
-                                        vcovUnscaled = NA,
-                                        sigma = NA, df.residual = NA, w = NULL),
-                          varPosterior = as.numeric(NA),
-                          dfPosterior = as.numeric(NA))
-} else {
-  slot(out,"varPosterior") <- limma:::.squeezeVar(getVar(out), getDF(out),
-                                                  priorEst$scale, priorEst$df2)
-  slot(out,"dfPosterior") <- getDF(out) + priorEst$df2
-}
-
-return(out)
-}, formula = ~condition, data = colData(pe)
-)
+    return(out)
+}, formula = ~condition, data = colData(pe))
 ```
 
 ## Inference
@@ -712,9 +778,9 @@ return(out)
 Calculate reference levels for proteins with fit errors
 
 ```{r}
-refLevels <- apply(yFitErrors, 1, function(y, data){
-  levels(droplevels(data$condition[!is.na(y)]))[1]
-  }, data = colData(pe))
+refLevels <- apply(yFitErrors, 1, function(y, data) {
+    levels(droplevels(data$condition[!is.na(y)]))[1]
+}, data = colData(pe))
 ```
 
 Parameters for some conditions are missing.
@@ -725,11 +791,10 @@ involving a particular contrast.
 ```{r}
 inferenceErrorRefLevelA <- list()
 for (j in 1:ncol(L)) {
-
-  contrast <- L[, j]
-  contrast[contrast == 0] <- NA
-  inferenceErrorRefLevelA[[colnames(L)[j]]] <-
-    topFeatures(modelsFitErrors[refLevels == "a"], na.exclude(contrast), sort = FALSE)
+    contrast <- L[, j]
+    contrast[contrast == 0] <- NA
+    inferenceErrorRefLevelA[[colnames(L)[j]]] <-
+        topFeatures(modelsFitErrors[refLevels == "a"], na.exclude(contrast), sort = FALSE)
 }
 ```
 
@@ -742,11 +807,12 @@ We first set inference for all contrasts involving the reference level
 ```{r}
 inferenceErrorRefLevelAltered <- list()
 for (j in 1:4) {
-
-  contrast <- L[, j]
-  contrast[] <- NA
-  inferenceErrorRefLevelAltered[[colnames(L)[j]]] <- topFeatures(modelsFitErrors[refLevels!="a"],
-                                                                 na.exclude(contrast), sort = FALSE)
+    contrast <- L[, j]
+    contrast[] <- NA
+    inferenceErrorRefLevelAltered[[colnames(L)[j]]] <- topFeatures(modelsFitErrors[refLevels != "a"],
+        na.exclude(contrast),
+        sort = FALSE
+    )
 }
 ```
 
@@ -756,19 +822,19 @@ and correct for the change in reference level.
 ```{r}
 protNamesHlp <- names(modelsFitErrors[refLevels != "a"])
 for (j in 5:ncol(L)) {
-
-inferenceErrorRefLevelAltered[[colnames(L)[j]]] <-
-    sapply(protNamesHlp, function(i, models, contrast, refLevels){
-        contrast[contrast == 0] <- NA
-        if (refLevels[i] != "a")
-
-         contrast[paste0("condition",refLevels[i])] <- NA
-         topFeatures(models[i], na.exclude(contrast)) %>% unlist
+    inferenceErrorRefLevelAltered[[colnames(L)[j]]] <-
+        sapply(protNamesHlp, function(i, models, contrast, refLevels) {
+            contrast[contrast == 0] <- NA
+            if (refLevels[i] != "a") {
+                  contrast[paste0("condition", refLevels[i])] <- NA
+              }
+            topFeatures(models[i], na.exclude(contrast)) %>% unlist()
         },
         contrast = L[, j],
-        refLevels = refLevels, models = modelsFitErrors[refLevels != "a"]) %>%
-        t %>%
-        data.frame
+        refLevels = refLevels, models = modelsFitErrors[refLevels != "a"]
+        ) %>%
+        t() %>%
+        data.frame()
 }
 ```
 
@@ -783,32 +849,38 @@ We store the results in the rowData of the assay in columns starting with
 ```{r}
 for (j in colnames(L)) {
 
-  # Combining the results
-  featureTableHlp <-rowData(pe[["protein"]])[[j]]
-  featureTableHlp[rownames(inferenceErrorRefLevelA[[j]]), ] <- inferenceErrorRefLevelA[[j]]
-  featureTableHlp[rownames(inferenceErrorRefLevelAltered[[j]]), ] <- inferenceErrorRefLevelAltered[[j]]
-  featureTableHlp$adjPval <- p.adjust(featureTableHlp$pval, "BH")
+    # Combining the results
+    featureTableHlp <- rowData(pe[["protein"]])[[j]]
+    featureTableHlp[rownames(inferenceErrorRefLevelA[[j]]), ] <- inferenceErrorRefLevelA[[j]]
+    featureTableHlp[rownames(inferenceErrorRefLevelAltered[[j]]), ] <- inferenceErrorRefLevelAltered[[j]]
+    featureTableHlp$adjPval <- p.adjust(featureTableHlp$pval, "BH")
 
-  # Store results in rowData of the protein assay
-  rowData(pe[["protein"]])[[paste0("rlmOpt", j)]] <- featureTableHlp
+    # Store results in rowData of the protein assay
+    rowData(pe[["protein"]])[[paste0("rlmOpt", j)]] <- featureTableHlp
 }
 ```
 
 ## Comparison of number proteins that can be analysed for a particular contrast
 
 ```{r}
-nProtDefault <- sapply(colnames(L),
-function(j){
-  sum(!is.na(rowData(pe[["protein"]])[[j]]$pval))
-  })
+nProtDefault <- sapply(
+    colnames(L),
+    function(j) {
+        sum(!is.na(rowData(pe[["protein"]])[[j]]$pval))
+    }
+)
 
-nProtCustom <- sapply(colnames(L),
-function(j){
-sum(!is.na(rowData(pe[["protein"]])[[paste0("rlmOpt", j)]]$pval))
-})
+nProtCustom <- sapply(
+    colnames(L),
+    function(j) {
+        sum(!is.na(rowData(pe[["protein"]])[[paste0("rlmOpt", j)]]$pval))
+    }
+)
 
-cbind(default = nProtDefault, custom = nProtCustom,
-      extra = nProtCustom - nProtDefault)
+cbind(
+    default = nProtDefault, custom = nProtCustom,
+    extra = nProtCustom - nProtDefault
+)
 ```
 
 We observe that we can retrieve additional results
@@ -819,16 +891,20 @@ for `r min(nProtCustom-nProtDefault)` to `r max(nProtCustom-nProtDefault)` prote
 ```{r}
 tprFdpRlmOpt <- tprFdpRlmOptPlot <- list()
 for (i in contrastNames) {
-tprFdpRlmOpt[[i]] <- tprFdp(rowData(pe[["protein"]])[[paste0("rlmOpt",i)]]$pval %>% unlist,
-             rowData(pe[["protein"]])$accession$ecoli,rowData(pe[["protein"]])[[paste0("rlmOpt",i)]]$adjPval %>% unlist)
+    tprFdpRlmOpt[[i]] <- tprFdp(
+        rowData(pe[["protein"]])[[paste0("rlmOpt", i)]]$pval %>% unlist(),
+        rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[paste0("rlmOpt", i)]]$adjPval %>% unlist()
+    )
 
-hlp <- rbind(cbind(tprFdpRlmOpt[[i]], method = "error"),
-           cbind(tprFdps[[i]], method = "noError"))
+    hlp <- rbind(
+        cbind(tprFdpRlmOpt[[i]], method = "error"),
+        cbind(tprFdps[[i]], method = "noError")
+    )
 
-tprFdpRlmOptPlot[[i]] <- hlp %>%
-    ggplot(aes(x = fdp, y = tpr, color = method)) +
-    geom_path() +
-    geom_vline(xintercept = 0.01, lty = 2)
+    tprFdpRlmOptPlot[[i]] <- hlp %>%
+        ggplot(aes(x = fdp, y = tpr, color = method)) +
+        geom_path() +
+        geom_vline(xintercept = 0.01, lty = 2)
     ggtitle(i)
 }
 tprFdpRlmOptPlot

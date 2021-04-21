@@ -10,6 +10,10 @@ msqrobGlm(y, npep, formula, data, priorCount = 0.1, binomialBound = TRUE)
 \item{y}{A \code{matrix} with the peptide counts. The
 features are along the rows and samples along the columns.}
 
+\item{npep}{A vector with number of peptides per protein. It has as length
+the number of rows of y. The counts are equal or larger than the largest
+peptide count in y.}
+
 \item{formula}{Model formula. The model is built based on the
 covariates in the data object.}
 
@@ -20,11 +24,7 @@ the same number of rows as the number of columns (samples) of
 \item{priorCount}{A 'numeric(1)', which is a prior count to be added to the observations to shrink
 the estimated log-fold-changes towards zero.}
 
-\item{nPep}{A vector with number of peptides per protein. It has as length
-the number of rows of y. The counts are equal or larger than the largest
-peptide count in y.}
-
-\item{binomialBound:}{logical, if ‘TRUE’ then the quasibinomial variance estimator will
+\item{binomialBound}{logical, if ‘TRUE’ then the quasibinomial variance estimator will
 be never smaller than 1 (no underdispersion).}
 }
 \value{
@@ -45,14 +45,12 @@ by modeling peptide counts using quasibinomial glm
 data(pe)
 
 # Aggregate peptide intensities in protein expression values
-pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
+pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
 pe
 
 # Fit MSqrob model using robust regression with the MASS rlm function
-models <- msqrobGlm(aggcounts(pe[["protein"]]), rowData(pe[["protein"]])[[".n"]],~condition,colData(pe))
+models <- msqrobGlm(aggcounts(pe[["protein"]]), rowData(pe[["protein"]])[[".n"]], ~condition, colData(pe))
 #' getCoef(models[[1]])
-
-
 }
 \author{
 Lieven Clement

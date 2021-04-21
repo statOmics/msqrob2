@@ -14,35 +14,36 @@
 #'        ‘"BH"’, ‘"BY"’ and ‘"holm"’.  See ‘p.adjust’ for the complete
 #'        list of options. Default is "BH" the Benjamini-Hochberg method
 #'        to controle the False Discovery Rate (FDR).
-#' @param `boolean(1)` to indicate if the features have to be sorted according
+#' @param sort `boolean(1)` to indicate if the features have to be sorted according
 #'        to statistical significance.
 #' @param alpha `numeric` specifying the cutoff value for adjusted p-values.
 #'        Only features with lower p-values are listed.
 #'
-#' @examples #TODO
+#' @examples # TODO
 #' @return A dataframe with log2 fold changes (logFC), standard errors (se),
 #'         degrees of freedom of the test (df), t-test statistic (t),
 #'         p-values (pval) and adjusted pvalues (adjPval) using the specified
 #'         adjust.method in the p.adjust function of the stats package.
+#' @importFrom stats pt p.adjust na.exclude
 #' @rdname topTable
 #' @author Lieven Clement
 #' @export
 
-topFeatures<-function(models,contrast,adjust.method="BH",sort=TRUE,alpha=1){
-    logFC<-sapply(models,getContrast,L=contrast)
-    se<-sqrt(sapply(models,varContrast,L=contrast))
-    df<-sapply(models,getDfPosterior)
-    t<-logFC/se
-    pval<-pt(-abs(t),df)*2
-    adjPval<-p.adjust(pval,method=adjust.method)
-    out <-data.frame(logFC,se,df,t,pval,adjPval)
+topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alpha = 1) {
+    logFC <- sapply(models, getContrast, L = contrast)
+    se <- sqrt(sapply(models, varContrast, L = contrast))
+    df <- sapply(models, getDfPosterior)
+    t <- logFC / se
+    pval <- pt(-abs(t), df) * 2
+    adjPval <- p.adjust(pval, method = adjust.method)
+    out <- data.frame(logFC, se, df, t, pval, adjPval)
     if (sort) {
-        if(alpha<1) {
-            ids <- adjPval<alpha
-            out<-na.exclude(out[ids,])
-            }
-        return(out[order(out$pval),])
-        } else {
-        return(out)
+        if (alpha < 1) {
+            ids <- adjPval < alpha
+            out <- na.exclude(out[ids, ])
         }
+        return(out[order(out$pval), ])
+    } else {
+        return(out)
+    }
 }

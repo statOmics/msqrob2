@@ -26,9 +26,8 @@
 #' # The fold changes are calculated at the protein level while correcting for
 #' # the different peptide species in each sample and the correlation between
 #' # peptide intensities of peptides of the same protein in the same sample.
-#' pe <- msqrobAggregate(pe,i="peptide",fcol="Proteins",formula=~condition)
+#' pe <- msqrobAggregate(pe, i = "peptide", fcol = "Proteins", formula = ~condition)
 #' getCoef(rowData(pe[["msqrobAggregate"]])$msqrobModels[["P00956"]])
-#'
 #' @param object `QFeatures` instance
 #'
 #' @param formula Model formula. The model is built based on the
@@ -50,16 +49,10 @@
 #'        to store the msqrob models in the rowData of the SummarizedExperiment
 #'        instance or of the assay of the QFeatures instance. Default is "msqrobModels".
 #'
-#' @param overwrite `boolean(1)` to indicate if the column in the rowData has to
-#'        be overwritten if the modelColumnName already exists. Default is FALSE.
-#'
 #' @param robust `boolean(1)` to indicate if robust regression is
 #'     performed to account for outliers. Default is `TRUE`. If
 #'     `FALSE` an OLS fit is performed.
 #'
-#' @param ridge `boolean(1)` to indicate if ridge regression is
-#'        performed. Default is `FALSE`. If `TRUE` the fixed effects are
-#'        estimated via penalized regression and shrunken to zero.
 #'
 #' @param maxitRob `numeric(1)` indicating the maximum iterations in
 #'        the IRWLS algorithm used in the M-estimation step of the robust
@@ -83,37 +76,45 @@
 #' @rdname msqrobAggregate
 #'
 #' @aliases msqrobAggregate msqrobAggregate,QFeatures-method
+#' @import SummarizedExperiment
 #'
 #' @export
 
 
-setMethod("msqrobAggregate","QFeatures",
-          function(object,
-                   formula,
-                   i,
-                   fcol,
-                   name = "msqrobAggregate",
-                   aggregateFun = MsCoreUtils::robustSummary,
-                   modelColumnName="msqrobModels",
-                   robust=TRUE,
-                   maxitRob=1,
-                   tol=1e-6,
-                   doQR=TRUE,
-                   lmerArgs= list(control = lmerControl(calc.derivs = FALSE))){
-              if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain assay ",i))
-              if (!(fcol %in% colnames(rowData(object[[i]])))) stop(paste0("The rowData of Assay ",i," of the QFeatures object does not contain variable",fcol))
-              object<-QFeatures::aggregateFeatures(object=object,
-                                                  i=i,
-                                                  fcol=fcol,
-                                                  name=name,
-                                                  fun=aggregateFun)
-              rowData(object[[name]])[[modelColumnName]]<-msqrobLmer(y=assay(object[[i]]),
-                                                                     formula=formula,
-                                                                     data=colData(object),
-                                                                     robust=robust,
-                                                                     maxitRob=maxitRob,
-                                                                     tol=tol,
-                                                                     doQR=doQR,
-                                                                     lmerArgs = lmerArgs,
-                                                                     featureGroups=rowData(object[[i]])[[fcol]])
-              return(object)})
+setMethod(
+    "msqrobAggregate", "QFeatures",
+    function(object,
+    formula,
+    i,
+    fcol,
+    name = "msqrobAggregate",
+    aggregateFun = MsCoreUtils::robustSummary,
+    modelColumnName = "msqrobModels",
+    robust = TRUE,
+    maxitRob = 1,
+    tol = 1e-6,
+    doQR = TRUE,
+    lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
+        if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain assay ", i))
+        if (!(fcol %in% colnames(rowData(object[[i]])))) stop(paste0("The rowData of Assay ", i, " of the QFeatures object does not contain variable", fcol))
+        object <- QFeatures::aggregateFeatures(
+            object = object,
+            i = i,
+            fcol = fcol,
+            name = name,
+            fun = aggregateFun
+        )
+        rowData(object[[name]])[[modelColumnName]] <- msqrobLmer(
+            y = assay(object[[i]]),
+            formula = formula,
+            data = colData(object),
+            robust = robust,
+            maxitRob = maxitRob,
+            tol = tol,
+            doQR = doQR,
+            lmerArgs = lmerArgs,
+            featureGroups = rowData(object[[i]])[[fcol]]
+        )
+        return(object)
+    }
+)

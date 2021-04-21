@@ -76,21 +76,22 @@ for peptide species and within sample correlation.
 data(pe)
 
 # Aggregate peptide intensities in protein expression values
-pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
+pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
 
 # Fit MSqrob model using robust ridge regression upon summarization of
 # peptide intensities into protein expression values
-modelsRidge <- msqrobLmer(assay(pe[["protein"]]),~condition,colData(pe))
+modelsRidge <- msqrobLmer(assay(pe[["protein"]]), ~condition, colData(pe))
 getCoef(modelsRidge[[1]])
 
 # Fit MSqrob model using robust ridge regression starting from peptide intensities
 # The fold changes are calculated at the protein level while correcting for
 # the different peptide species in each sample and the correlation between
 # peptide intensities of peptides of the same protein in the same sample.
-modelsPepBased <-msqrobLmer(assay(pe[["peptide"]]),formula=~condition,data=colData(pe),
-                            featureGroups=rowData(pe[["peptide"]])$Proteins)
+modelsPepBased <- msqrobLmer(assay(pe[["peptide"]]),
+    formula = ~condition, data = colData(pe),
+    featureGroups = rowData(pe[["peptide"]])$Proteins
+)
 getCoef(modelsPepBased[[1]])
-
 }
 \author{
 Lieven Clement, Oliver M. Crook

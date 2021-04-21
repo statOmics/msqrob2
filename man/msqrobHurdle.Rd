@@ -79,11 +79,11 @@ Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
 \item{priorCount}{A 'numeric(1)', which is a prior count to be added to the observations to shrink
 the estimated odds ratios of the count component towards zero. Default is 0.1.}
 
+\item{binomialBound}{logical, if ‘TRUE’ then the quasibinomial variance estimator will
+be never smaller than 1 (no underdispersion). Default is TRUE.}
+
 \item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
 contains the log expression intensities that will be modelled.}
-
-\item{binomialBound:}{logical, if ‘TRUE’ then the quasibinomial variance estimator will
-be never smaller than 1 (no underdispersion). Default is TRUE.}
 }
 \value{
 SummarizedExperiment or QFeatures instance
@@ -106,22 +106,21 @@ for aggregation
 data(pe)
 
 # Aggregate peptide intensities to protein expression values
-pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
+pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
 
 # Fit Hurdle MSqrob model
 # For summarized SummarizedExperiment
 se <- pe[["protein"]]
 se
 colData(se) <- colData(pe)
-se <- msqrobHurdle(se,formula=~condition)
+se <- msqrobHurdle(se, formula = ~condition)
 getCoef(rowData(se)$msqrobHurdleIntensity[[1]])
 getCoef(rowData(se)$msqrobHurdleCount[[1]])
 
 # For features object
-pe <- msqrobHurdle(pe,i="protein",formula=~condition)
+pe <- msqrobHurdle(pe, i = "protein", formula = ~condition)
 getCoef(rowData(pe[["protein"]])$msqrobHurdleIntensity[[1]])
 getCoef(rowData(pe[["protein"]])$msqrobHurdleCount[[1]])
-
 }
 \author{
 Lieven Clement

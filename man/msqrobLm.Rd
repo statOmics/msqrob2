@@ -44,13 +44,12 @@ base on the MASS::rlm function.
 data(pe)
 
 # Aggregate peptide intensities in protein expression values
-pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
+pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
 pe
 
 # Fit MSqrob model using robust regression with the MASS rlm function
-models <- msqrobLm(assay(pe[["protein"]]),~condition,colData(pe))
+models <- msqrobLm(assay(pe[["protein"]]), ~condition, colData(pe))
 #' getCoef(models[[1]])
-
 }
 \author{
 Lieven Clement, Oliver M. Crook

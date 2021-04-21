@@ -4,6 +4,11 @@ author:
 - name: Lieven Clement, Oliver M. Crook
 output:
   BiocStyle::html_document
+bibliography: msqrob2.bib
+vignette: >
+    %\VignetteIndexEntry{E. labelled workflow}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteEncoding{UTF-8}
 ---
 
 *Disclaimer*: we only have a workflow for labelled proteomics when all samples were quantified within the same run. We are currently developing bespoke workflows for labelled proteomics experiments with multiple runs.
@@ -25,19 +30,19 @@ protein database used for search was Uniprot (2018_04) human protein databases w
 ```{r}
 library(msqrob2)
 url <- "ftp://jpost.pharm.kyoto-u.ac.jp/repository/JPST000562/target_psmtable.txt"
-download.file(url, destfile = "./target_psmtable.txt",method = "auto")
+download.file(url, destfile = "./target_psmtable.txt", method = "auto")
 
-df <- read.table("target_psmtable.txt",stringsAsFactors = FALSE, header = TRUE, quote = "", comment.char = "",sep = "\t")
+df <- read.table("target_psmtable.txt", stringsAsFactors = FALSE, header = TRUE, quote = "", comment.char = "", sep = "\t")
 ```
 
 We make a unique name per psm and read in data.
 The intensities are in the columns starting with the string "tmt10plex".
 
 ```{r}
-ecols<-grep("tmt10plex",colnames(df))
-pe <- readQFeatures(df,ecol=ecols,name="psmRaw")
+ecols <- grep("tmt10plex", colnames(df))
+pe <- readQFeatures(df, ecol = ecols, name = "psmRaw")
 
-colData(pe)$condition<-as.factor(c(rep("a",3),rep("b",4),rep("c",3)))
+colData(pe)$condition <- as.factor(c(rep("a", 3), rep("b", 4), rep("c", 3)))
 rm(df)
 gc()
 ```
@@ -64,8 +69,9 @@ pe <- zeroIsNA(pe, i = "psmRaw")
 ```{r}
 pe <- logTransform(pe, base = 2, i = "psmRaw", name = "psmLog")
 colPal <- colorRampPalette(c("red", "green", "blue"),
-                                     space = "rgb")
-limma::plotDensities(assay(pe[["psmLog"]]),col=colPal(10))
+    space = "rgb"
+)
+limma::plotDensities(assay(pe[["psmLog"]]), col = colPal(10))
 ```
 
 ## Filtering
@@ -73,10 +79,12 @@ limma::plotDensities(assay(pe[["psmLog"]]),col=colPal(10))
 We will retain the psms that are picked up in at least four channels
 
 ```{r}
-filtObserved <- VariableFilter(field = "nNonZero",
-                               value =4,
-                               condition =">=")
-pe <- filterFeatures(pe,filtObserved)
+filtObserved <- VariableFilter(
+    field = "nNonZero",
+    value = 4,
+    condition = ">="
+)
+pe <- filterFeatures(pe, filtObserved)
 ```
 
 ## Summarization
@@ -85,14 +93,14 @@ We will summarize the psms to proteins by using the median polish algorithm.
 We do not normalize the psm data first because this would break the connection between the reporter ions.
 
 ```{r}
-pe <- aggregateFeatures(pe,           
-                        i="psmLog",
-                        fcol="Master.protein.s.",
-                        name="protein",
-                        fun=MsCoreUtils::medianPolish,
-                        na.rm=TRUE
-                        )
-limma::plotDensities(assay(pe[["protein"]]),col=colPal(10))
+pe <- aggregateFeatures(pe,
+    i = "psmLog",
+    fcol = "Master.protein.s.",
+    name = "protein",
+    fun = MsCoreUtils::medianPolish,
+    na.rm = TRUE
+)
+limma::plotDensities(assay(pe[["protein"]]), col = colPal(10))
 ```
 
 ## Normalisation
@@ -106,9 +114,9 @@ On a log scale this becomes an offset:
 $$ \log_2 s_j = median_i \left[ \left(\log_2 y_{ij} - median_k(\log_2 y_{ik})\right)\right] $$
 
 ```{r}
-offset <- colMedians(assay(pe[["protein"]])-rowMedians(assay(pe[["protein"]]),na.rm=TRUE),na.rm=TRUE)
-assay(pe[["protein"]]) <- t(t(assay(pe[["protein"]]))-offset)
-limma::plotDensities(assay(pe[["protein"]]),col=colPal(10))
+offset <- colMedians(assay(pe[["protein"]]) - rowMedians(assay(pe[["protein"]]), na.rm = TRUE), na.rm = TRUE)
+assay(pe[["protein"]]) <- t(t(assay(pe[["protein"]])) - offset)
+limma::plotDensities(assay(pe[["protein"]]), col = colPal(10))
 ```
 
 # Analysis
@@ -138,8 +146,8 @@ Hence, the average log2 fold change (FC) between condition b and condition a is 
 
 
 ```{r}
-L <- makeContrast(c("conditionb = 0", "conditionc = 0", "conditionc - conditionb = 0"), parameterNames = c("conditionb","conditionc"))
-pe <- hypothesisTest(pe,"protein",L)
+L <- makeContrast(c("conditionb = 0", "conditionc = 0", "conditionc - conditionb = 0"), parameterNames = c("conditionb", "conditionc"))
+pe <- hypothesisTest(pe, "protein", L)
 ```
 
 # Performance
@@ -148,50 +156,51 @@ We know the ground truth. All ecoli proteins are DE, human proteins not.
 
 Function to calculate TPR and FDP
 ```{r}
-tprFdp <- function(pval, tp, adjPval){
-ord <- order(pval)
-return(data.frame(
-  pval = pval[ord],
-  adjPval = adjPval[ord],
-  tpr = cumsum(tp[ord])/sum(tp),
-  fdp = cumsum(!tp[ord])/1:length(tp)))
+tprFdp <- function(pval, tp, adjPval) {
+    ord <- order(pval)
+    return(data.frame(
+        pval = pval[ord],
+        adjPval = adjPval[ord],
+        tpr = cumsum(tp[ord]) / sum(tp),
+        fdp = cumsum(!tp[ord]) / 1:length(tp)
+    ))
 }
 ```
 
 ## comparisons
 
 ```{r}
-rowData(pe[["protein"]])$ecoli <- grepl("ECOLI",rownames(pe[["protein"]]))
-plot(tpr~fdp,tprFdp(rowData(pe[["protein"]])$conditionb$pval,rowData(pe[["protein"]])$ecoli,rowData(pe[["protein"]])$conditionb$adjPval),type="l",xlab="FDP",ylab="TPR")
-lines(tpr~fdp,tprFdp(rowData(pe[["protein"]])$conditionc$pval,rowData(pe[["protein"]])$ecoli,rowData(pe[["protein"]])$conditionc$adjPval),type="l",col=2)
-lines(tpr~fdp,tprFdp(rowData(pe[["protein"]])[["conditionc - conditionb"]]$pval,rowData(pe[["protein"]])$ecoli,rowData(pe[["protein"]])[["conditionc - conditionb"]]$adjPval),type="l",col=3)
-legend("bottomright",legend=c("B-A","C-A","C-B"),col=1:3,lty=1)
+rowData(pe[["protein"]])$ecoli <- grepl("ECOLI", rownames(pe[["protein"]]))
+plot(tpr ~ fdp, tprFdp(rowData(pe[["protein"]])$conditionb$pval, rowData(pe[["protein"]])$ecoli, rowData(pe[["protein"]])$conditionb$adjPval), type = "l", xlab = "FDP", ylab = "TPR")
+lines(tpr ~ fdp, tprFdp(rowData(pe[["protein"]])$conditionc$pval, rowData(pe[["protein"]])$ecoli, rowData(pe[["protein"]])$conditionc$adjPval), type = "l", col = 2)
+lines(tpr ~ fdp, tprFdp(rowData(pe[["protein"]])[["conditionc - conditionb"]]$pval, rowData(pe[["protein"]])$ecoli, rowData(pe[["protein"]])[["conditionc - conditionb"]]$adjPval), type = "l", col = 3)
+legend("bottomright", legend = c("B-A", "C-A", "C-B"), col = 1:3, lty = 1)
 ```
 
 ## Fold changes
 
 ```{r}
-boxplot(rowData(pe[["protein"]])[["conditionb"]]$logFC ~ rowData(pe[["protein"]])$ecoli,ylab="log2 FC",xlab="spiked",main="B vs A")
-abline(h=log2(2),col=2)
-boxplot(rowData(pe[["protein"]])[["conditionc"]]$logFC ~ rowData(pe[["protein"]])$ecoli,ylab="log2 FC",xlab="spiked",main="C vs A")
-abline(h=log2(6),col=2)
-boxplot(rowData(pe[["protein"]])[["conditionc - conditionb"]]$logFC ~ rowData(pe[["protein"]])$ecoli,ylab="log2 FC",xlab="spiked",main="C vs B")
-abline(h=log2(3),col=2)
+boxplot(rowData(pe[["protein"]])[["conditionb"]]$logFC ~ rowData(pe[["protein"]])$ecoli, ylab = "log2 FC", xlab = "spiked", main = "B vs A")
+abline(h = log2(2), col = 2)
+boxplot(rowData(pe[["protein"]])[["conditionc"]]$logFC ~ rowData(pe[["protein"]])$ecoli, ylab = "log2 FC", xlab = "spiked", main = "C vs A")
+abline(h = log2(6), col = 2)
+boxplot(rowData(pe[["protein"]])[["conditionc - conditionb"]]$logFC ~ rowData(pe[["protein"]])$ecoli, ylab = "log2 FC", xlab = "spiked", main = "C vs B")
+abline(h = log2(3), col = 2)
 ```
 
 Fold changes are under estimated!
 
 ```{r}
-rowData(pe[["psmLog"]])$ecoli <- grepl("ECOLI",rowData(pe[["psmLog"]])$Master.protein.s.)
-fcBa <- assay(pe[["psmLog"]]) %*% c(rep(-1/3,3),rep(1/4,4),rep(0,3))
-fcCa <- assay(pe[["psmLog"]]) %*% c(rep(-1/3,3),rep(0,4),rep(1/3,3))
-fcCb <- assay(pe[["psmLog"]]) %*% c(rep(0,3),rep(-1/4,4),rep(1/3,3))
-boxplot(fcBa ~ rowData(pe[["psmLog"]])$ecoli,ylab="log2 FC",xlab="spiked",main="B vs A")
-abline(h=log2(2),col=2)
-boxplot(fcCa ~ rowData(pe[["psmLog"]])$ecoli,ylab="log2 FC",xlab="spiked",main="C vs A")
-abline(h=log2(6),col=2)
-boxplot(fcCb ~ rowData(pe[["psmLog"]])$ecoli,ylab="log2 FC",xlab="spiked",main="C vs B")
-abline(h=log2(2),col=2)
+rowData(pe[["psmLog"]])$ecoli <- grepl("ECOLI", rowData(pe[["psmLog"]])$Master.protein.s.)
+fcBa <- assay(pe[["psmLog"]]) %*% c(rep(-1 / 3, 3), rep(1 / 4, 4), rep(0, 3))
+fcCa <- assay(pe[["psmLog"]]) %*% c(rep(-1 / 3, 3), rep(0, 4), rep(1 / 3, 3))
+fcCb <- assay(pe[["psmLog"]]) %*% c(rep(0, 3), rep(-1 / 4, 4), rep(1 / 3, 3))
+boxplot(fcBa ~ rowData(pe[["psmLog"]])$ecoli, ylab = "log2 FC", xlab = "spiked", main = "B vs A")
+abline(h = log2(2), col = 2)
+boxplot(fcCa ~ rowData(pe[["psmLog"]])$ecoli, ylab = "log2 FC", xlab = "spiked", main = "C vs A")
+abline(h = log2(6), col = 2)
+boxplot(fcCb ~ rowData(pe[["psmLog"]])$ecoli, ylab = "log2 FC", xlab = "spiked", main = "C vs B")
+abline(h = log2(2), col = 2)
 ```
 
 # References

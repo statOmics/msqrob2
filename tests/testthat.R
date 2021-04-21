@@ -7,4 +7,3 @@ library("testthat")
 library("msqrob2")
 
 test_check("msqrob2")
-

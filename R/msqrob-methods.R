@@ -19,7 +19,7 @@
 #' data(pe)
 #'
 #' # Aggregate peptide intensities in protein expression values
-#' pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
+#' pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
 #'
 #' # Fit MSqrob model using robust linear regression upon summarization of
 #' # peptide intensities into protein expression values.
@@ -27,20 +27,19 @@
 #' se <- pe[["protein"]]
 #' se
 #' colData(se) <- colData(pe)
-#' se <- msqrob(se,formula=~condition,modelColumnName="rlm")
+#' se <- msqrob(se, formula = ~condition, modelColumnName = "rlm")
 #' getCoef(rowData(se)$rlm[[1]])
 #'
 #' # For features object
-#' pe <- msqrob(pe,i="protein",formula=~condition,modelColumnName="rlm")
+#' pe <- msqrob(pe, i = "protein", formula = ~condition, modelColumnName = "rlm")
 #' # with ridge regression (slower)
-#' pe <- msqrob(pe,i="protein",formula=~condition,ridge=TRUE,modelColumnName="ridge")
+#' pe <- msqrob(pe, i = "protein", formula = ~condition, ridge = TRUE, modelColumnName = "ridge")
 #'
-#' #compare for human protein (no DE)==> large shrinkage to zero
-#' cbind(getCoef(rowData(pe[["protein"]])$rlm[[1]]),getCoef(rowData(pe[["protein"]])$ridge[[1]]))
+#' # compare for human protein (no DE)==> large shrinkage to zero
+#' cbind(getCoef(rowData(pe[["protein"]])$rlm[[1]]), getCoef(rowData(pe[["protein"]])$ridge[[1]]))
 #'
-#' #compare for ecoli protein (DE)==> almost no shrinkage to zero
-#' cbind(getCoef(rowData(pe[["protein"]])$rlm[["P00956"]]),getCoef(rowData(pe[["protein"]])$ridge[["P00956"]]))
-#'
+#' # compare for ecoli protein (DE)==> almost no shrinkage to zero
+#' cbind(getCoef(rowData(pe[["protein"]])$rlm[["P00956"]]), getCoef(rowData(pe[["protein"]])$ridge[["P00956"]]))
 #' @param object `SummarizedExperiment` or `QFeatures` instance
 #'
 #' @param formula Model formula. The model is built based on the
@@ -79,37 +78,51 @@
 #'        Default is `list(control = lmerControl(calc.derivs = FALSE))`
 #' @rdname msqrob
 #'
+#' @import SummarizedExperiment
 #' @export
-setMethod("msqrob","SummarizedExperiment",
-          function(object,
-                   formula,
-                   modelColumnName="msqrobModels",
-                   overwrite=FALSE,
-                   robust=TRUE,
-                   ridge=FALSE,
-                   maxitRob=1,
-                   tol=1e-6,
-                   doQR=TRUE,
-                   lmerArgs= list(control = lmerControl(calc.derivs = FALSE))){
-           if (ncol(colData(object))==0) stop("error: colData is empty")
-           if((modelColumnName %in% colnames(rowData(object)))&!overwrite) stop(paste0("There is already a column named \'",
-                                                                                       modelColumnName,
-                                                                                       "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of SummarizedExperiment object"))
-           if (!ridge)  rowData(object)[[modelColumnName]]<-msqrobLm(y=assay(object),
-                                                                     formula=formula,
-                                                                     data=colData(object),
-                                                                     robust=robust,
-                                                                     maxitRob=maxitRob) else
-                        rowData(object)[[modelColumnName]]<-msqrobLmer(y=assay(object),
-                                                                       formula=formula,
-                                                                       data=colData(object),
-                                                                       robust=robust,
-                                                                       maxitRob=maxitRob,
-                                                                       tol=tol,
-                                                                       doQR=doQR,
-                                                                       lmerArgs = lmerArgs)
-           return(object)
-           })
+setMethod(
+    "msqrob", "SummarizedExperiment",
+    function(object,
+    formula,
+    modelColumnName = "msqrobModels",
+    overwrite = FALSE,
+    robust = TRUE,
+    ridge = FALSE,
+    maxitRob = 1,
+    tol = 1e-6,
+    doQR = TRUE,
+    lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
+        if (ncol(colData(object)) == 0) stop("error: colData is empty")
+        if ((modelColumnName %in% colnames(rowData(object))) & !overwrite) {
+            stop(paste0(
+                "There is already a column named \'",
+                modelColumnName,
+                "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of SummarizedExperiment object"
+            ))
+        }
+        if (!ridge) {
+            rowData(object)[[modelColumnName]] <- msqrobLm(
+                y = assay(object),
+                formula = formula,
+                data = colData(object),
+                robust = robust,
+                maxitRob = maxitRob
+            )
+        } else {
+              rowData(object)[[modelColumnName]] <- msqrobLmer(
+                  y = assay(object),
+                  formula = formula,
+                  data = colData(object),
+                  robust = robust,
+                  maxitRob = maxitRob,
+                  tol = tol,
+                  doQR = doQR,
+                  lmerArgs = lmerArgs
+              )
+          }
+        return(object)
+    }
+)
 
 #' @param i `character` or `integer` to specify the element of the `QFeatures` that
 #'        contains the log expression intensities that will be modelled.
@@ -117,38 +130,49 @@ setMethod("msqrob","SummarizedExperiment",
 #' @return A SummarizedExperiment or a `QFeatures` instance with the models.
 #' @export
 #' @rdname msqrob
-setMethod("msqrob","QFeatures",
-          function(object,
-                   i,
-                   formula,
-                   modelColumnName="msqrobModels",
-                   overwrite=FALSE,
-                   robust=TRUE,
-                   ridge=FALSE,
-                   maxitRob=1,
-                   tol=1e-6,
-                   doQR=TRUE,
-                   lmerArgs= list(control = lmerControl(calc.derivs = FALSE))){
-            if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain an assay with the name ",i))
-            if((modelColumnName %in% colnames(rowData(object[[i]])))&!overwrite) stop(paste0("There is already a column named \'",
-                                                                                      modelColumnName,
-                                                                                      "\' in the rowData of the assay",
-                                                                                      i,
-                                                                                      "of the QFeatures object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of assay of the QFeatures object")
-                                                                                      )
-            if (!ridge)  rowData(object[[i]])[[modelColumnName]]<-msqrobLm(y=assay(object[[i]]),
-                                                                           formula=formula,
-                                                                           data=colData(object),
-                                                                           robust=robust,
-                                                                           maxitRob=maxitRob) else
-                         rowData(object[[i]])[[modelColumnName]]<-msqrobLmer(y=assay(object[[i]]),
-                                                                             formula=formula,
-                                                                             data=colData(object),
-                                                                             robust=robust,
-                                                                             maxitRob=maxitRob,
-                                                                             tol=tol,
-                                                                             doQR=doQR,
-                                                                             lmerArgs = lmerArgs)
-            return(object)
-
-            })
+setMethod(
+    "msqrob", "QFeatures",
+    function(object,
+    i,
+    formula,
+    modelColumnName = "msqrobModels",
+    overwrite = FALSE,
+    robust = TRUE,
+    ridge = FALSE,
+    maxitRob = 1,
+    tol = 1e-6,
+    doQR = TRUE,
+    lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
+        if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain an assay with the name ", i))
+        if ((modelColumnName %in% colnames(rowData(object[[i]]))) & !overwrite) {
+            stop(paste0(
+                "There is already a column named \'",
+                modelColumnName,
+                "\' in the rowData of the assay",
+                i,
+                "of the QFeatures object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of assay of the QFeatures object"
+            ))
+        }
+        if (!ridge) {
+            rowData(object[[i]])[[modelColumnName]] <- msqrobLm(
+                y = assay(object[[i]]),
+                formula = formula,
+                data = colData(object),
+                robust = robust,
+                maxitRob = maxitRob
+            )
+        } else {
+              rowData(object[[i]])[[modelColumnName]] <- msqrobLmer(
+                  y = assay(object[[i]]),
+                  formula = formula,
+                  data = colData(object),
+                  robust = robust,
+                  maxitRob = maxitRob,
+                  tol = tol,
+                  doQR = doQR,
+                  lmerArgs = lmerArgs
+              )
+          }
+        return(object)
+    }
+)

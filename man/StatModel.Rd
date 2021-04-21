@@ -17,6 +17,19 @@ StatModel(
   dfPosterior = NA_real_
 )
 }
+\arguments{
+\item{object}{\code{StatModel} object}
+
+\item{type}{default set to fit-error, can be a "lm", "rlm" (robust lm with M estimation),
+"lmer" (when mixed models or ridge regression is adopted), "quasibinomial" (when peptide counts are fitted)}
+
+\item{params}{A list containing the parameters of the fitted model}
+
+\item{varPosterior}{Numeric, posterior variance, default is NA}
+
+\item{dfPosterior}{Numeric, posterior degrees of freedom,
+default is NA}
+}
 \description{
 The \code{StatModel} class contains a statistical model as applied on a
 feature.
@@ -27,6 +40,8 @@ Models are created by the dedicated user-level functions
 feature is assigned its statistical model and the models are stored
 as a variable in a \code{DataFrame} object, as illustred in the example
 below.
+
+Function for constructing a new \code{StatModel} object.
 }
 \section{Slots}{
 
@@ -44,10 +59,12 @@ is \code{"fitError"}, i.e. a error model. Other include \code{"lm"},
 
 \examples{
 ## A fully specified dummy model
-myModel <- StatModel(type = "rlm",
-                     params = list(x = 3, y = 7, b = 4),
-                     varPosterior = c(0.1, 0.2, 0.3),
-                     dfPosterior = c(6, 7, 8))
+myModel <- StatModel(
+    type = "rlm",
+    params = list(x = 3, y = 7, b = 4),
+    varPosterior = c(0.1, 0.2, 0.3),
+    dfPosterior = c(6, 7, 8)
+)
 myModel
 myModel@params
 
@@ -58,6 +75,7 @@ mod2 <- StatModel(type = "lm")
 df <- DataFrame(x = 1:2)
 df$mods <- c(mod1, mod2)
 df
+# TODO
 }
 \author{
 Oliver M. Crook, Laurent Gatto, Lieven Clement

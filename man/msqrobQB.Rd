@@ -41,11 +41,11 @@ be overwritten if the modelColumnName already exists. Default is FALSE.}
 \item{priorCount}{A 'numeric(1)', which is a prior count to be added to the observations to shrink
 the estimated log-fold-changes towards zero. Default is 0.1.}
 
+\item{binomialBound}{logical, if ‘TRUE’ then the quasibinomial variance estimator will
+be never smaller than 1 (no underdispersion). Default is TRUE.}
+
 \item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
 contains the log expression intensities that will be modelled.}
-
-\item{binomialBound:}{logical, if ‘TRUE’ then the quasibinomial variance estimator will
-be never smaller than 1 (no underdispersion). Default is TRUE.}
 }
 \value{
 SummarizedExperiment or QFeatures instance
@@ -65,19 +65,18 @@ by modeling peptide counts using quasibinomial glm
 data(pe)
 
 # Aggregate by counting how many peptide we observe for each protein
-pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
+pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
 
 # Fit MSqrob model to peptide counts using a quasi-binomial model
 # For summarized SummarizedExperiment
 se <- pe[["protein"]]
 se
 colData(se) <- colData(pe)
-se <- msqrobQB(se,formula=~condition)
+se <- msqrobQB(se, formula = ~condition)
 getCoef(rowData(se)$msqrobQbModels[[1]])
 
 # For features object
-pe <- msqrobQB(pe,i="protein",formula=~condition)
-
+pe <- msqrobQB(pe, i = "protein", formula = ~condition)
 }
 \author{
 Lieven Clement

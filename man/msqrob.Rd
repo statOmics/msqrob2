@@ -92,7 +92,7 @@ and \code{SummarizedExperiment} instance.
 data(pe)
 
 # Aggregate peptide intensities in protein expression values
-pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
+pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
 
 # Fit MSqrob model using robust linear regression upon summarization of
 # peptide intensities into protein expression values.
@@ -100,20 +100,19 @@ pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
 se <- pe[["protein"]]
 se
 colData(se) <- colData(pe)
-se <- msqrob(se,formula=~condition,modelColumnName="rlm")
+se <- msqrob(se, formula = ~condition, modelColumnName = "rlm")
 getCoef(rowData(se)$rlm[[1]])
 
 # For features object
-pe <- msqrob(pe,i="protein",formula=~condition,modelColumnName="rlm")
+pe <- msqrob(pe, i = "protein", formula = ~condition, modelColumnName = "rlm")
 # with ridge regression (slower)
-pe <- msqrob(pe,i="protein",formula=~condition,ridge=TRUE,modelColumnName="ridge")
+pe <- msqrob(pe, i = "protein", formula = ~condition, ridge = TRUE, modelColumnName = "ridge")
 
-#compare for human protein (no DE)==> large shrinkage to zero
-cbind(getCoef(rowData(pe[["protein"]])$rlm[[1]]),getCoef(rowData(pe[["protein"]])$ridge[[1]]))
+# compare for human protein (no DE)==> large shrinkage to zero
+cbind(getCoef(rowData(pe[["protein"]])$rlm[[1]]), getCoef(rowData(pe[["protein"]])$ridge[[1]]))
 
-#compare for ecoli protein (DE)==> almost no shrinkage to zero
-cbind(getCoef(rowData(pe[["protein"]])$rlm[["P00956"]]),getCoef(rowData(pe[["protein"]])$ridge[["P00956"]]))
-
+# compare for ecoli protein (DE)==> almost no shrinkage to zero
+cbind(getCoef(rowData(pe[["protein"]])$rlm[["P00956"]]), getCoef(rowData(pe[["protein"]])$ridge[["P00956"]]))
 }
 \author{
 Lieven Clement
