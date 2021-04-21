@@ -34,12 +34,11 @@ name: R-CMD-check-bioc
 ## Note that you can always run a GHA test without the cache by using the word
 ## "/nocache" in the commit message.
 env:
-  has_testthat: 'true'
+  has_testthat: 'false'
   run_covr: 'false'
   run_pkgdown: 'false'
   has_RUnit: 'false'
   cache-version: 'cache-v1'
-  run_docker: 'false'
 
 jobs:
   build-check:
@@ -52,9 +51,9 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - { os: ubuntu-latest, r: 'devel', bioc: '3.13', cont: "bioconductor/bioconductor_docker:devel", rspm: "https://packagemanager.rstudio.com/cran/__linux__/focal/latest" }
-          - { os: macOS-latest, r: 'devel', bioc: '3.13'}
-          - { os: windows-latest, r: 'devel', bioc: '3.13'}
+          - { os: ubuntu-latest, r: '4.1', cont: "bioconductor/bioconductor_docker:devel", rspm: "https://packagemanager.rstudio.com/cran/__linux__/focal/latest" }
+          - { os: macOS-latest, r: 'devel' }
+          - { os: windows-latest, r: 'devel' }
     env:
       R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
       RSPM: ${{ matrix.config.rspm }}
@@ -102,16 +101,16 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.R_LIBS_USER }}
-          key: ${{ env.cache-version }}-${{ runner.os }}-biocversion-devel-r-devel-${{ hashFiles('.github/depends.Rds') }}
-          restore-keys: ${{ env.cache-version }}-${{ runner.os }}-biocversion-devel-r-devel-
+          key: ${{ env.cache-version }}-${{ runner.os }}-biocbranch-devel-r-4.1-${{ hashFiles('.github/depends.Rds') }}
+          restore-keys: ${{ env.cache-version }}-${{ runner.os }}-biocbranch-devel-r-4.1-
 
       - name: Cache R packages on Linux
         if: "!contains(github.event.head_commit.message, '/nocache') && runner.os == 'Linux' "
         uses: actions/cache@v2
         with:
           path: /home/runner/work/_temp/Library
-          key: ${{ env.cache-version }}-${{ runner.os }}-biocversion-devel-r-devel-${{ hashFiles('.github/depends.Rds') }}
-          restore-keys: ${{ env.cache-version }}-${{ runner.os }}-biocversion-devel-r-devel-
+          key: ${{ env.cache-version }}-${{ runner.os }}-biocbranch-devel-r-4.1-${{ hashFiles('.github/depends.Rds') }}
+          restore-keys: ${{ env.cache-version }}-${{ runner.os }}-biocbranch-devel-r-4.1-
 
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
@@ -151,7 +150,7 @@ jobs:
 
       - name: Set BiocVersion
         run: |
-          BiocManager::install(version = "${{ matrix.config.bioc }}", ask = FALSE)
+          BiocManager::install(version = "devel", ask = FALSE)
         shell: Rscript {0}
 
       - name: Install dependencies pass 1
@@ -197,7 +196,7 @@ jobs:
       - name: Install pkgdown
         if: github.ref == 'refs/heads/master' && env.run_pkgdown == 'true' && runner.os == 'Linux'
         run: |
-          remotes::install_github("r-lib/pkgdown")
+          remotes::install_cran("pkgdown")
         shell: Rscript {0}
 
       - name: Session info
@@ -214,7 +213,7 @@ jobs:
           rcmdcheck::rcmdcheck(
               args = c("--no-build-vignettes", "--no-manual", "--timings"),
               build_args = c("--no-manual", "--no-resave-data"),
-              error_on = "error",
+              error_on = "warning",
               check_dir = "check"
           )
         shell: Rscript {0}
@@ -266,15 +265,5 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@master
         with:
-          name: ${{ runner.os }}-biocversion-devel-r-devel-results
+          name: ${{ runner.os }}-biocbranch-devel-r-4.1-results
           path: check
-
-      - uses: docker/build-push-action@v1
-        if: "!contains(github.event.head_commit.message, '/nodocker') && env.run_docker == 'true' && runner.os == 'Linux' "
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: statomics/msqrob2
-          tag_with_ref: true
-          tag_with_sha: true
-          tags: latest

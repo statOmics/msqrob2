@@ -49,7 +49,7 @@ Imports:
     codetools
 Suggests:
     multcomp,
-    scp,
+    gridExtra,
     knitr,
     BiocStyle,
     RefManageR,
