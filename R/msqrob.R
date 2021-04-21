@@ -48,6 +48,7 @@
 #' @importFrom MASS rlm
 #' @importFrom stats model.matrix lm.fit
 #' @importFrom limma squeezeVar
+#' @importFrom methods is
 #'
 #' @export
 msqrobLm <- function(y,
@@ -226,7 +227,7 @@ msqrobLm <- function(y,
 #'
 #' @importFrom MASS psi.huber
 #' @importFrom stats resid update.formula resid mad
-#' @importFrom methods as
+#' @importFrom methods as is
 #' @import lme4
 #' @import Matrix
 #' @importFrom BiocParallel bplapply
@@ -522,6 +523,7 @@ msqrobLmer <- function(y,
 #'
 #' @importFrom limma squeezeVar
 #' @importFrom stats model.matrix glm.fit binomial
+#' @importFrom methods is
 #'
 #' @export
 

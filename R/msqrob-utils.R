@@ -125,6 +125,8 @@ makeContrast <- function(contrasts, parameterNames) {
 }
 
 #' @importFrom codetools walkCode makeCodeWalker
+#' @importFrom methods is
+
 .expression2coef <- function(ex, vars, debug = FALSE) {
     m.rhs <- .rhs(ex)
     m.lhs <- .lhs(ex)

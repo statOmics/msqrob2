@@ -29,6 +29,7 @@
 #' @rdname statModelMethods
 #' @return A matrix with the calculated contrasts or variance-covariance matrix of contrasts
 #' @aliases statModelMethods StatModel-method getContrast varContrast
+#' @importFrom methods is
 
 setMethod(
     "getContrast", "StatModel",
@@ -44,6 +45,8 @@ setMethod(
 )
 
 #' @rdname statModelMethods
+#' @importFrom methods is
+
 setMethod(
     "varContrast", "StatModel",
     function(object, L) {
