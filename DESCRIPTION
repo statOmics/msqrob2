@@ -49,6 +49,8 @@ Imports:
     codetools
 Suggests:
     multcomp,
+    gridExtra,
+    DEqMS,
     knitr,
     BiocStyle,
     RefManageR,
