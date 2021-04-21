@@ -51,6 +51,7 @@ library(tidyverse)
 library(limma)
 library(QFeatures)
 library(msqrob2)
+library(gridExtra)
 
 myurl <-
     "https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/maxquant/peptides.zip"
@@ -286,6 +287,7 @@ pe <- hypothesisTest(object = pe, i = "protein", contrast = L, modelColumn = "ms
 ## Heatmaps
 
 ```{r}
+par(mfrow = c(2, 1), pty = "s")
 for (i in colnames(L)) {
     sigNames <- rowData(pe[["protein"]])[[paste0("hurdle_", i)]] %>%
         rownames_to_column("protein") %>%
@@ -375,7 +377,7 @@ for (i in colnames(L)) {
         theme_classic(base_size = 14) + # guides(size = FALSE, alpha = FALSE)
         ggtitle(paste0(i, " = 0"))
 }
-tprFdpPlots
+grid.arrange(grobs = tprFdpPlots[1:9], ncol = 3)
 ```
 
 The performance of the hurdle method is better then of the

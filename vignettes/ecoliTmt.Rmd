@@ -203,4 +203,6 @@ boxplot(fcCb ~ rowData(pe[["psmLog"]])$ecoli, ylab = "log2 FC", xlab = "spiked",
 abline(h = log2(2), col = 2)
 ```
 
+Note, that the fold changes are biased, which is a known problem in labelled proteomics experiments. 
+
 # References

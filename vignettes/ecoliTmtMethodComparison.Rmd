@@ -30,6 +30,7 @@ protein database used for search was Uniprot (2018_04) human protein databases w
 
 ```{r}
 library(msqrob2)
+library(gridExtra)
 url <- "ftp://jpost.pharm.kyoto-u.ac.jp/repository/JPST000562/target_psmtable.txt"
 download.file(url, destfile = "./target_psmtable.txt", method = "auto")
 
@@ -373,11 +374,12 @@ for (i in colnames(L)) {
         theme_classic(base_size = 14) + # guides(size = FALSE, alpha = FALSE)
         ggtitle(paste0(i, " = 0"))
 }
-tprFdpPlots
+grid.arrange(grobs = tprFdpPlots, ncol = 1)
 
 for (i in 1:length(tprFdpPlots)) {
-      print(tprFdpPlots[[i]] + xlim(0, .2))
-  }
+    tprFdpPlots[[i]] <- tprFdpPlots[[i]] + xlim(0, .2)
+}
+grid.arrange(grobs = tprFdpPlots, ncol = 1)
 ```
 
 The default method ranks a few human proteins very highly.
@@ -429,60 +431,5 @@ for (i in falsePos[1:5])
 
 Top false positives all seem to have signal.
 
-
-## ROC plots
-
-```{r}
-rocDefault <- list()
-rocSweep <- list()
-rocDEqMS <- list()
-rocLimma <- list()
-rocDefaultT <- list()
-rocSweepT <- list()
-rocPlots <- list()
-
-for (i in colnames(L)) {
-    rocDefault[[i]] <- tprFdp(
-        rowData(pe[["protein"]])[[i]]$pval,
-        grepl("ECOLI", rownames(pe[["protein"]])), rowData(pe[["protein"]])[[i]]$adjPval
-    )
-    rocSweep[[i]] <- tprFdp(
-        rowData(pe[["proteinSweep"]])[[i]]$pval,
-        grepl("ECOLI", rownames(pe[["proteinSweep"]])), rowData(pe[["proteinSweep"]])[[i]]$adjPval
-    )
-    rocDefaultT[[i]] <- tprFdp(
-        rowData(pe[["protein"]])[[paste0("trendedDisp_", i)]]$pval,
-        grepl("ECOLI", rownames(pe[["proteinSweep"]])), rowData(pe[["protein"]])[[paste0("trendedDisp_", i)]]$adjPval
-    )
-    rocSweepT[[i]] <- tprFdp(
-        rowData(pe[["proteinSweep"]])[[paste0("trendedDisp_", i)]]$pval,
-        grepl("ECOLI", rownames(pe[["proteinSweep"]])), rowData(pe[["proteinSweep"]])[[paste0("trendedDisp_", i)]]$adjPval
-    )
-    rocDEqMS[[i]] <- tprFdp(
-        res[[i]]$sca.P.Value,
-        grepl("ECOLI", rownames(res[[i]])),
-        res[[i]]$sca.adj.pval
-    )
-    rocLimma[[i]] <- tprFdp(
-        res[[i]]$P.Value,
-        grepl("ECOLI", rownames(res[[i]])),
-        res[[i]]$adj.P.Val
-    )
-    hlp <- rbind(
-        cbind(rocDefault[[i]], method = "default"),
-        cbind(rocSweep[[i]], method = "sweep"),
-        cbind(rocLimma[[i]], method = "limma"),
-        cbind(rocDEqMS[[i]], method = "DEqMS"),
-        cbind(rocDefaultT[[i]], method = "defaultT"),
-        cbind(rocSweepT[[i]], method = "sweepT")
-    )
-    rocPlots[[i]] <- hlp %>%
-        ggplot(aes(x = fpr, y = tpr, color = method)) +
-        geom_path() +
-        theme_classic(base_size = 14) + # guides(size = FALSE, alpha = FALSE)
-        ggtitle(paste0(i, " = 0"))
-}
-rocPlots
-```
 
 # References

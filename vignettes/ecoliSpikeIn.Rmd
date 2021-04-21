@@ -54,6 +54,7 @@ library(limma)
 library(QFeatures)
 library(msqrob2)
 library(BiocParallel)
+library(gridExtra)
 
 myurl <-
     "https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/maxquant/peptides.zip"
@@ -508,24 +509,8 @@ for (i in contrastNames)
         geom_vline(xintercept = log2(FCs[i]), col = "red") +
         ggtitle(i)
 }
-volcano
+grid.arrange(grobs = volcano, nrow = 2)
 ```
-
-#### Heatmaps
-
-```{r}
-for (i in contrastNames)
-{
-    sigNames <- rowData(pe[["protein"]])[[i]] %>%
-        rownames_to_column("protein") %>%
-        filter(adjPval < 0.01) %>%
-        pull(protein)
-    heatmap(assay(pe[["protein"]])[sigNames, ], main = i)
-}
-```
-
-We again observe that the majority of the proteins that are returned
-in all comparisons are spike-in proteins.
 
 #### Sensitivity FDP plots
 
@@ -546,7 +531,8 @@ for (i in contrastNames)
         geom_point(data = tprFdps[[i]][sum(tprFdps[[i]]$adjPval < 0.01, na.rm = TRUE), ], aes(x = fdp, y = tpr), cex = 2) +
         ggtitle(i)
 }
-tprFdpPlots
+
+grid.arrange(grobs = tprFdpPlots[1:9], ncol = 3)
 ```
 
 The performance gets better when the logFC between the compared
@@ -585,48 +571,11 @@ for (i in contrastNames)
         geom_vline(xintercept = log2(FCs[i]), col = "red") +
         ggtitle(paste("median summarisation", i))
 }
-volcanoMed
+grid.arrange(grobs = volcanoMed, nrow = 2)
 ```
 
 Note, that less proteins are found to be DE upon median summarisation.
 
-
-### Sensitivity FDP plot
-
-Add accession slot to rowData of proteinMedian assay.
-(First check if same proteins are in both the protein and proteinMedian assay).
-
-```{r}
-mean(rownames(pe[["proteinMedian"]]) == rownames(pe[["protein"]]))
-rowData(pe[["proteinMedian"]])$accession <- rowData(pe[["protein"]])$accession
-```
-
-```{r}
-tprFdpMed <- list()
-tprFdpPlotMed <- list()
-for (i in contrastNames)
-{
-    tprFdpMed[[i]] <- tprFdp(
-        rowData(pe[["proteinMedian"]])[[i]]$pval,
-        rowData(pe[["proteinMedian"]])$accession$ecoli,
-        rowData(pe[["proteinMedian"]])[[i]]$adjPval
-    )
-
-    hlp <- rbind(
-        cbind(tprFdps[[i]], method = "robustRlm"),
-        cbind(tprFdpMed[[i]], method = "medianRlm")
-    )
-    tprFdpPlotMed[[i]] <- hlp %>%
-        ggplot(aes(x = fdp, y = tpr, color = method)) +
-        geom_path() +
-        ggtitle(i)
-}
-tprFdpPlotMed
-```
-
-The mean summarisation is vastly outperformed by robust summarisaton.
-This clearly indicates that differences in peptide species have to be
-accounted for in the summarisation.
 
 ## Robust summarisation followed by robust ridge regression
 
@@ -665,16 +614,26 @@ for (i in contrastNames)
         geom_vline(xintercept = log2(FCs[i]), col = "red") +
         ggtitle(paste("robust ridge", i))
 }
-volcanoRidge
+grid.arrange(grobs = volcanoRidge, nrow = 2)
 ```
 
 ### Sensitivity FDP plot
+Add accession slot to rowData of proteinMedian assay. (First check if same proteins are in both the protein and proteinMedian assay).
 
 ```{r}
-tprFdpRidge <- list()
+mean(rownames(pe[["proteinMedian"]]) == rownames(pe[["protein"]]))
+rowData(pe[["proteinMedian"]])$accession <- rowData(pe[["protein"]])$accession
+
+tprFdpRidge <- tprFdpMed <- list()
 tprFdpPlotRidge <- list()
 for (i in contrastNames)
 {
+    tprFdpMed[[i]] <- tprFdp(
+        rowData(pe[["proteinMedian"]])[[i]]$pval,
+        rowData(pe[["proteinMedian"]])$accession$ecoli,
+        rowData(pe[["proteinMedian"]])[[i]]$adjPval
+    )
+
     tprFdpRidge[[i]] <- tprFdp(
         rowData(pe[["protein"]])[[paste0("ridge", i)]]$pval,
         rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[paste0("ridge", i)]]$adjPval
@@ -690,10 +649,15 @@ for (i in contrastNames)
         geom_path() +
         ggtitle(i)
 }
-tprFdpPlotRidge
+
+grid.arrange(grobs = tprFdpPlotRidge[1:9], ncol = 3)
 ```
 
-Ridge regression further improves the performance for allmost all comparisons.
+- The median summarisation is vastly outperformed by robust summarisaton.
+This clearly indicates that differences in peptide species have to be
+accounted for in the summarisation.
+
+- Ridge regression further improves the performance for allmost all comparisons.
 
 # Resolving Fit errors
 
@@ -907,7 +871,7 @@ for (i in contrastNames) {
         geom_vline(xintercept = 0.01, lty = 2)
     ggtitle(i)
 }
-tprFdpRlmOptPlot
+grid.arrange(grobs = tprFdpRlmOptPlot[1:9], ncol = 3)
 ```
 
 As expected, the ranking does not improve much for the comparisons involving

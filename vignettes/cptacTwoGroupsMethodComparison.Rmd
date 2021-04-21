@@ -257,7 +257,7 @@ volcano
 
 ## Median summarisation
 
-```{r}
+```{r warning=FALSE}
 pe <- aggregateFeatures(pe,
     i = "peptideNorm", fcol = "Proteins", na.rm = TRUE,
     name = "proteinMedian", fun = matrixStats::colMedians
