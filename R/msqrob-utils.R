@@ -6,7 +6,7 @@
 #' @return A character vector containing the names of the protein groups for which none of its proteins is present in a smaller protein group.
 #' @examples
 #' data(pe)
-#' smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins)
+#' smallestUniqueGroups(rowData(pe[["peptide"]])$Proteins)
 #' @export
 smallestUniqueGroups <- function(proteins,
     split = ";") {
