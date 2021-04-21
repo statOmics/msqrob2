@@ -58,7 +58,10 @@ Suggests:
     tidyverse,
     plotly,
     msdata,
-    MSnbase
+    MSnbase,
+    matrixStats,
+    MsCoreUtils,
+    DEqMS
 License: Artistic-2.0
 Collate: 'msqrob-framework.R' 'allGenerics.R'
         'accessors.R' 'msqrob.R' 'msqrob-utils.R' 'StatModel-methods.R'
