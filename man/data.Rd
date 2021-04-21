@@ -18,12 +18,12 @@ pe
 }
 \description{
 Subset of peptides from 100 proteins from a quantitative mass spectrometry
-based proteomics dataset (PRIDE identifier: PXD003881 Shen et al. \link{2018}).
+based proteomics dataset (PRIDE identifier: PXD003881 Shen et al. (2018)).
 E. Coli lysates were spiked at five different concentrations (3\%, 4.5\%, 6\%,
 7.5\% and 9\%wt/wt) in a stable human background (4 repl. per treatment). The
 twenty resulting samples were run on an Orbitrap Fusion mass spectrometer.
 Raw data files were processed with MaxQuant (version 1.6.1.0, Cox and Mann
-\link{2008}) using default search settings unless otherwise noted. Spectra were
+(2008)) using default search settings unless otherwise noted. Spectra were
 searched against the UniProtKB/SwissProt human and E. Coli reference
 proteome databases (07/06/2018), concatenated with the default Maxquant
 contaminant database. Carbamidomethylation of Cystein was set as a fixed

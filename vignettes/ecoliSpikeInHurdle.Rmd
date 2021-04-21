@@ -355,3 +355,5 @@ tprFdpPlots
 
 The performance of the hurdle method is better then of the
 default method, especially for the comparisons involving low concentrations.
+
+# References

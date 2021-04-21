@@ -423,3 +423,5 @@ comparisons. By default the ridge regression workflow returns an error message
 if the model only has two fixed effect parameters, e.g. "(intercept)" and  parameter "conditionB".
 In the vignette of a large spike-in study with multiple spike-in conditions
 we illustrate the benefit of ridge regression when dealing with more complex experiments.
+
+# References

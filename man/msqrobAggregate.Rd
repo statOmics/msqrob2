@@ -100,8 +100,8 @@ data(pe)
 # The fold changes are calculated at the protein level while correcting for
 # the different peptide species in each sample and the correlation between
 # peptide intensities of peptides of the same protein in the same sample.
-pe<-msqrobAggregate(pe,i="peptide",fcol="Protein",formula=~condition)
-getCoef(rowData(pe[["msqrobAgregate"]])$msqrobModels[["P00956"]])
+pe <- msqrobAggregate(pe,i="peptide",fcol="Proteins",formula=~condition)
+getCoef(rowData(pe[["msqrobAggregate"]])$msqrobModels[["P00956"]])
 
 }
 \author{

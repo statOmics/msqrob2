@@ -48,7 +48,7 @@ smallestUniqueGroups <- function(proteins,
 #'
 #' @examples
 #' makeContrast(c("conditionb=0"),parameterNames=c("(Intercept)","conditionb","conditionc"))
-#' makeContrast(c("conditionc=b"),parameterNames=c("conditionB"))
+#' makeContrast(c("conditionc=0"),parameterNames=c("conditionc"))
 #' makeContrast(c("conditionb=0","conditionc=0","conditionc-conditionb=0"),parameterNames=c("conditionb","conditionc"))
 #'
 #' @return A numeric contrast matrix with rownames that equal the model parameters that are involved in the contrasts

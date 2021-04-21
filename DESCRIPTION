@@ -1,7 +1,7 @@
 Package: msqrob2
 Title: Robust statistical inference for quantitative LC-MS proteomics
 Version: 0.0.1
-Authors@R:
+Author:
     c(person(given = "Lieven",
            family = "Clement",
            role = c("aut", "cre"),
@@ -25,17 +25,20 @@ Authors@R:
              family = "Goeminne",
              email = " ludgergoeminne@gmail.com",
              role = "ctb"))
+Maintainer: Lieven Clement <lieven.clement@ugent.be>
 Description: Robust statistical inference for quantitative proteomics
    using the Feature infrastructure for quantitative mass spectrometry
    data.
-Depends: R (>= 4.0), QFeatures (>= 1.1.2), methods, lme4, purrr
-Imports: MASS, limma
+Depends: R (>= 4.0), QFeatures (>= 1.1.2), methods, lme4, purrr, BiocParallel
+Imports: MASS, limma, knitr, testthat
+Suggests: Matrix, multcomp
 License: Artistic-2.0
 Collate: 'msqrob-framework.R' 'allGenerics.R'
         'accessors.R' 'msqrob.R' 'msqrob-utils.R' 'StatModel-methods.R'
         'hypothesisTest-methods.R' 'msqrob-methods.R' 'msqrobAggregate.R'
         'topFeatures.R' 'data.R' 'msqrobQB.R' 'msqrobHurdle-methods.R'
 Encoding: UTF-8
+VignetteBuilder: knitr
 LazyData: true
 Roxygen: list(markdown=TRUE)
 RoxygenNote: 7.1.1

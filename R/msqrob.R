@@ -82,22 +82,22 @@ msqrobLm <- function(y,
                                 mod <- try(lm.fit(X, y))
                                 if (class(mod)[1] != "try-error" & mod$rank == ncol(X))
                                     type <- "lm"
-                            } 
-                            
+                            }
+
                             if (type == "rlm") {
                                 w <- mod$w
                                 sigma <- sqrt(sum(mod$w * mod$resid^2) / (sum(mod$w) - mod$rank))
                                 df.residual <- sum(mod$w) - mod$rank
                                 if (df.residual<2L) type <- "fitError"
-                            } 
-                            
+                            }
+
                             if (type == "lm") {
                                 w <- NULL
                                 sigma <- sqrt(sum(mod$residuals^2 / mod$df.residual))
                                 df.residual <- mod$df.residual
                                 if (df.residual<2L) type <- "fitError"
-                            } 
-                            
+                            }
+
                             if (type != "fitError")
                                 model <- list(coefficients = mod$coef,
                                               vcovUnscaled = .vcovUnscaled(mod),
@@ -211,6 +211,7 @@ msqrobLm <- function(y,
 #'
 #' @importFrom MASS psi.huber
 #' @import lme4
+#' @import BiocParallel
 #'
 #' @export
 msqrobLmer <- function(y,
@@ -226,7 +227,7 @@ msqrobLmer <- function(y,
 
     if( length(formula)==3)
       formula <- formula[-2]
-    
+
     fixed <- model.matrix(nobars(formula), data)
     df <- data
     df$fixed <- fixed
@@ -240,18 +241,18 @@ msqrobLmer <- function(y,
     if(is.null(findbars(formula))) {
         form <- formula(y ~ (1|ridge))
     } else {
-      
+
       if(nobars(formula)[[2]] != 1) {
             form <- formula(
                          paste0("y ~ (1|ridge) + ", paste0("(",paste(findbars(formula), collapse=")+("),")"))
             )
-      } else { 
+      } else {
         form <- formula
       }
     }
 
     if (is.null(featureGroups)) featureGroups <- rownames(y)
-    
+
     y <- split.data.frame(y, featureGroups)
 
     models <- bplapply(y,
@@ -262,7 +263,7 @@ msqrobLmer <- function(y,
                                       data$features <- as.factor(rep(rownames(y), ncol(y)))
                                       form <- update.formula(form, ~.+(1|samples) + (1|features))
                                 }
-                         
+
                                 #dim(y) <- NULL
                                 data$y <- y
                                 data <- data[!is.na(data$y), ]
@@ -277,13 +278,13 @@ msqrobLmer <- function(y,
                                 model <- NULL
 
                                 if (nobars(formula)[[2]] != 1) {
-                                  
+
                                     ##Fooling lmer to adopt ridge regression using Fabian Scheipl's trick
                                     if (qrFixed$rank == ncol(data$fixed))
                                     try({
                                           colnames(Q) <- colnames(data$fixed)
                                           if (colnames(data$fixed)[1] == "(Intercept)") Q <- Q[, -1]
-                                          
+
                                           data$ridge <- as.factor(rep(colnames(Q),length = nrow(data)))
                                           parsedFormulaC <- lFormula(form,data = as.list(data))
                                           parsedFormulaC$reTrms$cnms$ridge <- ""
@@ -329,7 +330,7 @@ msqrobLmer <- function(y,
                                               } else {
                                                   ids <- grep("ridge", names(betas))
                                               }
-                                            
+
                                           Rinv <- diag(betas)
                                           coefNames <- names(betas)
                                           Rinv[ids, ids] <- solve(qr.R(qrFixed))
@@ -356,7 +357,7 @@ msqrobLmer <- function(y,
                                           }
                                       }
                                 return(StatModel(type = type,
-                                                 params = model, 
+                                                 params = model,
                                                  varPosterior = as.numeric(NA),
                                                  dfPosterior = as.numeric(NA)))
                          },
@@ -364,7 +365,7 @@ msqrobLmer <- function(y,
                          data = df)
 
     hlp <- limma::squeezeVar(var = sapply(models, getVar), df = sapply(models, getDF))
-    
+
     for (i in 1:length(models)){
         models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
         models[[i]]@dfPosterior <- as.numeric(hlp$df.prior + getDF(models[[i]]))
@@ -377,7 +378,7 @@ msqrobLmer <- function(y,
 
   p1 <- 1L:model$rank
   p <- length(model$coefficients)
-  
+
   out <- matrix(NA, p, p)
   out[p1, p1] <- chol2inv( model$qr$qr[p1, p1, drop = FALSE])
   colnames(out) <- rownames(out) <- names(model$coefficients)
@@ -394,13 +395,13 @@ msqrobLmer <- function(y,
                           Matrix::tcrossprod(getME(model, "Lambda")) +
                           Matrix::Diagonal(ncol(Z), 1e-18)
                          )
-    
+
     i <- -seq_len(ncol(X))
     vcovInv[i, i] <- vcovInv[i, i] + Ginv
     vcovInv <- Matrix::solve(vcovInv)
     ranefLevels <- imap(model@flist,~{paste0(.y, levels(.x))})
-    zNames <- unlist(lapply(1:length(model@cnms), 
-                            function(x, cnms, levels) 
+    zNames <- unlist(lapply(1:length(model@cnms),
+                            function(x, cnms, levels)
                               c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0)),
                             cnms = model@cnms,
                             levels = ranefLevels))
@@ -457,10 +458,26 @@ msqrobLmer <- function(y,
 #'
 #' @examples
 #'
+#' # Load example data
+#' # The data are a Feature object with containing
+#' # a SummarizedExperiment named "peptide" with MaxQuant peptide intensities
+#' # The data are a subset of spike-in the human-ecoli study
+#' # The variable condition in the colData of the Feature object
+#' # contains information on the spike in condition a-e (from low to high)
+#' data(pe)
+#'
+#' # Aggregate peptide intensities in protein expression values
+#' pe<-aggregateFeatures(pe,i="peptide",fcol="Proteins",name="protein")
+#' pe
+#'
+#' # Fit MSqrob model using robust regression with the MASS rlm function
+#' models <- msqrobGlm(aggcounts(pe[["protein"]]), rowData(pe[["protein"]])[[".n"]],~condition,colData(pe))
+#' #' getCoef(models[[1]])
+#'
 #'
 #' @return A list of objects of the `StatModel` class.
 #'
-#' @rdname msqrobQB
+#' @rdname msqrobGlm
 #'
 #' @author Lieven Clement
 #'
@@ -507,17 +524,17 @@ msqrobGlm <- function(y,
                                dfPosterior = as.numeric(NA))
                   }, y = y, npep = npep, myDesign = myDesign)
   hlp <- limma::squeezeVar(var = sapply(models, getVar), df = sapply(models, getDF))
-  
+
   for (i in 1:length(models)) {
     models[[i]]@varPosterior<-as.numeric(hlp$var.post[i])
     models[[i]]@dfPosterior<-as.numeric(hlp$df.prior + getDF(models[[i]]))
-    
+
     if (!is.na(models[[i]]@varPosterior) & binomialBound)
         if (models[[i]]@varPosterior < 1) {
             models[[i]]@varPosterior <- 1
             models[[i]]@dfPosterior <- Inf
         }
   }
-  
+
   return(models)
 }

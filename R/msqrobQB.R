@@ -48,6 +48,8 @@
 #'
 #' @return SummarizedExperiment or QFeatures instance
 #'
+#' @rdname msqrobQB
+#'
 #' @aliases msqrobQB msqrobQB,SummarizedExperiment-method msqrobQB,QFeatures-method
 #'
 #' @author Lieven Clement

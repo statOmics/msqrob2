@@ -193,3 +193,5 @@ abline(h=log2(6),col=2)
 boxplot(fcCb ~ rowData(pe[["psmLog"]])$ecoli,ylab="log2 FC",xlab="spiked",main="C vs B")
 abline(h=log2(2),col=2)
 ```
+
+# References
