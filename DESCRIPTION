@@ -49,7 +49,8 @@ Suggests:
     RefManageR,
     sessioninfo,
     rmarkdown,
-    testthat
+    testthat,
+    tidyverse
 License: Artistic-2.0
 Collate: 'msqrob-framework.R' 'allGenerics.R'
         'accessors.R' 'msqrob.R' 'msqrob-utils.R' 'StatModel-methods.R'
