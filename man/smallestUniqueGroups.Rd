@@ -19,5 +19,5 @@ For a given vector of protein group names, outputs the names of those protein gr
 }
 \examples{
 data(pe)
-smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins)
+smallestUniqueGroups(rowData(pe[["peptide"]])$Proteins)
 }
