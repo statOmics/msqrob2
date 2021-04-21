@@ -279,8 +279,9 @@ With respect to the vignette file size, we only make detail plots for the top 5 
 
 
 ```{r, warning=FALSE, message=FALSE}
-if (length(sigNames) > 5) {
-    for (protName in sigNames[1:2])
+topN <- 5
+if (length(sigNames) > topN) {
+    for (protName in sigNames[1:topN])
     {
         pePlot <- pe[protName, , c("peptideNorm", "protein")]
         pePlotDf <- data.frame(longFormat(pePlot))

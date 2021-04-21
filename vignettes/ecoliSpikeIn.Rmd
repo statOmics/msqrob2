@@ -509,7 +509,7 @@ for (i in contrastNames)
         geom_vline(xintercept = log2(FCs[i]), col = "red") +
         ggtitle(i)
 }
-grid.arrange(grobs = volcano, nrow = 2)
+grid.arrange(grobs = volcano[1:9], nrow = 3)
 ```
 
 #### Sensitivity FDP plots
@@ -571,7 +571,7 @@ for (i in contrastNames)
         geom_vline(xintercept = log2(FCs[i]), col = "red") +
         ggtitle(paste("median summarisation", i))
 }
-grid.arrange(grobs = volcanoMed, nrow = 2)
+grid.arrange(grobs = volcanoMed[1:9], nrow = 3)
 ```
 
 Note, that less proteins are found to be DE upon median summarisation.

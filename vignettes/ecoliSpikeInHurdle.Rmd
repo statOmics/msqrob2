@@ -287,7 +287,6 @@ pe <- hypothesisTest(object = pe, i = "protein", contrast = L, modelColumn = "ms
 ## Heatmaps
 
 ```{r}
-par(mfrow = c(2, 1), pty = "s")
 for (i in colnames(L)) {
     sigNames <- rowData(pe[["protein"]])[[paste0("hurdle_", i)]] %>%
         rownames_to_column("protein") %>%
