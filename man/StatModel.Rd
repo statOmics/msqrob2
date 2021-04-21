@@ -30,6 +30,9 @@ StatModel(
 \item{dfPosterior}{Numeric, posterior degrees of freedom,
 default is NA}
 }
+\value{
+A StatModel object
+}
 \description{
 The \code{StatModel} class contains a statistical model as applied on a
 feature.
@@ -66,7 +69,7 @@ myModel <- StatModel(
     dfPosterior = c(6, 7, 8)
 )
 myModel
-myModel@params
+
 
 
 ## A collection of models stored as a variable in a DataFrame

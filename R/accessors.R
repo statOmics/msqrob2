@@ -32,6 +32,9 @@
 #' getFitMethod(rowData(pe[["protein"]])$msqrobModels[[1]])
 #' # Similar for the remaining accessors
 #' @param object `StatModel` object
+#'
+#' @return The requested parameter of the StatModel object
+
 
 setMethod("getModel",
     signature = "StatModel",

@@ -47,6 +47,9 @@
 \arguments{
 \item{object}{\code{StatModel} object}
 }
+\value{
+The requested parameter of the StatModel object
+}
 \description{
 Accessor functions for StatModel class
 \describe{

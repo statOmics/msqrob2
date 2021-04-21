@@ -37,7 +37,7 @@
 #'     dfPosterior = c(6, 7, 8)
 #' )
 #' myModel
-#' myModel@params
+#'
 #'
 #'
 #' ## A collection of models stored as a variable in a DataFrame
@@ -85,6 +85,8 @@ setMethod(
 #'
 #' @examples
 #' # TODO
+#' @return A StatModel object
+#'
 #' @importFrom methods new
 #'
 #' @export
