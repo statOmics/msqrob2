@@ -60,9 +60,8 @@ Suggests:
     msdata,
     MSnbase,
     matrixStats,
-    MsCoreUtils,
-    DEqMS,
-    gridExtra
+    MsCoreUtils
+    
 License: Artistic-2.0
 Collate: 'msqrob-framework.R' 'allGenerics.R'
         'accessors.R' 'msqrob.R' 'msqrob-utils.R' 'StatModel-methods.R'
