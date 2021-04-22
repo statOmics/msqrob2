@@ -51,7 +51,6 @@ Suggests:
     multcomp,
     gridExtra,
     readr,
-    DEqMS,
     knitr,
     BiocStyle,
     RefManageR,
