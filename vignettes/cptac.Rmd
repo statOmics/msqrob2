@@ -16,6 +16,24 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+# Introduction
+
+Label-Free Quantitative mass spectrometry based workflows for differential expression (DE) analysis of proteins is often challenging due to peptide-specific effects and context-sensitive missingness of peptide intensities.
+
+- `msqrob2` provides  peptide-based workflows that can assess for DE directly from peptide intensities and outperform summarisation methods which first aggregate MS1 peptide intensities to protein intensities before DE analysis.
+However, they are computationally expensive, often hard to understand for the non-specialised end-user, and they do not provide protein summaries, which are important for visualisation or downstream processing.
+
+- `msqrob2` therefore also proposes a novel summarisation strategy, which estimates MSqRob's model parameters in a two-stage procedure circumventing the drawbacks of peptide-based workflows.
+
+- the summarisation based workflow in `msqrob2` maintains MSqRob's superior performance, while providing useful protein expression summaries for plotting and downstream analysis.
+Summarising peptide to protein intensities considerably reduces the computational complexity, the memory footprint and the model complexity.
+Moreover, it renders the analysis framework to become modular, providing users the flexibility to develop workflows tailored towards specific applications.
+
+In this vignette we will demonstrate how to perform  `msqrob`'s summarisation based workflow  starting from a Maxquant search on a subset of the cptac spike-in study.
+
+Examples on our peptide-based workflows and on the analysis of more complex designs can be found on our companion website [msqrob2Examples](https://statomics.github.io/msqrob2Examples).
+
+Technical details on our methods can be found in [@goeminne2016], [@goeminne2020] and [@sticker2020].
 
 # Background
 This case-study is a subset of the data of the 6th study of the Clinical
