@@ -255,7 +255,8 @@ volcano <- ggplot(
 ) +
     geom_point(cex = 2.5) +
     scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
-    theme_minimal()
+    theme_minimal() +
+    ggtitle("Default workflow")
 volcano
 ```
 
@@ -317,5 +318,237 @@ if (length(sigNames) > topN) {
     }
 }
 ```
+
+# Comparison with other workflows
+
+## Median summarisation
+
+```{r warning=FALSE}
+pe <- aggregateFeatures(pe,
+    i = "peptideNorm", fcol = "Proteins", na.rm = TRUE,
+    name = "proteinMedian", fun = matrixStats::colMedians
+)
+pe <- msqrob(object = pe, i = "proteinMedian", formula = ~condition)
+pe <- hypothesisTest(object = pe, i = "proteinMedian", contrast = L)
+```
+
+### MDS plot
+
+```{r}
+limma::plotMDS(assay(pe[["proteinMedian"]]),
+    col = as.numeric(colData(pe)$condition)
+)
+```
+
+Note, that upon median summarisation the separation between
+the samples according to the spike-in condition is much less clear
+than when using robust summarisation. This is because median summarisation
+does not account for a differences in observed peptides per protein.
+Indeed, for DE proteins more peptides will go missing in the low spike-in
+condition a.
+
+### Volcano-plots
+
+```{r,warning=FALSE}
+volcanoMed <- rowData(pe[["proteinMedian"]])[[colnames(L)]] %>%
+    ggplot(aes(x = logFC, y = -log10(pval), color = adjPval < 0.01)) +
+    geom_point(cex = 2.5) +
+    scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
+    theme_minimal() +
+    geom_vline(xintercept = log2(0.74 / .25), col = "red") +
+    ggtitle("median summarisation")
+```
+
+## Robust summarisation followed by robust ridge regression
+
+msqrob2 can also be used to adopt parameter estimation using robust ridge regression by setting the argument 'ridge=TRUE'.
+The performance of ridge regression generally improves for more complex designs with multiple conditions.
+
+Note, that the parameter names for ridge regression always start with the string "ridge".
+
+```{r}
+try(pe <- msqrob(
+    object = pe, i = "protein", formula = ~condition,
+    modelColumnName = "ridge", ridge = TRUE
+)) # note: intentional error
+```
+
+Note, that by default ridge regression does not work for two group comparisons
+because it typically performs better the more parameters there are in the mean model
+(more complex designs). However, we can force ridge regression in a two
+group comparison using a formula without intercept.
+
+```{r}
+pe <- msqrob(
+    object = pe, i = "protein", formula = ~ -1 + condition,
+    modelColumnName = "ridge", ridge = TRUE
+)
+Lridge <- makeContrast(
+    "ridgeconditionB - ridgeconditionA = 0",
+    c("ridgeconditionB", "ridgeconditionA")
+)
+pe <- hypothesisTest(
+    object = pe, i = "protein", contrast = Lridge,
+    modelColumn = "ridge"
+)
+```
+
+
+### Volcano-plot
+
+```{r,warning=FALSE}
+volcanoRidge <- rowData(pe[["protein"]])[[colnames(Lridge)]] %>%
+    ggplot(aes(
+        x = logFC, y = -log10(pval),
+        color = adjPval < 0.01
+    )) +
+    geom_point(cex = 2.5) +
+    scale_color_manual(values = alpha(c("black", "red"), 0.5)) +
+    theme_minimal() +
+    geom_vline(xintercept = log2(0.74 / 0.25), col = "red") +
+    ggtitle(paste("robust ridge"))
+```
+
+
+# Comparison of performance
+
+
+Because we are analysing a spike-in study we know the ground truth,
+i.e. we know that only the spike-in proteins (UPS proteins) are differentially expressed.
+
+We first add the ground truth data to the rowData of the object.
+
+```{r}
+rowData(pe[["protein"]])$ups <- grepl("UPS", rownames(pe[["protein"]]))
+rowData(pe[["proteinMedian"]])$ups <- grepl("UPS", rownames(pe[["proteinMedian"]]))
+```
+
+## Volcano plots
+
+```{r}
+grid.arrange(grobs = list(volcano, volcanoMed, volcanoRidge), ncol = 1)
+```
+
+- Less proteins are found to be DE upon median summarisation. It is indeed important that the summarisation accounts for properties of the different peptides of a protein that are present in the different samples.
+
+- The volcano plot opens up and that the dots are more tight.
+The DE proteins are also around the real fold change of the spiked proteins.
+
+
+## log2 Fold Change Estimation
+
+```{r}
+logFC <- data.frame(
+    default = rowData(pe[["protein"]])[[colnames(L)]][, 1],
+    median = rowData(pe[["proteinMedian"]])[[colnames(L)]][, 1],
+    ridge = rowData(pe[["protein"]])[[colnames(Lridge)]][, 1],
+    ups = rowData(pe[["protein"]])$ups
+)
+
+logFC <- logFC %>% gather(method, log2FC, c("default", "median", "ridge"))
+logFC$ups <- as.factor(logFC$ups)
+logFC %>% ggplot(aes(x = method, y = log2FC, fill = ups)) +
+    geom_boxplot() +
+    geom_hline(yintercept = log2(0.74 / .25), color = "red")
+```
+
+Note, that methods based on robust summarisation (default and ridge) have
+unbiased fold change estimates for both the ecoli (real log2 FC = 0)
+and spiked UPS proteins
+(real log2 FC = `r round(log2(.74/.25),2)` red horizontal line).
+Ridge regression provides a strong shrinkage of the fold change
+estimates of the non-DE (ecoli) proteins towards zero.
+
+Median summarisation returns biased fold changes for the spiked UPS proteins.
+This is because peptides of the ups proteins that do not fly well through
+the mass spec are typically missing in the low spike-in condition.
+Hence, the protein estimates for condition a are typically overestimated
+and for condition b underestimated leading to an underestimation
+of the fold change. The default robust summarisation uses a peptide
+based model to summarise the data, which estimates the protein expression
+value while correcting for the peptide.
+
+## Sensitivity FDP Plots
+
+Because we are analysing a spike-in study we know the ground truth,
+i.e. we know that only the spike-in proteins (UPS proteins)
+are differentially expressed. We can therefore evaluate the performance
+of the method, i.e. we will assess - the sensitivity or true positive rate (TPR),
+the proportion of actual positives that are correctly identified, in the
+protein list that we return $$TPR=\frac{TP}{\text{#actual positives}},$$
+here TP are the true positives in the list.
+The TPR is thus the fraction of ups proteins that we can recall.
+
+- false discovery proportion (FPD): fraction of false positives in the
+protein list that we return: $$FPD=\frac{FP}{FP+TP},$$
+with FP the false positives. In our case the yeast proteins that are in our list.
+
+Instead, of only calculating that for the protein list that is returned
+for the chosen FDR level, we can do this for all possible FDR cutoffs
+so that we get an overview of the quality of the ranking of the proteins
+in the protein list.
+
+Function to calculate TPR and FDP
+```{r}
+tprFdp <- function(pval, tp, adjPval) {
+    ord <- order(pval)
+    return(data.frame(
+        pval = pval[ord],
+        adjPval = adjPval[ord],
+        tpr = cumsum(tp[ord]) / sum(tp),
+        fdp = cumsum(!tp[ord]) / 1:length(tp)
+    ))
+}
+```
+
+```{r}
+tprFdpDefault <- tprFdp(
+    rowData(pe[["protein"]])[[colnames(L)]]$pval,
+    rowData(pe[["protein"]])$ups,
+    rowData(pe[["protein"]])[[colnames(L)]]$adjPval
+)
+tprFdpMedian <- tprFdp(
+    rowData(pe[["proteinMedian"]])[[colnames(L)]]$pval,
+    rowData(pe[["proteinMedian"]])$ups,
+    rowData(pe[["proteinMedian"]])[[colnames(L)]]$adjPval
+)
+
+tprFdpRidge <- tprFdp(
+    rowData(pe[["protein"]])[[colnames(Lridge)]]$pval,
+    rowData(pe[["protein"]])$ups,
+    rowData(pe[["protein"]])[[colnames(Lridge)]]$adjPval
+)
+
+hlp <- rbind(
+    cbind(tprFdpDefault, method = "default"),
+    cbind(tprFdpMedian, method = "median"),
+    cbind(tprFdpRidge, method = "ridge")
+)
+tprFdpPlot <- hlp %>%
+    ggplot(aes(x = fdp, y = tpr, color = method)) +
+    geom_path()
+tprFdpPlot
+```
+
+Ridge regression does not seem to improve the performance in two-group
+comparisons. By default the ridge regression workflow returns an error message
+if the model only has two fixed effect parameters, e.g. "(intercept)" and  parameter "conditionB".
+In the vignette of a large spike-in study with multiple spike-in conditions
+we illustrate the benefit of ridge regression when dealing with more complex experiments.
+
+# Additional Examples
+
+On our companion website [msqrob2Examples](https://statomics.github.io/msqrob2Examples)
+you can find:
+
+- Examples with all msqrob2 workflows
+- Examples with more complex designs
+- Code to assess proteins with fit-errors due to missing values
+- ...
+
+Details to the methods and workflows in `msqrob2` can be found in
+[@goemine2016, @goeminne2020, @sticker2020].
+
+Please refer to this papers when you use our tools.
 
 # References
