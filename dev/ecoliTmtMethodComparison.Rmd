@@ -31,6 +31,7 @@ protein database used for search was Uniprot (2018_04) human protein databases w
 ```{r}
 library(msqrob2)
 library(gridExtra)
+library(DEqMS)
 url <- "ftp://jpost.pharm.kyoto-u.ac.jp/repository/JPST000562/target_psmtable.txt"
 download.file(url, destfile = "./target_psmtable.txt", method = "auto")
 
@@ -146,7 +147,6 @@ limma::plotDensities(assay(pe[["proteinSweep"]])[!rowData(pe[["proteinSweep"]])$
 The resulting summaries should be equivalent to those of the DEqMS median sweep function
 
 ```{r}
-library(DEqMS)
 df <- data.frame(peptide = rowData(pe[["psmLog"]])$Peptide, protein = rowData(pe[["psmLog"]])$"Master.protein.s.", assay(pe[["psmLog"]]))
 proteinMedianSweeping <- medianSweeping(df)
 range(assay(pe[["proteinSweep"]]) - proteinMedianSweeping, na.rm = TRUE)

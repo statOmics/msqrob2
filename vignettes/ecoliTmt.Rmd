@@ -32,7 +32,7 @@ library(msqrob2)
 url <- "ftp://jpost.pharm.kyoto-u.ac.jp/repository/JPST000562/target_psmtable.txt"
 download.file(url, destfile = "./target_psmtable.txt", method = "auto")
 
-df <- read.table("target_psmtable.txt", stringsAsFactors = FALSE, header = TRUE, quote = "", comment.char = "", sep = "\t")
+df <- read_tsv("target_psmtable.txt")
 ```
 
 We make a unique name per psm and read in data.
@@ -203,6 +203,6 @@ boxplot(fcCb ~ rowData(pe[["psmLog"]])$ecoli, ylab = "log2 FC", xlab = "spiked",
 abline(h = log2(2), col = 2)
 ```
 
-Note, that the fold changes are biased, which is a known problem in labelled proteomics experiments. 
+Note, that the fold changes are biased, which is a known problem in labelled proteomics experiments.
 
 # References
