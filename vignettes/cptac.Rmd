@@ -547,8 +547,8 @@ you can find:
 - ...
 
 Details to the methods and workflows in `msqrob2` can be found in
-[@goemine2016, @goeminne2020, @sticker2020].
+[@goeminne2016], [@goeminne2020] and [@sticker2020].
 
-Please refer to this papers when you use our tools.
+Please refer to these papers when you use our tools.
 
 # References
