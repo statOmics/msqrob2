@@ -16,7 +16,7 @@ To install the current version of *msqrob2*, run.
 if(!requireNamespace("BiocManager", quietly = TRUE)) {
  install.packages("BiocManager")
 }
-BiocManager::install("statOmics/tradeSeq")
+BiocManager::install("statOmics/msqrob2")
 ```
 
 The dependencies of the package are listed in the DESCRIPTION file of the package.
@@ -28,4 +28,4 @@ Please use https://github.com/statOmics/msqrob2/issues to submit issues, bug rep
 
 ## Usage
 
-Start with the vignettes 
+See vignettes on [msqrob2Examples](https://statomics.github.io/msqrob2Examples)
