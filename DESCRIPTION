@@ -50,7 +50,6 @@ Imports:
 Suggests:
     multcomp,
     gridExtra,
-    readr,
     knitr,
     BiocStyle,
     RefManageR,
