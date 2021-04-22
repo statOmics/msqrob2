@@ -51,6 +51,7 @@ library(limma)
 library(QFeatures)
 library(msqrob2)
 library(plotly)
+library(gridExtra)
 
 peptidesFile <- msdata::quant(pattern = "cptac_a_b_peptides", full.names = TRUE)
 ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
