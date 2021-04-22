@@ -35,7 +35,7 @@ library(DEqMS)
 url <- "ftp://jpost.pharm.kyoto-u.ac.jp/repository/JPST000562/target_psmtable.txt"
 download.file(url, destfile = "./target_psmtable.txt", method = "auto")
 
-df <- read.table("target_psmtable.txt", stringsAsFactors = FALSE, header = TRUE, quote = "", comment.char = "", sep = "\t")
+df <- readr::read_tsv("target_psmtable.txt")
 ```
 
 We make a unique name per psm and read in data.
