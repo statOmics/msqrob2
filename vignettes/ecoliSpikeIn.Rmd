@@ -708,12 +708,12 @@ modelsFitErrors <- apply(yFitErrors, 1, function(y, data, formula) {
     # Drop unused levels of factors of the data
     factorColumns <- which(sapply(data, class) == "factor")
     for (j in factorColumns) {
-          data[[j]] <- droplevels(data[[j]])
-      }
+        data[[j]] <- droplevels(data[[j]])
+    }
 
     # Fit the model and adopt Empirical Bayes variance estimation
     out <- try(msqrobLm(y, formula, data)[[1]], silent = TRUE)
-    if (class(out) == "try-error") {
+    if (is(out, "try-error")) {
         out <- StatModel(
             type = "fitError",
             params = list(
@@ -804,7 +804,7 @@ for (j in 5:ncol(L)) {
 
 ## Combine inference for models with and without fitErrors.
 
-Note, that we have to reperform the FDR correction. Indeed, the FDR is a set
+Note, that we have to redo the FDR correction. Indeed, the FDR is a set
 property and has to be calculated using all results
 (default msqrob2 + custom msqrob2 models) for each contrast.
 We store the results in the rowData of the assay in columns starting with
