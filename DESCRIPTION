@@ -1,6 +1,6 @@
 Package: msqrob2
 Title: Robust statistical inference for quantitative LC-MS proteomics
-Version: 0.99.1
+Version: 0.99.2
 Authors@R: c(
       person(given = "Lieven",
            family = "Clement",
@@ -34,7 +34,7 @@ Description: msqrob2 provides a robust linear mixed model framework for assessin
     for quantitative mass spectrometry data to store the model results together with the raw data and preprocessed
     data.
 Depends:
-    R (>= 4.0),
+    R (>= 4.1),
     QFeatures (>= 1.1.2)
 Imports:
     stats,

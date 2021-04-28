@@ -1,5 +1,4 @@
-citHeader("To cite tradeSeq in publications use:")
-
+citHeader("To cite msqrob2 in publications use:")
 citEntry(
   entry    = "Article",
   title    = "Peptide-level Robust Ridge Regression Improves Estimation, Sensitivity, and Specificity in Data-dependent Quantitative Label-free Shotgun Proteomics",

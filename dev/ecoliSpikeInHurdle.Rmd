@@ -1,0 +1,450 @@
+---
+title: "Ecoli-Human Spike-in Study (PRIDE ID PXD003881): Hurdle analysis"
+author:
+- name: Lieven Clement
+output:
+  BiocStyle::html_document
+bibliography: msqrob2.bib
+vignette: >
+  %\VignetteIndexEntry{D. Label-free Hurdle workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+# Background
+In this vignette, we assess the performance of the MSqRob Hurdle workflow for
+differential expression analysis using a publicly available
+spike-in study (PRIDE identifier: PXD003881 Shen et al. [2018]). E. Coli lysates
+were spiked at five different concentrations (3%, 4.5%, 6%, 7.5% and 9% wt/wt)
+in a stable human background (four replicates per treatment). The samples were
+run on an Orbitrap Fusion mass spectrometer. Raw data files were processed with
+MaxQuant (version 1.6.1.0, Cox and Mann [2008]) using default search settings
+unless otherwise noted. Spectra were searched against the UniProtKB/SwissProt
+human and E. Coli reference proteome databases (07/06/2018), concatenated with
+the default Maxquant contaminant database. Carbamidomethylation of Cystein
+was set as a fixed modification, and oxidation of Methionine and acetylation
+of the protein amino-terminus were allowed as variable modifications. In silico
+cleavage was set to use trypsin/P, allowing two miscleavages. Match between
+runs was also enabled using default settings. The resulting peptide-to-spectrum
+matches (PSMs) were filtered by MaxQuant at 1% FDR.
+
+```{r}
+concentrations <- (2:6) * 1.5
+names(concentrations) <- letters[1:5]
+```
+
+# Data
+
+We first import the peptides.txt file. This is the file that contains your
+peptide-level intensities. For a MaxQuant search [6], this peptides.txt file can
+be found by default in the "path_to_raw_files/combined/txt/" folder from the
+MaxQuant output, with "path_to_raw_files" the folder where raw files were saved.
+In this tutorial, we will use a MaxQuant peptides file of the ecoli spike-in
+study that is stored in the msdata package. We use the QFeatures package to import the data.
+
+With the grepEcols function we find the columns that are containing the
+expression data of the peptides in the peptides.txt file.
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(limma)
+library(QFeatures)
+library(msqrob2)
+library(gridExtra)
+
+myurl <-
+    "https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/maxquant/peptides.zip"
+download.file(myurl, "peptides.zip", method = "curl", extra = "-L")
+unzip("peptides.zip")
+peptidesFile <- "peptides.txt"
+ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
+pe <- readQFeatures(
+    table = peptidesFile, fnames = 1, ecol = ecols,
+    name = "peptideRaw", sep = "\t"
+)
+pe
+```
+
+We can extract the spikein condition from the raw file name.
+
+```{r}
+cond <- which(strsplit(colnames(pe)[[1]][1], split = "")[[1]] == "a") # find where condition is stored
+colData(pe)$condition <- substr(colnames(pe), cond, cond) %>%
+    unlist() %>%
+    as.factor()
+```
+
+We calculate how many non zero intensities we have per peptide.
+This will be useful for filtering.
+
+```{r}
+rowData(pe[["peptideRaw"]])$nNonZero <- rowSums(assay(pe[["peptideRaw"]]) > 0)
+```
+
+
+Peptides with zero intensities are missing peptides and should be
+represent with a `NA` value instead of `0`.
+```{r}
+pe <- zeroIsNA(pe, i = "peptideRaw")
+```
+
+## Information on species
+
+In the spikin-study there are peptides from ecoli and human proteins.
+The ecoli peptides are spiked.
+
+```{r}
+myurl <-
+    "https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/ecoli_up000000625_7_06_2018.fasta"
+download.file(myurl, "ecoli.fasta", method = "curl", extra = "-L")
+myurl <- "https://raw.githubusercontent.com/statOmics/MSqRobSumPaper/master/spikein/data/fasta/human_up000005640_sp_7_06_2018.fasta"
+download.file(myurl, "human.fasta", method = "curl", extra = "-L")
+```
+
+```{r}
+id <- list(
+    ecoli = "ecoli.fasta",
+    human = "human.fasta"
+) %>%
+    map(~ {
+        read_lines(.x) %>%
+            {
+                .[str_detect(., "^>")]
+            } %>%
+            str_extract(., "(?<=\\|).*(?=\\|)")
+    })
+```
+## Data exploration
+
+We can inspect the missingness in our data with the `plotNA()`
+function provided with `MSnbase`. `r format(mean(is.na(assay(pe[["peptideRaw"]])))*100,digits=2)`%
+of all peptide intensities are missing and for some peptides we do not
+even measure a signal in any sample. The missingness is similar across samples.
+
+
+```{r, cache= TRUE, eval=FALSE}
+MSnbase::plotNA(assay(pe)) +
+    xlab("Peptide index (ordered by data completeness)")
+```
+
+
+# Preprocessing
+
+We  normalize the data using vsn normalisation. Note,
+that the data should not be log-transformed then.
+
+
+## Filtering
+
+### Handling overlapping protein groups
+In our approach a peptide can map to multiple proteins,
+as long as there is none of these proteins present in a smaller subgroup.
+
+```{r}
+pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Proteins %in% smallestUniqueGroups(rowData(pe[["peptideRaw"]])$Proteins), ]
+```
+
+### Remove reverse sequences (decoys) and contaminants
+
+We now remove the contaminants, peptides that map to decoy sequences and proteins,
+which were only identified by peptides with modifications.
+
+```{r}
+pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$Reverse != "+", ]
+pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$
+    Potential.contaminant != "+", ]
+```
+
+### Drop peptides that were only identified in one sample
+
+We want to keep peptide that were at least observed twice.
+
+```{r}
+pe[["peptideRaw"]] <- pe[["peptideRaw"]][rowData(pe[["peptideRaw"]])$nNonZero >= 2, ]
+nrow(pe[["peptideRaw"]])
+```
+
+We keep `r nrow(pe[["peptideRaw"]])` peptides upon filtering.
+
+
+## Normalize the data using the `vsn` method
+```{r}
+pe <- normalize(pe, i = "peptideRaw", method = "vsn", name = "peptideNorm")
+```
+
+
+## Explore quantile normalized data
+
+Upon normalisation the density curves for all samples coincide.
+We have not run the code to reduce the size of the vignette.
+Uncomment the line below to generate the plot.
+
+```{r}
+# limma::plotDensities(assay(pe[["peptideNorm"]]))
+```
+
+We can visualize our data using a multi-dimensional scaling plot,
+eg. as provided by the limma package.
+We have not run the code to reduce the size of the vignette.
+Uncomment the line below to generate the plot.
+
+```{r}
+# limma::plotMDS(assay(pe[["peptideNorm"]]), col = as.numeric(colData(pe)$condition))
+```
+
+The first axis in the plot is showing the leading log fold changes
+(differences on the log scale) between the samples. We notice that the
+leading differences (log FC) in the peptide data seems to be driven by the spike-in condition.
+
+# Summarization to protein level
+
+Use the standard summarisation in aggregateFeatures (robust summarisation)
+
+```{r warning=FALSE}
+pe <- aggregateFeatures(pe, i = "peptideNorm", fcol = "Proteins", na.rm = TRUE, name = "protein")
+```
+
+We can visualize the summarized data using a multi-dimensional scaling plot,
+eg. as provided by the limma package.
+We have not run the code to reduce the size of the vignette.
+Uncomment the line below to generate the plot.
+
+```{r}
+# plotMDS(assay(pe[["protein"]]), col = as.numeric(colData(pe)$condition))
+```
+
+# Data Analysis
+
+## Estimation
+
+Here, we will illustrate three different workflows that are available in MSqRob.
+
+### Default workflow:
+
+1. Robust summarisation
+
+2. Estimation with a robust linear model of the protein expression values
+
+```{r, warning=FALSE}
+pe <- msqrob(object = pe, i = "protein", formula = ~condition)
+```
+
+### Robust summarisation followed by robust ridge regression
+
+1. Robust summarisation
+
+2. Estimation with robust ridge regression.
+
+- This is done by setting the argument `ridge = TRUE`.
+- The performance of ridge regression generally improves for more complex designs with multiple conditions.
+- In two-group designs ridge regression does not improve much.
+The method is computationally complex!
+
+```{r, warning=FALSE}
+pe <- msqrob(
+    object = pe,
+    i = "protein",
+    formula = ~condition,
+    modelColumnName = "ridge",
+    ridge = TRUE)
+```
+
+
+
+
+### Hurdle workflow
+
+The hurdle model has two components:
+
+- A count component modelling absence/presence of a peptide
+- A intensity component modelling the expression level given that expression occurs.
+
+The count component models the number of peptides that were used to summarize to
+protein level expression values using a quasibinomial model. The model component
+is stored by default in the rowData under the name "msqrobHurdleCount".
+
+For the intensity component, the hurdle model estimates the model parameters by default using robust regression. This model component is stored in the rowData under name "msqrobHurdleIntensity".
+
+```{r, warning=FALSE}
+pe <- msqrobHurdle(object = pe, i = "protein", formula = ~condition)
+```
+
+
+## Inference
+
+What are the parameter names of the model?
+```{r}
+getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
+```
+
+Spike-in condition a is the reference class.
+So the mean log2 expression for samples from condition a is
+'(Intercept). The mean log2 expression for samples from condition b-e is
+'(Intercept)+conditionb',...,'(Intercept)+conditione', respectively. Hence, the
+average log2 fold change (FC) between condition b and condition a is modelled using the parameter 'conditionb'.
+Thus, we assess the contrast 'conditionb = 0' with our statistical test.
+The same holds for comparison c-a, d-a, e-a.
+
+```{r}
+comparisonsRef <- paste0(paste0("condition", letters[2:5]), " = 0")
+comparisonsRef
+```
+
+The test for average log2 FC between condition c and b will
+assess the contrast 'conditionc - conditionb = 0', ...
+
+```{r}
+comparisonsOther <- paste0(
+    apply(
+        combn(paste0("condition", letters[2:5]), 2)[2:1, ],
+        2,
+        paste,
+        collapse = " - "
+    ),
+    " = 0"
+)
+comparisonsOther
+
+comparisons <- c(comparisonsRef, comparisonsOther)
+```
+
+We make the contrast matrix using the makeContrast function
+
+```{r}
+L <- makeContrast(comparisons, parameterNames = paste0("condition", letters[2:5]))
+L
+```
+
+And we adopt the hypothesis tests for each contrast.
+
+## Inference
+
+### Default workflow
+
+We use the argument resultsColumnNamePrefix = "default" because we will evaluate
+the contrasts with multiple models and store all results in the rowData.
+
+```{r}
+pe <- hypothesisTest(object = pe, i = "protein", contrast = L,overwrite=TRUE, resultsColumnNamePrefix = "default")
+contrastNamesDefault <- paste0("default",colnames(L))
+```
+
+
+We do not make plots to reduce the vignette size.
+
+
+```{r}
+pe <- hypothesisTestHurdle(object = pe, i = "protein", contrast = L)
+```
+
+Compare it with inference on MSqRob native, i.e. the intensity component only
+
+```{r}
+pe <- hypothesisTest(object = pe, i = "protein", contrast = L, modelColumn = "msqrobHurdleIntensity")
+```
+
+
+
+
+
+# Plots
+## Heatmaps
+
+```{r}
+for (i in colnames(L)) {
+    sigNames <- rowData(pe[["protein"]])[[paste0("hurdle_", i)]] %>%
+        rownames_to_column("protein") %>%
+        filter(fisherAdjPval < 0.01) %>%
+        pull(protein)
+    heatmap(assay(pe[["protein"]])[sigNames, ], main = i)
+}
+```
+
+## Sensitivity FDP plots
+
+Because we are analysing a spike-in study we know the ground truth,
+i.e. we know that only the spike-in proteins (ecoli) are differentially expressed.
+We can therefore evaluate the performance of the method, i.e. we will assess
+
+- the sensitivity or true positive rate (TPR), the proportion of actual
+positives that are correctly identified, in the protein list that we return
+$$TPR=\frac{TP}{\text{#actual positives}},$$
+here TP are the true positives in the list. The TPR is thus the fraction of ups
+proteins that we can recall.
+
+- false discovery proportion (FPD): fraction of false positives
+in the protein list that we return:
+$$FPD=\frac{FP}{FP+TP},$$
+with FP the false positives. In our case the yeast proteins that are in our list.
+
+Instead of only calculating that for the protein list that is returned for the
+chosen FDR level, we can do this for all possible FDR cutoffs so that we get
+an overview of the quality of the ranking of the proteins in the protein list.
+
+
+We first add the ground truth data to the rowData of the object.
+
+```{r}
+accessions <- rownames(pe[["protein"]]) %>%
+    data_frame(protein = .)
+
+accessions <- accessions %>%
+    transmute(protein = as.character(protein), proteins = strsplit(protein, ";")) %>%
+    unnest() %>%
+    mutate(human = proteins %in% id$human, ecoli = proteins %in% id$ecoli) %>%
+    group_by(protein) %>%
+    summarise(human = any(human), ecoli = any(ecoli)) %>%
+    right_join(accessions)
+rowData(pe[["protein"]])$accession <- accessions
+```
+
+Check that all accessions are either human or ecoli:
+
+```{r}
+nrow(accessions)
+sum(accessions$human)
+sum(accessions$ecoli)
+sum(accessions$human) + sum(accessions$ecoli)
+```
+
+Function to calculate TPR and FDP
+```{r}
+tprFdp <- function(pval, tp, adjPval) {
+    ord <- order(pval)
+    return(data.frame(
+        pval = pval[ord],
+        adjPval = adjPval[ord],
+        tpr = cumsum(tp[ord]) / sum(tp),
+        fdp = cumsum(!tp[ord]) / 1:length(tp)
+    ))
+}
+```
+
+```{r}
+tprFdpDefault <- list()
+tprFdpHurdle <- list()
+tprFdpPlots <- list()
+for (i in colnames(L)) {
+    tprFdpDefault[[i]] <- tprFdp(
+        rowData(pe[["protein"]])[[i]]$pval,
+        rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[i]]$adjPval
+    )
+    tprFdpHurdle[[i]] <- tprFdp(
+        rowData(pe[["protein"]])[[paste0("hurdle_", i)]]$fisherPval,
+        rowData(pe[["protein"]])$accession$ecoli, rowData(pe[["protein"]])[[paste0("hurdle_", i)]]$fisherAdjPval
+    )
+    hlp <- rbind(cbind(tprFdpDefault[[i]], method = "default"), cbind(tprFdpHurdle[[i]], method = "hurdle"))
+    tprFdpPlots[[i]] <- hlp %>%
+        ggplot(aes(x = fdp, y = tpr, color = method)) +
+        geom_path() +
+        theme_classic(base_size = 14) + # guides(size = FALSE, alpha = FALSE)
+        ggtitle(paste0(i, " = 0"))
+}
+grid.arrange(grobs = tprFdpPlots[1:9], ncol = 3)
+```
+
+The performance of the hurdle method is better then of the
+default method, especially for the comparisons involving low concentrations.
+
+# References
