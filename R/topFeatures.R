@@ -4,9 +4,9 @@
 #'
 #' @param models A list with elements of the class `StatModel` that are
 #'        estimated using the \code{\link{msqrob}} function
-#' @param contrast `numeric` matrix specifying one or more contrasts of
+#' @param contrast `numeric` (matrix)vector specifying one contrast of
 #'        the linear model coefficients to be tested equal to zero.
-#'        The rownames of the matrix should be equal to the names of
+#'        The (row)names of the vector should be equal to the names of
 #'        parameters of the model.
 #' @param adjust.method `character` specifying the method to adjust
 #'        the p-values for multiple testing.
@@ -44,9 +44,20 @@
 #' @export
 
 topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alpha = 1) {
-    logFC <- sapply(models, getContrast, L = contrast)
-    se <- sqrt(sapply(models, varContrast, L = contrast))
-    df <- sapply(models, getDfPosterior)
+    if(is(contrast,"matrix"))
+        if(ncol(contrast)>1)
+            stop("Argument contrast is matrix with more than one column, only one contrast is allowed")
+    logFC <- vapply(models,
+        getContrast,
+        numeric(1),
+        L = contrast
+    )
+    se <- sqrt(vapply(models,
+        varContrast,
+        numeric(1),
+        L = contrast
+    ))
+    df <- vapply(models, getDfPosterior, numeric(1))
     t <- logFC / se
     pval <- pt(-abs(t), df) * 2
     adjPval <- p.adjust(pval, method = adjust.method)

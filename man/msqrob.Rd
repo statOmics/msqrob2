@@ -112,7 +112,10 @@ pe <- msqrob(pe, i = "protein", formula = ~condition, ridge = TRUE, modelColumnN
 cbind(getCoef(rowData(pe[["protein"]])$rlm[[1]]), getCoef(rowData(pe[["protein"]])$ridge[[1]]))
 
 # compare for ecoli protein (DE)==> almost no shrinkage to zero
-cbind(getCoef(rowData(pe[["protein"]])$rlm[["P00956"]]), getCoef(rowData(pe[["protein"]])$ridge[["P00956"]]))
+cbind(
+    getCoef(rowData(pe[["protein"]])$rlm[["P00956"]]),
+    getCoef(rowData(pe[["protein"]])$ridge[["P00956"]])
+)
 }
 \author{
 Lieven Clement

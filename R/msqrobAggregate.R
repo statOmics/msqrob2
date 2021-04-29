@@ -95,8 +95,8 @@ setMethod(
     tol = 1e-6,
     doQR = TRUE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
-        if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain assay ", i))
-        if (!(fcol %in% colnames(rowData(object[[i]])))) stop(paste0("The rowData of Assay ", i, " of the QFeatures object does not contain variable", fcol))
+        if (is.null(object[[i]])) stop("QFeatures object does not contain assay ", i)
+        if (!(fcol %in% colnames(rowData(object[[i]])))) stop("The rowData of Assay ", i, " of the QFeatures object does not contain variable", fcol)
         object <- QFeatures::aggregateFeatures(
             object = object,
             i = i,

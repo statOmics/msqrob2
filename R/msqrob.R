@@ -129,12 +129,12 @@ msqrobLm <- function(y,
     ## Squeeze a set of sample variances together by computing
     ## empirical Bayes posterior means
     hlp <- limma::squeezeVar(
-        var = sapply(models, getVar),
-        df = sapply(models, getDF)
+        var = vapply(models, getVar, numeric(1)),
+        df = vapply(models, getDF, numeric(1))
     )
 
     ## Put variance and degrees of freedom in appropriate slots
-    for (i in 1:length(models)) {
+    for (i in seq_len(length(models))) {
         mydf <- hlp$df.prior + getDF(models[[i]])
         models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
         models[[i]]@dfPosterior <- as.numeric(mydf)
@@ -251,7 +251,7 @@ msqrobLmer <- function(y,
     df$fixed <- fixed
 
     if (sum(!grepl("(Intercept)", colnames(fixed))) < 2 & nobars(formula)[[2]] != 1) {
-        stop("Error: the mean model must have more than two parameters for ridge regression.
+        stop("The mean model must have more than two parameters for ridge regression.
               if you really want to adopt ridge regression when your factor has only two levels
               rerun the function with a formula where you drop the intercept. e.g. ~-1+condition
             ")
@@ -276,7 +276,7 @@ msqrobLmer <- function(y,
     models <- bplapply(y,
         function(y, form, data) {
             if (nrow(y) > 1) {
-                data <- data[rep(1:nrow(data), each = nrow(y)), ]
+                data <- data[rep(seq_len(nrow(data)), each = nrow(y)), ]
                 data$samples <- as.factor(rep(colnames(y), each = nrow(y)))
                 data$features <- as.factor(rep(rownames(y), ncol(y)))
                 form <- update.formula(form, ~ . + (1 | samples) + (1 | features))
@@ -395,9 +395,12 @@ msqrobLmer <- function(y,
         data = df
     )
 
-    hlp <- limma::squeezeVar(var = sapply(models, getVar), df = sapply(models, getDF))
+    hlp <- limma::squeezeVar(
+        var = vapply(models, getVar, numeric(1)),
+        df = vapply(models, getDF, numeric(1))
+    )
 
-    for (i in 1:length(models)) {
+    for (i in seq_len(length(models))) {
         models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
         models[[i]]@dfPosterior <- as.numeric(hlp$df.prior + getDF(models[[i]]))
     }
@@ -436,7 +439,7 @@ msqrobLmer <- function(y,
     ranefLevels <- imap(model@flist, ~ {
         paste0(.y, levels(.x))
     })
-    zNames <- unlist(lapply(1:length(model@cnms),
+    zNames <- unlist(lapply(seq_len(length(model@cnms)),
         function(x, cnms, levels) {
             c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0))
         },
@@ -455,7 +458,7 @@ msqrobLmer <- function(y,
     ranefLevels <- purrr::imap(model@flist, ~ {
         paste0(.y, levels(.x))
     })
-    zNames <- unlist(lapply(1:length(model@cnms), function(x, cnms, levels) {
+    zNames <- unlist(lapply(seq_len(length(model@cnms)), function(x, cnms, levels) {
         c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0))
     },
     cnms = model@cnms, levels = ranefLevels
@@ -513,8 +516,13 @@ msqrobLmer <- function(y,
 #' pe
 #'
 #' # Fit MSqrob model using robust regression with the MASS rlm function
-#' models <- msqrobGlm(aggcounts(pe[["protein"]]), rowData(pe[["protein"]])[[".n"]], ~condition, colData(pe))
-#' #' getCoef(models[[1]])
+#' models <- msqrobGlm(
+#'     aggcounts(pe[["protein"]]),
+#'     rowData(pe[["protein"]])[[".n"]],
+#'     ~condition,
+#'     colData(pe)
+#' )
+#' getCoef(models[[1]])
 #' @return A list of objects of the `StatModel` class.
 #'
 #' @rdname msqrobGlm
@@ -534,7 +542,7 @@ msqrobGlm <- function(y,
     priorCount = .1,
     binomialBound = TRUE) {
     myDesign <- model.matrix(formula, data)
-    models <- lapply(1:nrow(y),
+    models <- lapply(seq_len(nrow(y)),
         function(i, y, npep, myDesign) {
             type <- "fitError"
             model <- list(
@@ -575,9 +583,12 @@ msqrobGlm <- function(y,
         },
         y = y, npep = npep, myDesign = myDesign
     )
-    hlp <- limma::squeezeVar(var = sapply(models, getVar), df = sapply(models, getDF))
+    hlp <- limma::squeezeVar(
+        var = vapply(models, getVar, numeric(1)),
+        df = vapply(models, getDF, numeric(1))
+    )
 
-    for (i in 1:length(models)) {
+    for (i in seq_len(length(models))) {
         models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
         models[[i]]@dfPosterior <- as.numeric(hlp$df.prior + getDF(models[[i]]))
 

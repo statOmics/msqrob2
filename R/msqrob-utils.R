@@ -16,13 +16,20 @@ smallestUniqueGroups <- function(proteins,
 
     j <- 1
     while (length(b) != 0) {
-        included <- c(included, sapply(b[sapply(b, length) == j], function(x) paste(x, collapse = split)))
-        a <- unlist(b[sapply(b, length) == j])
-        b <- b[sapply(b, length) > j]
+        included <- c(
+            included,
+            vapply(
+                b[vapply(b, length, integer(1)) == j],
+                function(x) paste(x, collapse = split),
+                character(1)
+            )
+        )
+        a <- unlist(b[vapply(b, length, integer(1)) == j])
+        b <- b[vapply(b, length, integer(1)) > j]
 
         if (length(b) != 0) {
             sel <- vector()
-            for (i in 1:length(b)) {
+            for (i in seq_len(length(b))) {
                 sel[i] <- !any(b[[i]] %in% a)
             }
             b <- b[sel]
@@ -33,7 +40,6 @@ smallestUniqueGroups <- function(proteins,
     included <- unlist(included)
     return(included)
 }
-
 
 #' Make contrast matrix
 #'
@@ -49,9 +55,26 @@ smallestUniqueGroups <- function(proteins,
 #'        the log2 fold change conditionc-conditionb equals 0, encoded as "condtionb-conditionc=0".
 #'
 #' @examples
-#' makeContrast(c("conditionb=0"), parameterNames = c("(Intercept)", "conditionb", "conditionc"))
-#' makeContrast(c("conditionc=0"), parameterNames = c("conditionc"))
-#' makeContrast(c("conditionb=0", "conditionc=0", "conditionc-conditionb=0"), parameterNames = c("conditionb", "conditionc"))
+#' makeContrast(c("conditionb = 0"),
+#'     parameterNames = c(
+#'         "(Intercept)",
+#'         "conditionb",
+#'         "conditionc"
+#'     )
+#' )
+#' makeContrast(c("conditionc=0"),
+#'     parameterNames = c("conditionc")
+#' )
+#' makeContrast(c(
+#'     "conditionb=0",
+#'     "conditionc=0",
+#'     "conditionc-conditionb=0"
+#' ),
+#' parameterNames = c(
+#'     "conditionb",
+#'     "conditionc"
+#' )
+#' )
 #' @return A numeric contrast matrix with rownames that equal the model parameters that are involved in the contrasts
 #'
 #' @rdname makeContrast
@@ -84,7 +107,7 @@ makeContrast <- function(contrasts, parameterNames) {
     colnames(K) <- var
     rownames(K) <- seq_along(ex)
     m <- rep(0, length(ex))
-    for (i in 1:length(ex)) {
+    for (i in seq_len(length(ex))) {
         expr <- parse(text = ex[i])
         if (length(expr[[1]]) != 3) {
             stop("msqrob2:::.chrlinfct2matrix: argument ", sQuote(ex[i]),
@@ -539,10 +562,9 @@ makeContrast <- function(contrasts, parameterNames) {
     }, enum = function(x) {
         paste0("'", x, "'", collapse = ", ")
     }, fatal = function(name, ...) {
-        stop(paste0(
+        stop(
             "msqrob2:::.expression2coef::walkCode::",
-            name
-        ), ": ", ..., call. = FALSE)
+            name, ": ", ..., call. = FALSE)
     }, trace = function(fn, v, w) {
         message(
             fn, ": v = ", sQuote(v), ", mode = ", mode(v),
@@ -553,7 +575,7 @@ makeContrast <- function(contrasts, parameterNames) {
     if (any(idx <- is.numeric(effects))) {
         stop("msqrob2:::.expression2coef: The lhs expression ",
             sQuote(deparse(m.lhs)), " ", "contains a numeric offset term evaluating to ",
-            paste0(effects[idx], collapse = ", "), ". ", "This is either an internal error or a misspecification from your part. ",
+            paste0(effects[idx], collapse = ", "), ". ", "This is either an internal flaw or a misspecification from your part. ",
             "If so, please pull these offsets to the right-hand side of the equation",
             call. = FALSE
         )

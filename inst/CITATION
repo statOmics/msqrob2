@@ -1,45 +1,56 @@
-citHeader("To cite msqrob2 in publications use:")
-citEntry(
-  entry    = "Article",
-  title    = "Peptide-level Robust Ridge Regression Improves Estimation, Sensitivity, and Specificity in Data-dependent Quantitative Label-free Shotgun Proteomics",
-  author   = "Ludger Goeminne and Kris Gevaert and Lieven Clement",
-  journal  = "Molecular & Cellular Proteomics",
-  year     = "2016",
-  volume   = "15",
-  number   = "2",
-  pages    = "657-668",
-  url      = "https://doi.org/10.1074/mcp.m115.055897",
-  textVersion = paste(
+pkgVer <- function(pkg) {
+    if (!exists("meta") || is.null(meta)) meta <- packageDescription(pkg)
+    ver <- meta$Version
+    paste0('https://github.com/statOmics/', pkg, ' - R package version ', ver)
+}
 
-  )
-)
-
-citEntry(
-  entry    = "Article",
-  title    = "Robust Summarization and Inference in Proteome-wide Label-free Quantification",
-  author   = "Adriaan Sticker and Ludger Goeminne and Lennart Martens and Lieven Clement",
-  journal  = "Molecular & Cellular Proteomics",
-  year     = "2020",
-  volume   = "19",
-  number   = "7",
-  pages    = "1209-1219",
-  url      = "https://doi.org/10.1074/mcp.ra119.001624",
-  textVersion = paste(
-
-  )
-)
-
-citEntry(
-  entry    = "Article",
-  title    = "MSqRob Takes the Missing Hurdle: Uniting Intensity- and Count-Based Proteomics",
-  author   = "Ludger Goeminne and Adriaan Sticker and Lennart Martens and Kris Gevaert and Lieven Clement",
-  journal  = "Analytical Chemistry",
-  year     = "2020",
-  volume   = "92",
-  number   = "9",
-  pages    = "6278–6287",
-  url      = "https://doi.org/10.1021/acs.analchem.9b04375",
-  textVersion = paste(
-
-  )
+c(
+    bibentry(bibtype="article",
+        title = "Peptide-level Robust Ridge Regression Improves Estimation, Sensitivity, and Specificity in Data-dependent Quantitative Label-free Shotgun Proteomics",
+        author = personList(
+            as.person("Ludger Goeminne"),
+            as.person("Kris Gevaert"),
+            as.person("Lieven Clement")
+        ),
+        journal  = "Molecular & Cellular Proteomics",
+        year = 2016,
+        volume   = "15",
+        number   = "2",
+        pages    = "657-668",
+        doi      = "https://doi.org/10.1074/mcp.m115.055897",
+        url      = "https://doi.org/10.1074/mcp.m115.055897"
+    ),
+    bibentry(bibtype="article",
+        title = "Robust Summarization and Inference in Proteome-wide Label-free Quantification",
+        author = personList(
+            as.person("Adriaan Sticker"),
+            as.person("Ludger Goeminne"),
+            as.person("Lennart Martens"),
+            as.person("Lieven Clement")
+        ),
+        journal  = "Molecular & Cellular Proteomics",
+        year     = "2020",
+        volume   = "19",
+        number   = "7",
+        pages    = "1209-1219",
+        doi      = "https://doi.org/10.1074/mcp.ra119.001624",
+        url      = "https://doi.org/10.1074/mcp.ra119.001624"
+    ),
+    bibentry(bibtype="article",
+        title = "MSqRob Takes the Missing Hurdle: Uniting Intensity- and Count-Based Proteomics",
+        author = personList(
+            as.person("Adriaan Sticker"),
+            as.person("Ludger Goeminne"),
+            as.person("Lennart Martens"),
+            as.person("Kris Gevaert"),
+            as.person("Lieven Clement")
+        ),
+        journal  = "Analytical Chemistry",
+        year     = "2020",
+        volume   = "92",
+        number   = "9",
+        pages    = "6278–6287",
+        url      = "https://doi.org/10.1021/acs.analchem.9b04375",
+        doi      = "https://doi.org/10.1021/acs.analchem.9b04375"
+    )
 )

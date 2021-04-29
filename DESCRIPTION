@@ -1,6 +1,6 @@
 Package: msqrob2
 Title: Robust statistical inference for quantitative LC-MS proteomics
-Version: 0.99.2
+Version: 0.99.3
 Authors@R: c(
       person(given = "Lieven",
            family = "Clement",

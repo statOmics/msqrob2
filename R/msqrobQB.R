@@ -66,13 +66,13 @@ setMethod(
     overwrite = FALSE,
     priorCount = .1,
     binomialBound = TRUE) {
-        if (ncol(colData(object)) == 0) stop("error: colData is empty")
+        if (ncol(colData(object)) == 0) stop("colData is empty")
         if ((modelColumnName %in% colnames(rowData(object))) & !overwrite) {
-            stop(paste0(
+            stop(
                 "There is already a column named \'",
                 modelColumnName,
                 "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of SummarizedExperiment object"
-            ))
+            )
         }
         if (!(".n" %in% colnames(rowData(object)))) stop("The assay does not seem to be aggregated so the number of features are not available")
         rowData(object)[[modelColumnName]] <- msqrobGlm(aggcounts(object),
@@ -100,15 +100,15 @@ setMethod(
     overwrite = FALSE,
     priorCount = .1,
     binomialBound = TRUE) {
-        if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain an assay with the name ", i))
+        if (is.null(object[[i]])) stop("QFeatures object does not contain an assay with the name ", i)
         if ((modelColumnName %in% colnames(rowData(object[[i]]))) & !overwrite) {
-            stop(paste0(
+            stop(
                 "There is already a column named \'",
                 modelColumnName,
                 "\' in the rowData of assay \'",
                 i,
                 "'of object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of SummarizedExperiment object"
-            ))
+            )
         }
         if (!(".n" %in% colnames(rowData(object[[i]])))) stop("The assay does not seem to be aggregated so the number of features are not available")
         rowData(object[[i]])[[modelColumnName]] <- msqrobGlm(aggcounts(object[[i]]),

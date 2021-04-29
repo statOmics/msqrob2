@@ -23,7 +23,24 @@ Construct the contrast matrix corresponding to specified contrasts
 of a set of parameters.
 }
 \examples{
-makeContrast(c("conditionb=0"), parameterNames = c("(Intercept)", "conditionb", "conditionc"))
-makeContrast(c("conditionc=0"), parameterNames = c("conditionc"))
-makeContrast(c("conditionb=0", "conditionc=0", "conditionc-conditionb=0"), parameterNames = c("conditionb", "conditionc"))
+makeContrast(c("conditionb = 0"),
+    parameterNames = c(
+        "(Intercept)",
+        "conditionb",
+        "conditionc"
+    )
+)
+makeContrast(c("conditionc=0"),
+    parameterNames = c("conditionc")
+)
+makeContrast(c(
+    "conditionb=0",
+    "conditionc=0",
+    "conditionc-conditionb=0"
+),
+parameterNames = c(
+    "conditionb",
+    "conditionc"
+)
+)
 }

@@ -39,7 +39,10 @@
 #' cbind(getCoef(rowData(pe[["protein"]])$rlm[[1]]), getCoef(rowData(pe[["protein"]])$ridge[[1]]))
 #'
 #' # compare for ecoli protein (DE)==> almost no shrinkage to zero
-#' cbind(getCoef(rowData(pe[["protein"]])$rlm[["P00956"]]), getCoef(rowData(pe[["protein"]])$ridge[["P00956"]]))
+#' cbind(
+#'     getCoef(rowData(pe[["protein"]])$rlm[["P00956"]]),
+#'     getCoef(rowData(pe[["protein"]])$ridge[["P00956"]])
+#' )
 #' @param object `SummarizedExperiment` or `QFeatures` instance
 #'
 #' @param formula Model formula. The model is built based on the
@@ -92,13 +95,13 @@ setMethod(
     tol = 1e-6,
     doQR = TRUE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
-        if (ncol(colData(object)) == 0) stop("error: colData is empty")
+        if (ncol(colData(object)) == 0) stop("colData is empty")
         if ((modelColumnName %in% colnames(rowData(object))) & !overwrite) {
-            stop(paste0(
+            stop(
                 "There is already a column named \'",
                 modelColumnName,
                 "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of SummarizedExperiment object"
-            ))
+            )
         }
         if (!ridge) {
             rowData(object)[[modelColumnName]] <- msqrobLm(
@@ -109,17 +112,17 @@ setMethod(
                 maxitRob = maxitRob
             )
         } else {
-              rowData(object)[[modelColumnName]] <- msqrobLmer(
-                  y = assay(object),
-                  formula = formula,
-                  data = colData(object),
-                  robust = robust,
-                  maxitRob = maxitRob,
-                  tol = tol,
-                  doQR = doQR,
-                  lmerArgs = lmerArgs
-              )
-          }
+            rowData(object)[[modelColumnName]] <- msqrobLmer(
+                y = assay(object),
+                formula = formula,
+                data = colData(object),
+                robust = robust,
+                maxitRob = maxitRob,
+                tol = tol,
+                doQR = doQR,
+                lmerArgs = lmerArgs
+            )
+        }
         return(object)
     }
 )
@@ -143,15 +146,15 @@ setMethod(
     tol = 1e-6,
     doQR = TRUE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
-        if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain an assay with the name ", i))
+        if (is.null(object[[i]])) stop("QFeatures object does not contain an assay with the name ", i)
         if ((modelColumnName %in% colnames(rowData(object[[i]]))) & !overwrite) {
-            stop(paste0(
+            stop(
                 "There is already a column named \'",
                 modelColumnName,
                 "\' in the rowData of the assay",
                 i,
                 "of the QFeatures object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of assay of the QFeatures object"
-            ))
+            )
         }
         if (!ridge) {
             rowData(object[[i]])[[modelColumnName]] <- msqrobLm(
@@ -162,17 +165,17 @@ setMethod(
                 maxitRob = maxitRob
             )
         } else {
-              rowData(object[[i]])[[modelColumnName]] <- msqrobLmer(
-                  y = assay(object[[i]]),
-                  formula = formula,
-                  data = colData(object),
-                  robust = robust,
-                  maxitRob = maxitRob,
-                  tol = tol,
-                  doQR = doQR,
-                  lmerArgs = lmerArgs
-              )
-          }
+            rowData(object[[i]])[[modelColumnName]] <- msqrobLmer(
+                y = assay(object[[i]]),
+                formula = formula,
+                data = colData(object),
+                robust = robust,
+                maxitRob = maxitRob,
+                tol = tol,
+                doQR = doQR,
+                lmerArgs = lmerArgs
+            )
+        }
         return(object)
     }
 )

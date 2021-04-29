@@ -27,27 +27,52 @@
 #'
 #' # Define contrast
 #' getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
-#' # Assess log2 fold change between condition c and condition b:
-#' L <- makeContrast("conditionc - conditionb=0", c("conditionb", "conditionc"))
+#' # Assess log2 fold change between condition c and condition b
+#' L <- makeContrast(
+#'     "conditionc - conditionb=0",
+#'     c("conditionb", "conditionc")
+#' )
 #'
 #' # example SummarizedExperiment instance
 #' se <- pe[["protein"]]
 #' se <- hypothesisTest(se, L)
 #' head(rowData(se)$"conditionc - conditionb", 10)
 #' # Volcano plot
-#' plot(-log10(pval) ~ logFC, rowData(se)$"conditionc - conditionb", col = (adjPval < 0.05) + 1)
+#' plot(-log10(pval) ~ logFC,
+#'     rowData(se)$"conditionc - conditionb",
+#'     col = (adjPval < 0.05) + 1
+#' )
 #'
 #' # Example for QFeatures instance
 #' # Assess log2 fold change between condition b and condition a (reference class),
 #' # condition c and condition a, and, condition c and condition b.
-#' L <- makeContrast(c("conditionb=0", "conditionc=0", "conditionc - conditionb=0"), c("conditionb", "conditionc"))
+#' L <- makeContrast(
+#'     c(
+#'         "conditionb=0",
+#'         "conditionc=0",
+#'         "conditionc - conditionb=0"
+#'     ),
+#'     c("conditionb", "conditionc")
+#' )
 #' pe <- hypothesisTest(pe, i = "protein", L)
 #' head(rowData(pe[["protein"]])$"conditionb", 10)
 #' # Volcano plots
 #' par(mfrow = c(1, 3))
-#' plot(-log10(pval) ~ logFC, rowData(pe[["protein"]])$"conditionb", col = (adjPval < 0.05) + 1, main = "log2 FC b-a")
-#' plot(-log10(pval) ~ logFC, rowData(pe[["protein"]])$"conditionc", col = (adjPval < 0.05) + 1, main = "log2 FC c-a")
-#' plot(-log10(pval) ~ logFC, rowData(pe[["protein"]])$"conditionc - conditionb", col = (adjPval < 0.05) + 1, main = "log2 FC c-b")
+#' plot(-log10(pval) ~ logFC,
+#'     rowData(pe[["protein"]])$"conditionb",
+#'     col = (adjPval < 0.05) + 1,
+#'     main = "log2 FC b-a"
+#' )
+#' plot(-log10(pval) ~ logFC,
+#'     rowData(pe[["protein"]])$"conditionc",
+#'     col = (adjPval < 0.05) + 1,
+#'     main = "log2 FC c-a"
+#' )
+#' plot(-log10(pval) ~ logFC,
+#'     rowData(pe[["protein"]])$"conditionc - conditionb",
+#'     col = (adjPval < 0.05) + 1,
+#'     main = "log2 FC c-b"
+#' )
 #'
 #' # Hurdle method
 #' pe <- msqrobHurdle(pe, i = "protein", formula = ~condition)
@@ -98,11 +123,11 @@ setMethod(
     modelColumn = "msqrobModels",
     resultsColumnNamePrefix = "",
     overwrite = FALSE) {
-        if (!(modelColumn %in% colnames(rowData(object)))) stop(paste0("There is no column named \'", modelColumn, "\' with stored models of an msqrob fit in the rowData of the SummarizedExperiment object"))
+        if (!(modelColumn %in% colnames(rowData(object)))) stop("There is no column named \'", modelColumn, "\' with stored models of an msqrob fit in the rowData of the SummarizedExperiment object")
         if (is.null(colnames(contrast)) & resultsColumnNamePrefix == "") resultsColumnNamePrefix <- "msqrobResults"
-        if (is.null(colnames(contrast)) & ncol(contrast) > 1) colnames(contrast) <- 1:ncol(contrast)
-        if ((sum(paste0(resultsColumnNamePrefix, colnames(contrast)) %in% colnames(rowData(object))) > 0) & !overwrite) stop(paste0("There is/are already column(s) named \'", paste(paste0(resultsColumnNamePrefix, colnames(contrast)), collapse = "\' or \'"), "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix"))
-        for (j in 1:ncol(contrast))
+        if (is.null(colnames(contrast)) & ncol(contrast) > 1) colnames(contrast) <- seq_len(ncol(contrast))
+        if ((sum(paste0(resultsColumnNamePrefix, colnames(contrast)) %in% colnames(rowData(object))) > 0) & !overwrite) stop("There is/are already column(s) with names starting with\'", resultsColumnNamePrefix, "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix")
+        for (j in seq_len(ncol(contrast)))
         {
             contrHlp <- contrast[, j]
             names(contrHlp) <- rownames(contrast)
@@ -125,11 +150,11 @@ setMethod(
     modelColumn = "msqrobHurdle",
     resultsColumnNamePrefix = "hurdle_",
     overwrite = FALSE) {
-        if (sum(paste0(modelColumn, c("Intensity", "Count")) %in% colnames(rowData(object))) != 2) stop(paste0("There are no columns for the models of the hurdle components in the rowData of the SummarizedExperiment"))
+        if (sum(paste0(modelColumn, c("Intensity", "Count")) %in% colnames(rowData(object))) != 2) stop("There are no columns for the models of the hurdle components in the rowData of the SummarizedExperiment")
         if (is.null(colnames(contrast)) & resultsColumnNamePrefix == "hurdle_") resultsColumnNamePrefix <- "hurdleResults"
-        if (is.null(colnames(contrast)) & ncol(contrast) > 1) colnames(contrast) <- 1:ncol(contrast)
-        if ((sum(paste0(resultsColumnNamePrefix, colnames(contrast)) %in% colnames(rowData(object))) > 0) & !overwrite) stop(paste0("There is/are already column(s) named \'", paste(paste0(resultsColumnNamePrefix, colnames(contrast)), collapse = "\' or \'"), "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix"))
-        for (j in 1:ncol(contrast))
+        if (is.null(colnames(contrast)) & ncol(contrast) > 1) colnames(contrast) <- seq_len(ncol(contrast))
+        if ((sum(paste0(resultsColumnNamePrefix, colnames(contrast)) %in% colnames(rowData(object))) > 0) & !overwrite) stop("There is/are already column(s) with names starting with\'", resultsColumnNamePrefix, "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix")
+        for (j in seq_len(ncol(contrast)))
         {
             contrHlp <- contrast[, j]
             names(contrHlp) <- rownames(contrast)
@@ -137,13 +162,13 @@ setMethod(
             countComponent <- topFeatures(rowData(object)[, paste0(modelColumn, "Count")], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1)
 
             sam <- cbind(
-                intensityComponent[, 1:5],
-                countComponent[, 1:5]
+                intensityComponent[, seq_len(5)],
+                countComponent[, seq_len(5)]
             )
 
-            colnames(sam)[2:5] <- paste0("logFC", colnames(sam)[2:5])
+            colnames(sam)[seq(2, 5)] <- paste0("logFC", colnames(sam)[seq(2, 5)])
             colnames(sam)[6] <- "logOR"
-            colnames(sam)[7:10] <- paste0("logOR", colnames(sam)[7:10])
+            colnames(sam)[seq(7, 10)] <- paste0("logOR", colnames(sam)[seq(7, 10)])
 
             sam$fisher <- -2 * (log(sam[, 5]) + log(sam[, 10]))
             sam$fisherDf <- 4
@@ -181,12 +206,12 @@ setMethod(
     modelColumn = "msqrobModels",
     resultsColumnNamePrefix = "",
     overwrite = FALSE) {
-        if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain an assay with the name ", i))
-        if (!(modelColumn %in% colnames(rowData(object[[i]])))) stop(paste0("There is no column named \'", modelColumn, "\' with stored models of an msqrob fit in the rowData of assay ", i, "of the QFeatures object."))
+        if (is.null(object[[i]])) stop("QFeatures object does not contain an assay with the name ", i)
+        if (!(modelColumn %in% colnames(rowData(object[[i]])))) stop("There is no column named \'", modelColumn, "\' with stored models of an msqrob fit in the rowData of assay ", i, "of the QFeatures object.")
         if (is.null(colnames(contrast)) & resultsColumnNamePrefix == "") resultsColumnNamePrefix <- "msqrobResults"
-        if (is.null(colnames(contrast)) & ncol(contrast) > 1) colnames(contrast) <- 1:ncol(contrast)
-        if ((sum(paste0(resultsColumnNamePrefix, colnames(contrast)) %in% colnames(rowData(object[[i]]))) > 0) & !overwrite) stop(paste0("There is/are already column(s) named \'", paste(paste0(resultsColumnNamePrefix, colnames(contrast)), collapse = "\' or \'"), "\' in the rowData of assay ", i, " of the QFeatures object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix"))
-        for (j in 1:ncol(contrast))
+        if (is.null(colnames(contrast)) & ncol(contrast) > 1) colnames(contrast) <- seq_len(ncol(contrast))
+        if ((sum(paste0(resultsColumnNamePrefix, colnames(contrast)) %in% colnames(rowData(object[[i]]))) > 0) & !overwrite) stop("There is/are already column(s) with names starting with", resultsColumnNamePrefix, "\' in the rowData of assay ", i, " of the QFeatures object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix")
+        for (j in seq_len(ncol(contrast)))
         {
             contrHlp <- contrast[, j]
             names(contrHlp) <- rownames(contrast)
@@ -208,12 +233,12 @@ setMethod(
     modelColumn = "msqrobHurdle",
     resultsColumnNamePrefix = "hurdle_",
     overwrite = FALSE) {
-        if (is.null(object[[i]])) stop(paste0("QFeatures object does not contain an assay with the name ", i))
-        if (sum(paste0(modelColumn, c("Intensity", "Count")) %in% colnames(rowData(object[[i]]))) != 2) stop(paste0("There are no columns for the models of the hurdle components in the rowData of assay ", i, "of the QFeatures object."))
+        if (is.null(object[[i]])) stop("QFeatures object does not contain an assay with the name ", i)
+        if (sum(paste0(modelColumn, c("Intensity", "Count")) %in% colnames(rowData(object[[i]]))) != 2) stop("There are no columns for the models of the hurdle components in the rowData of assay ", i, "of the QFeatures object.")
         if (is.null(colnames(contrast)) & resultsColumnNamePrefix == "hurdle_") resultsColumnNamePrefix <- "hurdleResults"
-        if (is.null(colnames(contrast)) & ncol(contrast) > 1) colnames(contrast) <- 1:ncol(contrast)
-        if ((sum(paste0(resultsColumnNamePrefix, colnames(contrast)) %in% colnames(rowData(object[[i]]))) > 0) & !overwrite) stop(paste0("There is/are already column(s) named \'", paste(paste0(resultsColumnNamePrefix, colnames(contrast)), collapse = "\' or \'"), "\' in the rowData of assay ", i, " of the QFeatures object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix"))
-        for (j in 1:ncol(contrast))
+        if (is.null(colnames(contrast)) & ncol(contrast) > 1) colnames(contrast) <- seq_len(ncol(contrast))
+        if ((sum(paste0(resultsColumnNamePrefix, colnames(contrast)) %in% colnames(rowData(object[[i]]))) > 0) & !overwrite) stop("There is/are already column(s) with names starting with ", resultsColumnNamePrefix, "\' in the rowData of assay ", i, " of the QFeatures object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix")
+        for (j in seq_len(ncol(contrast)))
         {
             contrHlp <- contrast[, j]
             names(contrHlp) <- rownames(contrast)
@@ -221,13 +246,13 @@ setMethod(
             countComponent <- topFeatures(rowData(object[[i]])[, paste0(modelColumn, "Count")], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1)
 
             sam <- cbind(
-                intensityComponent[, 1:5],
-                countComponent[, 1:5]
+                intensityComponent[, seq_len(5)],
+                countComponent[, seq_len(5)]
             )
 
-            colnames(sam)[2:5] <- paste0("logFC", colnames(sam)[2:5])
+            colnames(sam)[seq(2, 5)] <- paste0("logFC", colnames(sam)[seq(2, 5)])
             colnames(sam)[6] <- "logOR"
-            colnames(sam)[7:10] <- paste0("logOR", colnames(sam)[7:10])
+            colnames(sam)[seq(7, 10)] <- paste0("logOR", colnames(sam)[seq(7, 10)])
 
             sam$fisher <- -2 * (log(sam[, 5]) + log(sam[, 10]))
             sam$fisherDf <- 4

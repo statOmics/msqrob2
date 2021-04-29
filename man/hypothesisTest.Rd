@@ -115,27 +115,52 @@ pe <- msqrob(pe, i = "protein", formula = ~condition)
 
 # Define contrast
 getCoef(rowData(pe[["protein"]])$msqrobModels[[1]])
-# Assess log2 fold change between condition c and condition b:
-L <- makeContrast("conditionc - conditionb=0", c("conditionb", "conditionc"))
+# Assess log2 fold change between condition c and condition b
+L <- makeContrast(
+    "conditionc - conditionb=0",
+    c("conditionb", "conditionc")
+)
 
 # example SummarizedExperiment instance
 se <- pe[["protein"]]
 se <- hypothesisTest(se, L)
 head(rowData(se)$"conditionc - conditionb", 10)
 # Volcano plot
-plot(-log10(pval) ~ logFC, rowData(se)$"conditionc - conditionb", col = (adjPval < 0.05) + 1)
+plot(-log10(pval) ~ logFC,
+    rowData(se)$"conditionc - conditionb",
+    col = (adjPval < 0.05) + 1
+)
 
 # Example for QFeatures instance
 # Assess log2 fold change between condition b and condition a (reference class),
 # condition c and condition a, and, condition c and condition b.
-L <- makeContrast(c("conditionb=0", "conditionc=0", "conditionc - conditionb=0"), c("conditionb", "conditionc"))
+L <- makeContrast(
+    c(
+        "conditionb=0",
+        "conditionc=0",
+        "conditionc - conditionb=0"
+    ),
+    c("conditionb", "conditionc")
+)
 pe <- hypothesisTest(pe, i = "protein", L)
 head(rowData(pe[["protein"]])$"conditionb", 10)
 # Volcano plots
 par(mfrow = c(1, 3))
-plot(-log10(pval) ~ logFC, rowData(pe[["protein"]])$"conditionb", col = (adjPval < 0.05) + 1, main = "log2 FC b-a")
-plot(-log10(pval) ~ logFC, rowData(pe[["protein"]])$"conditionc", col = (adjPval < 0.05) + 1, main = "log2 FC c-a")
-plot(-log10(pval) ~ logFC, rowData(pe[["protein"]])$"conditionc - conditionb", col = (adjPval < 0.05) + 1, main = "log2 FC c-b")
+plot(-log10(pval) ~ logFC,
+    rowData(pe[["protein"]])$"conditionb",
+    col = (adjPval < 0.05) + 1,
+    main = "log2 FC b-a"
+)
+plot(-log10(pval) ~ logFC,
+    rowData(pe[["protein"]])$"conditionc",
+    col = (adjPval < 0.05) + 1,
+    main = "log2 FC c-a"
+)
+plot(-log10(pval) ~ logFC,
+    rowData(pe[["protein"]])$"conditionc - conditionb",
+    col = (adjPval < 0.05) + 1,
+    main = "log2 FC c-b"
+)
 
 # Hurdle method
 pe <- msqrobHurdle(pe, i = "protein", formula = ~condition)

@@ -49,8 +49,13 @@ pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
 pe
 
 # Fit MSqrob model using robust regression with the MASS rlm function
-models <- msqrobGlm(aggcounts(pe[["protein"]]), rowData(pe[["protein"]])[[".n"]], ~condition, colData(pe))
-#' getCoef(models[[1]])
+models <- msqrobGlm(
+    aggcounts(pe[["protein"]]),
+    rowData(pe[["protein"]])[[".n"]],
+    ~condition,
+    colData(pe)
+)
+getCoef(models[[1]])
 }
 \author{
 Lieven Clement

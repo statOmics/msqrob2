@@ -104,13 +104,13 @@ setMethod(
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
     priorCount = .1,
     binomialBound = TRUE) {
-        if (ncol(colData(object)) == 0) stop("error: colData is empty")
+        if (ncol(colData(object)) == 0) stop("colData is empty")
         if ((sum(grep(pattern = modelColumnName, colnames(rowData(object)))) > 0) & !overwrite) {
-            stop(paste0(
+            stop(
                 "There are already columns with names starting with\'",
                 modelColumnName,
                 "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the columns with the new results or use another name for the argument modelColumnName to store the results as novel columns in the rowData of SummarizedExperiment object"
-            ))
+            )
         }
         if (!(".n" %in% colnames(rowData(object)))) stop("The assay does not seem to be aggregated so the number of features used for aggregation are not available")
         if (!ridge) {
@@ -164,15 +164,15 @@ setMethod(
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
     priorCount = .1,
     binomialBound = TRUE) {
-        if (ncol(colData(object)) == 0) stop("error: colData is empty")
+        if (ncol(colData(object)) == 0) stop("colData is empty")
         if ((sum(grep(pattern = modelColumnName, colnames(rowData(object[[i]])))) > 0) & !overwrite) {
-            stop(paste0(
+            stop(
                 "There are already columns with names starting with\'",
                 modelColumnName,
                 "\' in the rowData of assay ",
                 i,
                 " of the QFeatures object, set the argument overwrite=TRUE to replace the columns with the new results or use another name for the argument modelColumnName to store the results as novel columns in the rowData"
-            ))
+            )
         }
         if (!(".n" %in% colnames(rowData(object[[i]])))) stop("The assay does not seem to be aggregated so the number of features used for aggregation is not available")
         if (!ridge) {
