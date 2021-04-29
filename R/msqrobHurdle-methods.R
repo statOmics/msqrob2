@@ -122,17 +122,17 @@ setMethod(
                 maxitRob = maxitRob
             )
         } else {
-              rowData(object)[[paste0(modelColumnName, "Intensity")]] <- msqrobLmer(
-                  y = assay(object),
-                  formula = formula,
-                  data = colData(object),
-                  robust = robust,
-                  maxitRob = maxitRob,
-                  tol = tol,
-                  doQR = doQR,
-                  lmerArgs = lmerArgs
-              )
-          }
+            rowData(object)[[paste0(modelColumnName, "Intensity")]] <- msqrobLmer(
+                y = assay(object),
+                formula = formula,
+                data = colData(object),
+                robust = robust,
+                maxitRob = maxitRob,
+                tol = tol,
+                doQR = doQR,
+                lmerArgs = lmerArgs
+            )
+        }
         rowData(object)[[paste0(modelColumnName, "Count")]] <- msqrobGlm(aggcounts(object),
             rowData(object)[[".n"]],
             formula,
@@ -184,17 +184,17 @@ setMethod(
                 maxitRob = maxitRob
             )
         } else {
-              rowData(object[[i]])[[paste0(modelColumnName, "Intensity")]] <- msqrobLmer(
-                  y = assay(object[[i]]),
-                  formula = formula,
-                  data = colData(object),
-                  robust = robust,
-                  maxitRob = maxitRob,
-                  tol = tol,
-                  doQR = doQR,
-                  lmerArgs = lmerArgs
-              )
-          }
+            rowData(object[[i]])[[paste0(modelColumnName, "Intensity")]] <- msqrobLmer(
+                y = assay(object[[i]]),
+                formula = formula,
+                data = colData(object),
+                robust = robust,
+                maxitRob = maxitRob,
+                tol = tol,
+                doQR = doQR,
+                lmerArgs = lmerArgs
+            )
+        }
         rowData(object[[i]])[[paste0(modelColumnName, "Count")]] <- msqrobGlm(aggcounts(object[[i]]),
             rowData(object[[i]])[[".n"]],
             formula,

@@ -564,7 +564,9 @@ makeContrast <- function(contrasts, parameterNames) {
     }, fatal = function(name, ...) {
         stop(
             "msqrob2:::.expression2coef::walkCode::",
-            name, ": ", ..., call. = FALSE)
+            name, ": ", ...,
+            call. = FALSE
+        )
     }, trace = function(fn, v, w) {
         message(
             fn, ": v = ", sQuote(v), ", mode = ", mode(v),

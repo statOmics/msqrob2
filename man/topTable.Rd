@@ -10,9 +10,9 @@ topFeatures(models, contrast, adjust.method = "BH", sort = TRUE, alpha = 1)
 \item{models}{A list with elements of the class \code{StatModel} that are
 estimated using the \code{\link{msqrob}} function}
 
-\item{contrast}{\code{numeric} matrix specifying one or more contrasts of
+\item{contrast}{\code{numeric} (matrix)vector specifying one contrast of
 the linear model coefficients to be tested equal to zero.
-The rownames of the matrix should be equal to the names of
+The (row)names of the vector should be equal to the names of
 parameters of the model.}
 
 \item{adjust.method}{\code{character} specifying the method to adjust
