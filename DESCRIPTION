@@ -24,7 +24,13 @@ Authors@R: c(
       person(given = "Ludger",
              family = "Goeminne",
              email = " ludgergoeminne@gmail.com",
-             role = "ctb"))
+             role = "ctb"),
+      person(given = "Milan", 
+             family = "Malfait",
+             email = "milan.malfait94@gmail.com",
+             comment = c(ORCID = "0000-0001-9144-3701"),
+             role = "ctb")
+      )
 Description: msqrob2 provides a robust linear mixed model framework for assessing differential abundance in
     MS-based Quantitative proteomics experiments. Our workflows can start from raw peptide intensities or
     summarised protein expression values. The model parameter estimates can be stabilized by ridge regression,
