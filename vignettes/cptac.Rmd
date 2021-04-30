@@ -113,7 +113,7 @@ intensities are missing and for some peptides we do not even measure a signal
 in any sample. The missingness is similar across samples.
 
 
-```{r, cache= TRUE, eval=FALSE}
+```{r, cache=TRUE}
 MSnbase::plotNA(assay(pe[["peptideRaw"]])) +
     xlab("Peptide index (ordered by data completeness)")
 ```
