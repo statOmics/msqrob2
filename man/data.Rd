@@ -14,7 +14,7 @@ Feature set with an instance "peptide":
 }
 }
 \usage{
-pe
+data(pe)
 }
 \description{
 Subset of peptides from 100 proteins from a quantitative mass spectrometry
