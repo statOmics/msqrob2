@@ -83,3 +83,5 @@ biocViews:
     Normalization,
     TimeCourse,
     Preprocessing
+URL: https://github.com/statOmics/msqrob2
+BugReports: https://github.com/statOmics/msqrob2/issues
