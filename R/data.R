@@ -22,7 +22,7 @@
 #'         \item{rowData}{contains a variable "Proteins" with the protein accession and an variable ecoli to indicate if the protein is a spikin.}
 #'         \item{colData}{contains a factor condition indicating the spike-in condition}
 #'         }
-#'
+#' @usage data(pe)
 #' @rdname data
 #'
 #' @aliases data pe
