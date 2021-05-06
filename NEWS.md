@@ -1,4 +1,9 @@
+# msqrob2 0.99.5
+
+- Fix standard errors on the model parameter estimates by msqrobLmer when using doQR = TRUE
+
 # msqrob2 0.99.4
+
 - Minor update vignette. Replace eval=FALSE in one R chunk so that the code is evaluated.
 
 # msqrob2 0.99.3

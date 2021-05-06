@@ -361,7 +361,7 @@ msqrobLmer <- function(y,
                         Rinv[1, 1] <- 1
                         betas <- c(Rinv %*% betas)
                         names(betas) <- coefNames
-                        vcovUnscaled <- t(Rinv) %*% vcovUnscaled %*% Rinv
+                        vcovUnscaled <- Rinv %*% vcovUnscaled %*% t(Rinv)
                         rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- names(betas)
                     }
                 }

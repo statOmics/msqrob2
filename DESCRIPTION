@@ -1,6 +1,6 @@
 Package: msqrob2
 Title: Robust statistical inference for quantitative LC-MS proteomics
-Version: 0.99.4
+Version: 0.99.5
 Authors@R: c(
       person(given = "Lieven",
            family = "Clement",
@@ -30,6 +30,10 @@ Authors@R: c(
              email = "milan.malfait94@gmail.com",
              comment = c(ORCID = "0000-0001-9144-3701"),
              role = "ctb")
+      person(given = "Stijn",
+             family = "Vandenbulcke",
+             email = "vandenbulcke.stijn@gmail.com",
+             role = "aut")
       )
 Description: msqrob2 provides a robust linear mixed model framework for assessing differential abundance in
     MS-based Quantitative proteomics experiments. Our workflows can start from raw peptide intensities or
