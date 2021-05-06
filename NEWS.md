@@ -1,3 +1,7 @@
+# msqrob2 0.99.6
+
+- Update authors in Description file
+
 # msqrob2 0.99.5
 
 - Fix standard errors on the model parameter estimates by msqrobLmer when using doQR = TRUE
