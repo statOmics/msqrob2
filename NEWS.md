@@ -1,3 +1,6 @@
+# msqrob2 0.99.4
+- Minor update vignette. Replace eval=FALSE in one R chunk so that the code is evaluated.
+
 # msqrob2 0.99.3
 
 - Resolved notes on signalers
