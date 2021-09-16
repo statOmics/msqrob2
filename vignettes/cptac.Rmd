@@ -60,8 +60,8 @@ of the cptac study. This data is available in the `msdata` package.
 To import the data we use the `QFeatures` package.
 
 We generate the object peptideRawFile with the path to the peptideRaws.txt file.
-Using the `grepEcols` function, we find the columns that contain the expression
-data of the peptideRaws in the peptideRaws.txt file.
+We find the columns that contain the expression
+data of the peptideRaws in the peptideRaws.txt file using the `grep` function and we search for the pattern `Intensity\\.`, which will return the position of the columns that include `Intensity.` in their column name, which is the convention by  MaxQuant. 
 
 ```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
@@ -72,7 +72,9 @@ library(plotly)
 library(gridExtra)
 
 peptidesFile <- msdata::quant(pattern = "cptac_a_b_peptides", full.names = TRUE)
-ecols <- MSnbase::grepEcols(peptidesFile, "Intensity ", split = "\t")
+
+ecols <- grep("Intensity\\.", names(read.delim(peptidesFile)))
+
 pe <- readQFeatures(
     table = peptidesFile, fnames = 1, ecol = ecols,
     name = "peptideRaw", sep = "\t"
@@ -139,8 +141,7 @@ In our approach a peptide can map to multiple proteins, as long as there is
 none of these proteins present in a smaller subgroup.
 
 ```{r}
-pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Proteins
-    %in% smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins), ]
+pe <- filterFeatures(pe, ~ Proteins %in% smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins))
 ```
 
 ### Remove reverse sequences (decoys) and contaminants
@@ -149,9 +150,8 @@ We now remove the contaminants, peptides that map to decoy sequences, and protei
 which were only identified by peptides with modifications.
 
 ```{r}
-pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$Reverse != "+", ]
-pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$
-    Potential.contaminant != "+", ]
+pe <- filterFeatures(pe, ~ Reverse != "+")
+pe <- filterFeatures(pe, ~ Potential.contaminant != "+")
 ```
 
 ### Remove peptides of proteins that were only identified with modified peptides
@@ -163,27 +163,32 @@ I will skip this step for the moment. Large protein groups file needed for this.
 We keep peptides that were observed at last twice.
 
 ```{r}
-pe[["peptideLog"]] <- pe[["peptideLog"]][rowData(pe[["peptideLog"]])$nNonZero >= 2, ]
+pe <- filterFeatures(pe, ~ nNonZero >= 2)
 nrow(pe[["peptideLog"]])
 ```
 
 We keep `r nrow(pe[["peptideLog"]])` peptides after filtering.
 
-## Quantile normalize the data
+## Normalize the data by median centering 
+
 ```{r}
-pe <- normalize(pe, i = "peptideLog", method = "quantiles", name = "peptideNorm")
+pe <- normalize(pe,
+    i = "peptideLog",
+    name = "peptideNorm",
+    method = "center.median"
+)
 ```
 
 
-## Explore quantile normalized data
+## Explore normalized data
 
-After quantile normalisation the density curves for all samples coincide.
+After normalisation the density curves for all samples  are registered.
 
 ```{r}
 limma::plotDensities(assay(pe[["peptideNorm"]]))
 ```
 
-This is more clearly seen is a boxplot.
+This is even more clear in a boxplot.
 
 ```{r,}
 boxplot(assay(pe[["peptideNorm"]]),
@@ -397,7 +402,7 @@ because it typically performs better the more parameters there are in the mean m
 (more complex designs). However, we can force ridge regression in a two
 group comparison using a formula without intercept.
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 pe <- msqrob(
     object = pe, i = "protein", formula = ~ -1 + condition,
     modelColumnName = "ridge", ridge = TRUE
