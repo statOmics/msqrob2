@@ -1,3 +1,7 @@
+# msqrob2 1.1.1
+
+- Fix filtering steps in vignette: now using `QFeatures::filterFeatures()`
+
 # msqrob2 0.99.6
 
 - Update authors in Description file
