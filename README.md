@@ -6,7 +6,7 @@
 The `msqrob2` package ports and modernises the method presented in
 [`MSqRob`](https://github.com/statOmics/MSqRob) and
 [`MSqRobSum`](https://github.com/statOmics/MSqRobSum) to use the
-[`QFeatures`](https://rformassspectrometry.github.io/QFeatures/articles/Features.html)
+[`QFeatures`](https://rformassspectrometry.github.io/QFeatures/articles/QFeatures.html)
 class infrastructure.
 
 ## Installation
