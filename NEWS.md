@@ -1,4 +1,4 @@
-# msqrob2 1.1.2
+# msqrob2 1.5.1
 
 - Fix weighted variance covariance matrix and QR decomposition in the msqrobLmer function
 
