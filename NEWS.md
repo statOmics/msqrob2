@@ -1,3 +1,7 @@
+# msqrob2 1.1.2
+
+- Fix weighted variance covariance matrix and QR decomposition in the msqrobLmer function
+
 # msqrob2 1.1.1
 
 - Fix filtering steps in vignette: now using `QFeatures::filterFeatures()`
