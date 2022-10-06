@@ -355,7 +355,7 @@ msqrobLmer <- function(y,
                             ids <- grep("ridge", names(betas))
                         }
 
-                        Rinv <- diag(betas)
+                        Rinv <- diag(length(betas))
                         coefNames <- names(betas)
                         Rinv[ids, ids] <- solve(qr.R(qrFixed))
                         Rinv[1, 1] <- 1
@@ -427,7 +427,13 @@ msqrobLmer <- function(y,
 .getVcovBetaBUnscaled <- function(model) {
     X <- lme4::getME(model, "X")
     Z <- lme4::getME(model, "Z")
-    vcovInv <- Matrix::crossprod(cbind2(X, Z))
+    XZ <- cbind2(X,Z)
+    
+    if (is.null(model@frame$`(weights)`)){
+      model@frame$`(weights)` <- 1
+    }
+    
+    vcovInv <- Matrix::crossprod(model@frame$`(weights)`^.5 * XZ)
     Ginv <- Matrix::solve(
         Matrix::tcrossprod(getME(model, "Lambda")) +
             Matrix::Diagonal(ncol(Z), 1e-18)
