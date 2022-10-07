@@ -1,5 +1,10 @@
+
+<!-- badges: start -->
+[![R-CMD-check-bioc](https://github.com/statOmics/msqrob2/actions/workflows/check-bioc.yml/badge.svg)](https://github.com/statOmics/msqrob2/actions/workflows/check-bioc.yml)
+[![Codecov test coverage](https://codecov.io/gh/statOmics/msqrob2/branch/master/graph/badge.svg)](https://app.codecov.io/gh/statOmics/msqrob2?branch=master)
+<!-- badges: end -->
+
 # R package: msqrob2
-#
 
 ## Implementation of the MSqRob analysis of differentially expressed proteins using the Features infrastructure
 
