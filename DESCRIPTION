@@ -71,7 +71,8 @@ Suggests:
     msdata,
     MSnbase,
     matrixStats,
-    MsCoreUtils
+    MsCoreUtils,
+    covr
 License: Artistic-2.0
 Collate: 'msqrob-framework.R' 'allGenerics.R'
         'accessors.R' 'msqrob.R' 'msqrob-utils.R' 'StatModel-methods.R'
