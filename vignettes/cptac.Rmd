@@ -141,7 +141,8 @@ In our approach a peptide can map to multiple proteins, as long as there is
 none of these proteins present in a smaller subgroup.
 
 ```{r}
-pe <- filterFeatures(pe, ~ Proteins %in% smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins))
+Protein_filter <- rowData(pe[["peptideLog"]])$Proteins %in% smallestUniqueGroups(rowData(pe[["peptideLog"]])$Proteins)
+pe <- pe[Protein_filter,,]
 ```
 
 ### Remove reverse sequences (decoys) and contaminants
