@@ -145,6 +145,7 @@ setMethod(
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
+    featureGroup = NULL,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
         if (is.null(object[[i]])) stop("QFeatures object does not contain an assay with the name ", i)
         if ((modelColumnName %in% colnames(rowData(object[[i]]))) & !overwrite) {
@@ -156,7 +157,7 @@ setMethod(
                 "of the QFeatures object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of assay of the QFeatures object"
             )
         }
-        if (!ridge) {
+        if (!ridge & is.null(findbars(form))) {
             rowData(object[[i]])[[modelColumnName]] <- msqrobLm(
                 y = assay(object[[i]]),
                 formula = formula,
@@ -167,12 +168,15 @@ setMethod(
         } else {
             rowData(object[[i]])[[modelColumnName]] <- msqrobLmer(
                 y = assay(object[[i]]),
-                formula = formula,
-                data = colData(object),
+                form = formula,
+                coldata = colData(object),
+                rowdata = rowData(object)[[i]],
                 robust = robust,
                 maxitRob = maxitRob,
                 tol = tol,
                 doQR = doQR,
+                featureGroup,
+                ridge = TRUE,
                 lmerArgs = lmerArgs
             )
         }
