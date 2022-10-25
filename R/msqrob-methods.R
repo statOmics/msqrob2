@@ -103,7 +103,35 @@ setMethod(
                 "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of SummarizedExperiment object"
             )
         }
-        if (!ridge) {
+      
+      if (length(formula) == 3) {
+        formula <- formula[-2]
+      }
+      
+      if (any(all.vars(formula) %in% colnames(rowData(object)))){
+        stop(
+          "Use the msqrobAggregate function to use rowData variables"
+        )
+      }
+      
+      data <- colData(object)
+      
+      #Get the variables from the formula and check if they are in the coldata or rowdata 
+      check_vars <- all.vars(formula) %in% colnames(data)
+      if (!all(check_vars)){
+        if(sum(!check_vars) >1) {
+          vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
+          stop(paste("Variables", vars_not_found, "are not found in coldata"), sep = "")  
+        } else{
+          vars_not_found <- all.vars(formula)[!check_vars]
+          stop(paste0("Variable ", vars_not_found, " is not found in coldata"), sep = "")  
+        }
+      }
+      
+      #Select only the relevant columns
+      data <- data[colnames(data) %in% all.vars(formula)]     
+      
+      if (!ridge & is.null(findbars(formula))) {
             rowData(object)[[modelColumnName]] <- msqrobLm(
                 y = assay(object),
                 formula = formula,
@@ -116,10 +144,12 @@ setMethod(
                 y = assay(object),
                 formula = formula,
                 data = colData(object),
+                rowdata = NULL,
                 robust = robust,
                 maxitRob = maxitRob,
                 tol = tol,
                 doQR = doQR,
+                ridge = ridge,
                 lmerArgs = lmerArgs
             )
         }
@@ -145,7 +175,6 @@ setMethod(
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
-    featureGroup = NULL,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
         if (is.null(object[[i]])) stop("QFeatures object does not contain an assay with the name ", i)
         if ((modelColumnName %in% colnames(rowData(object[[i]]))) & !overwrite) {
@@ -157,7 +186,35 @@ setMethod(
                 "of the QFeatures object, set the argument overwrite=TRUE to replace the column with the new results or use another name for the argument modelColumnName to store the results as a novel column in the rowData of assay of the QFeatures object"
             )
         }
-        if (!ridge & is.null(findbars(form))) {
+      
+      if (length(formula) == 3) {
+        formula <- formula[-2]
+      }
+      
+      if (any(all.vars(formula) %in% colnames(rowData(object[[i]])))){
+        stop(
+          "Use the msqrobAggregate function to use rowData variables"
+        )
+      }
+      
+      data <- colData(object)
+      
+      #Get the variables from the formula and check if they are in the coldata or rowdata 
+      check_vars <- all.vars(formula) %in% colnames(data)
+      if (!all(check_vars)){
+        if(sum(!check_vars) >1) {
+          vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
+          stop(paste("Variables", vars_not_found, "are not found in coldata"), sep = "")  
+        } else{
+          vars_not_found <- all.vars(formula)[!check_vars]
+          stop(paste0("Variable ", vars_not_found, " is not found in coldata"), sep = "")  
+        }
+      }
+      
+      #Select only the relevant columns
+      data <- data[colnames(data) %in% all.vars(formula)]
+      
+      if (!ridge & is.null(findbars(formula))) {
             rowData(object[[i]])[[modelColumnName]] <- msqrobLm(
                 y = assay(object[[i]]),
                 formula = formula,
@@ -168,15 +225,14 @@ setMethod(
         } else {
             rowData(object[[i]])[[modelColumnName]] <- msqrobLmer(
                 y = assay(object[[i]]),
-                form = formula,
-                coldata = colData(object),
-                rowdata = rowData(object)[[i]],
+                formula = formula,
+                data = colData(object),
+                rowdata = NULL,
                 robust = robust,
                 maxitRob = maxitRob,
                 tol = tol,
                 doQR = doQR,
-                featureGroup,
-                ridge = TRUE,
+                ridge = ridge,
                 lmerArgs = lmerArgs
             )
         }

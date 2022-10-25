@@ -88,12 +88,13 @@ setMethod(
     i,
     fcol,
     name = "msqrobAggregate",
-    aggregateFun = MsCoreUtils::robustSummary,
+    aggregateFun = MsCoreUtils::medianPolish,
     modelColumnName = "msqrobModels",
     robust = TRUE,
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
+    ridge = FALSE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
         if (is.null(object[[i]])) stop("QFeatures object does not contain assay ", i)
         if (!(fcol %in% colnames(rowData(object[[i]])))) stop("The rowData of Assay ", i, " of the QFeatures object does not contain variable", fcol)
@@ -104,14 +105,47 @@ setMethod(
             name = name,
             fun = aggregateFun
         )
+        
+        if (length(formula) == 3) {
+          formula <- formula[-2]
+        }
+        rowdata <- rowData(object)[[i]]
+        data <- colData(object)
+        
+        #Get the variables from the formula and check if they are in the coldata or rowdata 
+        check_vars <- all.vars(formula) %in% c(colnames(rowdata), colnames(data)) 
+        if (!all(check_vars)){
+          if(sum(!check_vars) >1) {
+            vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
+            stop(paste("Variables", vars_not_found, "are not found in coldata or rowdata"), sep = "")  
+          } else{
+            vars_not_found <- all.vars(formula)[!check_vars]
+            stop(paste0("Variable ", vars_not_found, " is not found in coldata or rowdata"), sep = "")  
+          }
+        }
+        
+        #If there is at least one variable from the formula in the rowdata then keep rowdata
+        #Otherwise return NULL
+        if(any(colnames(rowdata) %in% all.vars(formula))){
+          #Select only the relevant columns
+          rowdata <- rowdata[colnames(rowdata) %in% all.vars(formula)]    
+        } else {
+          rowdata <- NULL
+        }
+        
+        #Select only the relevant columns
+        data <- data[colnames(data) %in% all.vars(formula)]
+        
         rowData(object[[name]])[[modelColumnName]] <- msqrobLmer(
             y = assay(object[[i]]),
             formula = formula,
             data = colData(object),
+            rowdata = rowdata,
             robust = robust,
             maxitRob = maxitRob,
             tol = tol,
             doQR = doQR,
+            ridge = ridge,
             lmerArgs = lmerArgs,
             featureGroups = rowData(object[[i]])[[fcol]]
         )

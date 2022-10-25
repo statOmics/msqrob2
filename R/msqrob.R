@@ -230,61 +230,73 @@ msqrobLm <- function(y,
 #' @importFrom methods as is
 #' @import lme4
 #' @import Matrix
-#' @importFrom BiocParallel bpmapply
+#' @importFrom BiocParallel bplapply bpmapply
 #'
 #' @export
 
 msqrobLmer <- function(y,
-                       form,
-                       rowdata,
-                       coldata,
-                       ridge = TRUE,
+                       formula,
+                       data,
+                       rowdata = NULL,
+                       ridge = FALSE,
                        tol  =1e-6,
                        robust = TRUE,
                        maxitRob = 1,
-                       doQR = FALSE,
+                       doQR = TRUE,
                        featureGroups=NULL,
                        lmerArgs = list(control = lmerControl(calc.derivs = FALSE))){
   
-  #Get the variables from the formula and check if they are in the coldata or rowdata 
-  check_vars <- all.vars(form) %in% c(colnames(rowdata), colnames(coldata)) 
-  if (!all(check_vars)){
-    if(sum(!check_vars) >1) {
-      vars_not_found <- paste0(all.vars(form)[!check_vars], collapse=", ")
-      stop(paste("Variables", vars_not_found, "are not found in coldata or rowdata"), sep = "")  
-    } else{
-      vars_not_found <- all.vars(form)[!check_vars]
-      stop(paste0("Variable ", vars_not_found, " is not found in coldata or rowdata"), sep = "")  
-    }
-  }
+
+  
   
   #Get the featureGroups variable
   if (is.null(featureGroups)){
     featureGroups <- rownames(y)
-  } else {
-    featureGroups <- rowdata[[featureGroups]]
   }
   
-  #Only keep variables of interest
-  rowdata <- rowdata[colnames(rowdata) %in% all.vars(form)]
-  coldata <- coldata[colnames(coldata) %in% all.vars(form)]
+  if (!is.null(rowdata)){
+    rowdata <- split.data.frame(rowdata, featureGroups)  
+  }
   
   y <- split.data.frame(y, featureGroups)
-  rowdata <- split.data.frame(rowdata, featureGroups)  
-  
   
   if (ridge == TRUE){
-    models <- bpmapply(FUN = .ridge_msqrobLmer,
-                       rowdata, y,
-                       MoreArgs = list("form" = form, "coldata" = coldata, "doQR" = doQR, 
-                                       "robust"=robust, "maxitRob" = maxitRob, "tol"  =tol))
+    if(is.null(rowdata)){
+      models <- bplapply(y,
+                         FUN = .ridge_msqrobLmer,
+                         "formula" = formula, 
+                         "coldata" = data, 
+                         "doQR" = doQR, 
+                         "robust"=robust, 
+                         "maxitRob" = maxitRob, 
+                         "tol"  =tol)
+    } else{
+      models <- bpmapply(FUN = .ridge_msqrobLmer,
+                         y, rowdata,
+                         MoreArgs = list("formula" = formula, "coldata" = data, "doQR" = doQR, 
+                                         "robust"=robust, "maxitRob" = maxitRob, "tol"  =tol))  
+    }
+    
   }else{
-    models <- bpmapply(FUN = .noridge_msqrobLmer,
-                       rowdata, y,
-                       MoreArgs = list("form" = form, "coldata" = coldata, 
-                                       "robust"=robust,"maxitRob" = maxitRob, "tol"  =tol))
+    
+    if(is.null(rowdata)){
+      models <- bplapply(y,
+                         FUN = .noridge_msqrobLmer,
+                         "formula" = formula, 
+                         "coldata" = data, 
+                          "robust"=robust,
+                         "maxitRob" = maxitRob, 
+                         "tol"  =tol)
+    } else{
+      models <- bpmapply(FUN = .noridge_msqrobLmer,
+                         y, rowdata,
+                         MoreArgs = list("formula" = formula, "coldata" = data, 
+                                         "robust"=robust,"maxitRob" = maxitRob, "tol"  =tol))
+    }  
   }
-  
+    
+    
+
   hlp <- limma::squeezeVar(
     var = vapply(models, getVar, numeric(1)),
     df = vapply(models, getDF, numeric(1))
@@ -298,35 +310,53 @@ msqrobLmer <- function(y,
 }
 
 ## Fit the mixed models with ridge regression
-.ridge_msqrobLmer <- function(rowdata,y_values,form,coldata, doQR, robust,maxitRob=1,tol = 1e-06){
-  #Create the matrix containing the variable information
+.ridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, doQR, robust,maxitRob=1,tol = 1e-06){
   
-  data <- coldata[rep(1:nrow(coldata), each = nrow(y_values)), ]
-  data <- cbind(data, rowdata)
-  colnames(data) <- c(colnames(coldata),colnames(rowdata))
+  #Create the matrix containing the variable information
+  if (is.null(rowdata)){
+    if (nrow(y) >1){
+      data <- coldata[rep(1:nrow(coldata), each = nrow(y)), ]
+      #If coldata consists of one column then repeating the values will result in a vector
+      #Therefore we need to create the dataframe again
+      if (dim(coldata)[2] == 1 ){
+        data <- DataFrame(data)
+        colnames(data) <- colnames(coldata)
+      }  
+    } else{
+      data <- coldata
+    }
+    
+  } else {
+    data <- cbind(
+      coldata[rep(1:nrow(coldata), each = nrow(y)), ],
+      rowdata[rep(1:nrow(rowdata), ncol(y)),]
+    )
+    colnames(data) <- c(colnames(coldata),colnames(rowdata))
+  }
+  
   
   #all possible variables are now in data,  now we can create the fixed object if we use ridge regression
-  fixed <- model.matrix(nobars(form), data = data)  
+  fixed <- model.matrix(nobars(formula), data = data)  
   data$fixed <- fixed
-  data$y <- as.matrix(y_values) 
+  data$y <- as.matrix(y) 
   data <- data[!is.na(data$y), ]
   
-  if (sum(!grepl("(Intercept)", colnames(fixed))) < 2 & nobars(form)[[2]] != 1) {
+  if (sum(!grepl("(Intercept)", colnames(fixed))) < 2 & nobars(formula)[[2]] != 1) {
     stop("The mean model must have more than two parameters for ridge regression.
               if you really want to adopt ridge regression when your factor has only two levels
               rerun the function with a formula where you drop the intercept. e.g. ~-1+condition
             ")
   }
   
-  if(is.null(findbars(form))) {
-    form <- formula(y ~ (1|ridge))
+  if(is.null(findbars(formula))) {
+    formula <- formula(y ~ (1|ridge))
   } else {
-    if (nobars(form)[[2]] != ~1){
+    if (nobars(formula)[[2]] != ~1){
       #udpate formula to remove any fixed effect variables and replace with ridge
-      form <- formula(
-        paste0("y ~ (1|ridge) + ", paste0("(",paste(findbars(form), collapse=")+("),")")))    
+      formula <- formula(
+        paste0("y ~ (1|ridge) + ", paste0("(",paste(findbars(formula), collapse=")+("),")")))    
     } else {
-      form <- update.formula(form, y~.)
+      formula <- update.formula(formula, y~.)
     }
   }
 
@@ -350,7 +380,7 @@ msqrobLmer <- function(y,
       data$ridge <- as.factor(rep(colnames(Q), length = nrow(data)))
       
       #Parse the data and formula
-      parsedFormulaC <- lFormula(form,data = as.list(data))
+      parsedFormulaC <- lFormula(formula,data = as.list(data))
       parsedFormulaC$reTrms$cnms$ridge <- ""
       ridgeId <- grep(names(parsedFormulaC$reTrms$Ztlist), pattern = "ridge")
       parsedFormulaC$reTrms$Ztlist[[ridgeId]] <- as(Matrix(t(Q)), class(parsedFormulaC$reTrms$Ztlist[[ridgeId]]))
@@ -389,14 +419,11 @@ msqrobLmer <- function(y,
       }  
     }
     
-    
     sigma <- sigma(model)
     betas <- .getBetaB(model)
     vcovUnscaled <- as.matrix(.getVcovBetaBUnscaled(model))
-    if (nobars(form)[[2]] != 1) {
-      
+    if (nobars(formula)[[2]] != 1) {
       if (doQR) {
-        
         if (colnames(data$fixed)[1] == "(Intercept)") {
           
           ids <- c(1, grep("ridge", names(betas)))
@@ -440,20 +467,31 @@ msqrobLmer <- function(y,
 }
 
 ## Fit the mixed models without ridge regression
-.noridge_msqrobLmer <- function(rowdata,y_values,form,coldata, robust,maxitRob=0, tol = 1e-06  ){
-  data <- coldata[rep(1:nrow(coldata), each = nrow(y_values)), ]
-  data <- cbind(data, rowdata)
-  colnames(data) <- c(colnames(coldata),colnames(rowdata))
+.noridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, robust,maxitRob=0, tol = 1e-06  ){
+  #Create the matrix containing the variable information
+  if (is.null(rowdata)){
+    data <- data[rep(1:nrow(coldata), each = nrow(y)), ]
+    if (!(is(data,"DFrame"))){
+      data <- DataFrame(data)
+      colnames(data) <- colnames(coldata)
+    }
+  } else {
+    data <- cbind(
+      data[rep(1:nrow(coldata), each = nrow(y)), ],
+      rowdata[rep(1:nrow(rowdata), ncol(y)),]
+    )
+    colnames(data) <- c(colnames(coldata),colnames(rowdata))
+  }
   
-  form <- update.formula(form, y~.)
+  formula <- update.formula(formula, y~.)
   
-  data$y <- as.matrix(y_values)
+  data$y <- as.matrix(y)
   data <- data[!is.na(data$y), ]
   
   model <- NULL
   
   try({
-    model <- lmer(form,  as.data.frame(data))
+    model <- lmer(formula,  as.data.frame(data))
   }, silent=TRUE)
   
   
