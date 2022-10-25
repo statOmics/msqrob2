@@ -91,10 +91,10 @@ setMethod(
     aggregateFun = MsCoreUtils::medianPolish,
     modelColumnName = "msqrobModels",
     robust = TRUE,
+    ridge = FALSE,
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
-    ridge = FALSE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
         if (is.null(object[[i]])) stop("QFeatures object does not contain assay ", i)
         if (!(fcol %in% colnames(rowData(object[[i]])))) stop("The rowData of Assay ", i, " of the QFeatures object does not contain variable", fcol)
@@ -142,10 +142,10 @@ setMethod(
             data = colData(object),
             rowdata = rowdata,
             robust = robust,
+            ridge = ridge,
             maxitRob = maxitRob,
             tol = tol,
             doQR = doQR,
-            ridge = ridge,
             lmerArgs = lmerArgs,
             featureGroups = rowData(object[[i]])[[fcol]]
         )

@@ -229,10 +229,10 @@ setMethod(
                 data = colData(object),
                 rowdata = NULL,
                 robust = robust,
+                ridge = ridge,
                 maxitRob = maxitRob,
                 tol = tol,
                 doQR = doQR,
-                ridge = ridge,
                 lmerArgs = lmerArgs
             )
         }
