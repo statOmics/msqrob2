@@ -8,9 +8,11 @@ msqrobLmer(
   y,
   formula,
   data,
-  robust = TRUE,
-  maxitRob = 1,
+  rowdata = NULL,
   tol = 1e-06,
+  robust = TRUE,
+  ridge = FALSE,
+  maxitRob = 1,
   doQR = TRUE,
   featureGroups = NULL,
   lmerArgs = list(control = lmerControl(calc.derivs = FALSE))
@@ -27,16 +29,24 @@ covariates in the data object.}
 the same number of rows as the number of columns (samples) of
 \code{y}.}
 
+\item{rowdata}{A \code{DataFrame} with the rowData information of the SummarizedExperiment.
+It has the same number of rows as the number of rows (features) of
+\code{y}.}
+
+\item{tol}{\code{numeric(1)} indicating the tolerance for declaring convergence
+of the M-estimation loop.}
+
 \item{robust}{\code{boolean(1)} to indicate if robust regression is
 performed to account for outliers. Default is \code{TRUE}. If
 \code{FALSE} an OLS fit is performed.}
 
+\item{ridge}{\code{boolean(1)} to indicate if ridge regression is
+performed. Default is \code{FALSE}. If \code{TRUE} the fixed effects are
+estimated via penalized regression and shrunken to zero.}
+
 \item{maxitRob}{\code{numeric(1)} indicating the maximum iterations in
 the IRWLS algorithm used in the M-estimation step of the robust
 regression.}
-
-\item{tol}{\code{numeric(1)} indicating the tolerance for declaring convergence
-of the M-estimation loop.}
 
 \item{doQR}{\code{boolean(1)} to indicate if QR decomposition is used when adopting
 ridge regression. Default is \code{TRUE}. If \code{FALSE} the predictors of the fixed
@@ -80,17 +90,20 @@ pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
 
 # Fit MSqrob model using robust ridge regression upon summarization of
 # peptide intensities into protein expression values
-modelsRidge <- msqrobLmer(assay(pe[["protein"]]), ~condition, colData(pe))
+modelsRidge <- msqrobLmer(assay(pe[["protein"]]), ~condition, data = colData(pe), 
+                          ridge = TRUE)
 getCoef(modelsRidge[[1]])
 
 # Fit MSqrob model using robust ridge regression starting from peptide intensities
 # The fold changes are calculated at the protein level while correcting for
 # the different peptide species in each sample and the correlation between
 # peptide intensities of peptides of the same protein in the same sample.
+# Add the samples variable to colData
+colData(pe)$samples <- rownames(colData(pe))
 modelsPepBased <- msqrobLmer(assay(pe[["peptide"]]),
-    formula = ~condition, data = colData(pe),
-    featureGroups = rowData(pe[["peptide"]])$Proteins
-)
+    formula = ~condition + (1|samples) + (1|Sequence), data = colData(pe),
+    rowdata = rowData(pe[["peptide"]]), featureGroups = rowData(pe[["peptide"]])$Proteins,
+    ridge = TRUE)
 getCoef(modelsPepBased[[1]])
 }
 \author{

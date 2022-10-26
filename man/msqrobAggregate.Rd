@@ -15,6 +15,7 @@ It models multiple features simultaneously, e.g. multiple peptides from the same
   aggregateFun = MsCoreUtils::robustSummary,
   modelColumnName = "msqrobModels",
   robust = TRUE,
+  ridge = FALSE,
   maxitRob = 1,
   tol = 1e-06,
   doQR = TRUE,
@@ -48,6 +49,10 @@ instance or of the assay of the QFeatures instance. Default is "msqrobModels".}
 \item{robust}{\code{boolean(1)} to indicate if robust regression is
 performed to account for outliers. Default is \code{TRUE}. If
 \code{FALSE} an OLS fit is performed.}
+
+\item{ridge}{\code{boolean(1)} to indicate if ridge regression is
+performed. Default is \code{FALSE}. If \code{TRUE} the fixed effects are
+estimated via penalized regression and shrunken to zero.}
 
 \item{maxitRob}{\code{numeric(1)} indicating the maximum iterations in
 the IRWLS algorithm used in the M-estimation step of the robust
@@ -93,7 +98,10 @@ data(pe)
 # The fold changes are calculated at the protein level while correcting for
 # the different peptide species in each sample and the correlation between
 # peptide intensities of peptides of the same protein in the same sample.
-pe <- msqrobAggregate(pe, i = "peptide", fcol = "Proteins", formula = ~condition)
+colData(pe)$samples <- rownames(colData(pe))
+pe <- msqrobAggregate(pe, i = "peptide", fcol = "Proteins", 
+     formula = ~condition + (1|samples) + (1|Sequence),
+     ridge = TRUE)
 getCoef(rowData(pe[["msqrobAggregate"]])$msqrobModels[["P00956"]])
 }
 \author{

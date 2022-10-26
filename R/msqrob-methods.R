@@ -114,10 +114,10 @@ setMethod(
         )
       }
       
-      data <- colData(object)
+      
       
       #Get the variables from the formula and check if they are in the coldata or rowdata 
-      check_vars <- all.vars(formula) %in% colnames(data)
+      check_vars <- all.vars(formula) %in% colnames(colData(object))
       if (!all(check_vars)){
         if(sum(!check_vars) >1) {
           vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
@@ -128,14 +128,12 @@ setMethod(
         }
       }
       
-      #Select only the relevant columns
-      data <- data[colnames(data) %in% all.vars(formula)]     
       
       if (!ridge & is.null(findbars(formula))) {
             rowData(object)[[modelColumnName]] <- msqrobLm(
                 y = assay(object),
                 formula = formula,
-                data = data,
+                data = colData(object),
                 robust = robust,
                 maxitRob = maxitRob
             )
@@ -143,7 +141,7 @@ setMethod(
             rowData(object)[[modelColumnName]] <- msqrobLmer(
                 y = assay(object),
                 formula = formula,
-                data = data,
+                data = colData(object),
                 rowdata = NULL,
                 robust = robust,
                 maxitRob = maxitRob,
@@ -197,10 +195,8 @@ setMethod(
         )
       }
       
-      data <- colData(object)
-      
       #Get the variables from the formula and check if they are in the coldata or rowdata 
-      check_vars <- all.vars(formula) %in% colnames(data)
+      check_vars <- all.vars(formula) %in% colnames(colData(object))
       if (!all(check_vars)){
         if(sum(!check_vars) >1) {
           vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
@@ -211,14 +207,11 @@ setMethod(
         }
       }
       
-      #Select only the relevant columns
-      data <- data[colnames(data) %in% all.vars(formula)]
-      
       if (!ridge & is.null(findbars(formula))) {
             rowData(object[[i]])[[modelColumnName]] <- msqrobLm(
                 y = assay(object[[i]]),
                 formula = formula,
-                data = data,
+                data = colData(object),
                 robust = robust,
                 maxitRob = maxitRob
             )
@@ -226,7 +219,7 @@ setMethod(
             rowData(object[[i]])[[modelColumnName]] <- msqrobLmer(
                 y = assay(object[[i]]),
                 formula = formula,
-                data = data,
+                data = colData(object),
                 rowdata = NULL,
                 robust = robust,
                 ridge = ridge,
