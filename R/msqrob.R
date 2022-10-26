@@ -246,9 +246,6 @@ msqrobLmer <- function(y,
                        featureGroups=NULL,
                        lmerArgs = list(control = lmerControl(calc.derivs = FALSE))){
   
-
-  
-  
   #Get the featureGroups variable
   if (is.null(featureGroups)){
     featureGroups <- rownames(y)
@@ -273,8 +270,12 @@ msqrobLmer <- function(y,
     } else{
       models <- bpmapply(FUN = .ridge_msqrobLmer,
                          y, rowdata,
-                         MoreArgs = list("formula" = formula, "coldata" = data, "doQR" = doQR, 
-                                         "robust"=robust, "maxitRob" = maxitRob, "tol"  =tol))  
+                         MoreArgs = list("formula" = formula, 
+                                         "coldata" = data, 
+                                         "doQR" = doQR, 
+                                         "robust"=robust, 
+                                         "maxitRob" = maxitRob, 
+                                         "tol"  =tol))  
     }
     
   }else{
@@ -290,8 +291,11 @@ msqrobLmer <- function(y,
     } else{
       models <- bpmapply(FUN = .noridge_msqrobLmer,
                          y, rowdata,
-                         MoreArgs = list("formula" = formula, "coldata" = data, 
-                                         "robust"=robust,"maxitRob" = maxitRob, "tol"  =tol))
+                         MoreArgs = list("formula" = formula, 
+                                         "coldata" = data, 
+                                         "robust"=robust,
+                                         "maxitRob" = maxitRob, 
+                                         "tol"  =tol))
     }  
   }
     
