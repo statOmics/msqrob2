@@ -135,7 +135,7 @@ setMethod(
             rowData(object)[[modelColumnName]] <- msqrobLm(
                 y = assay(object),
                 formula = formula,
-                data = colData(object),
+                data = data,
                 robust = robust,
                 maxitRob = maxitRob
             )
@@ -143,7 +143,7 @@ setMethod(
             rowData(object)[[modelColumnName]] <- msqrobLmer(
                 y = assay(object),
                 formula = formula,
-                data = colData(object),
+                data = data,
                 rowdata = NULL,
                 robust = robust,
                 maxitRob = maxitRob,
@@ -218,7 +218,7 @@ setMethod(
             rowData(object[[i]])[[modelColumnName]] <- msqrobLm(
                 y = assay(object[[i]]),
                 formula = formula,
-                data = colData(object),
+                data = data,
                 robust = robust,
                 maxitRob = maxitRob
             )
@@ -226,7 +226,7 @@ setMethod(
             rowData(object[[i]])[[modelColumnName]] <- msqrobLmer(
                 y = assay(object[[i]]),
                 formula = formula,
-                data = colData(object),
+                data = data,
                 rowdata = NULL,
                 robust = robust,
                 ridge = ridge,

@@ -331,6 +331,7 @@ msqrobLmer <- function(y,
       coldata[rep(1:nrow(coldata), each = nrow(y)), ],
       rowdata[rep(1:nrow(rowdata), ncol(y)),]
     )
+    data <- DataFrame(data)
     colnames(data) <- c(colnames(coldata),colnames(rowdata))
   }
   
@@ -470,16 +471,17 @@ msqrobLmer <- function(y,
 .noridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, robust,maxitRob=0, tol = 1e-06  ){
   #Create the matrix containing the variable information
   if (is.null(rowdata)){
-    data <- data[rep(1:nrow(coldata), each = nrow(y)), ]
+    data <- coldata[rep(1:nrow(coldata), each = nrow(y)), ]
     if (!(is(data,"DFrame"))){
       data <- DataFrame(data)
       colnames(data) <- colnames(coldata)
     }
   } else {
     data <- cbind(
-      data[rep(1:nrow(coldata), each = nrow(y)), ],
+      coldata[rep(1:nrow(coldata), each = nrow(y)), ],
       rowdata[rep(1:nrow(rowdata), ncol(y)),]
     )
+    data <- DataFrame(data)
     colnames(data) <- c(colnames(coldata),colnames(rowdata))
   }
   

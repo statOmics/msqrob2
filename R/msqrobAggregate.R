@@ -88,7 +88,7 @@ setMethod(
     i,
     fcol,
     name = "msqrobAggregate",
-    aggregateFun = MsCoreUtils::medianPolish,
+    aggregateFun = MsCoreUtils::robustSummary,
     modelColumnName = "msqrobModels",
     robust = TRUE,
     ridge = FALSE,
@@ -98,17 +98,14 @@ setMethod(
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
         if (is.null(object[[i]])) stop("QFeatures object does not contain assay ", i)
         if (!(fcol %in% colnames(rowData(object[[i]])))) stop("The rowData of Assay ", i, " of the QFeatures object does not contain variable", fcol)
-        object <- QFeatures::aggregateFeatures(
-            object = object,
-            i = i,
-            fcol = fcol,
-            name = name,
-            fun = aggregateFun
-        )
-        
+        if (ridge == FALSE & is.null(findbars(formula)) ){
+          stop("Formula contains no random effects.")
+        }
+          
         if (length(formula) == 3) {
           formula <- formula[-2]
         }
+        
         rowdata <- rowData(object)[[i]]
         data <- colData(object)
         
@@ -136,10 +133,18 @@ setMethod(
         #Select only the relevant columns
         data <- data[colnames(data) %in% all.vars(formula)]
         
+        object <- QFeatures::aggregateFeatures(
+          object = object,
+          i = i,
+          fcol = fcol,
+          name = name,
+          fun = aggregateFun
+        )
+        
         rowData(object[[name]])[[modelColumnName]] <- msqrobLmer(
             y = assay(object[[i]]),
             formula = formula,
-            data = colData(object),
+            data = data,
             rowdata = rowdata,
             robust = robust,
             ridge = ridge,
