@@ -1,3 +1,8 @@
+# msqrob2 1.5.3
+
+- Added the option to use mixed models without ridge regression
+- Added the option to use rowdata variables in the mixed models
+
 # msqrob2 1.5.1
 
 - Fix weighted variance covariance matrix and QR decomposition in the msqrobLmer function

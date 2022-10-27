@@ -26,7 +26,10 @@
 #' # The fold changes are calculated at the protein level while correcting for
 #' # the different peptide species in each sample and the correlation between
 #' # peptide intensities of peptides of the same protein in the same sample.
-#' pe <- msqrobAggregate(pe, i = "peptide", fcol = "Proteins", formula = ~condition)
+#' colData(pe)$samples <- rownames(colData(pe))
+#' pe <- msqrobAggregate(pe, i = "peptide", fcol = "Proteins", 
+#'      formula = ~condition + (1|samples) + (1|Sequence),
+#'      ridge = TRUE)
 #' getCoef(rowData(pe[["msqrobAggregate"]])$msqrobModels[["P00956"]])
 #' @param object `QFeatures` instance
 #'
@@ -53,6 +56,9 @@
 #'     performed to account for outliers. Default is `TRUE`. If
 #'     `FALSE` an OLS fit is performed.
 #'
+#' @param ridge `boolean(1)` to indicate if ridge regression is
+#'        performed. Default is `FALSE`. If `TRUE` the fixed effects are
+#'        estimated via penalized regression and shrunken to zero.
 #'
 #' @param maxitRob `numeric(1)` indicating the maximum iterations in
 #'        the IRWLS algorithm used in the M-estimation step of the robust
@@ -91,24 +97,56 @@ setMethod(
     aggregateFun = MsCoreUtils::robustSummary,
     modelColumnName = "msqrobModels",
     robust = TRUE,
+    ridge = FALSE,
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
         if (is.null(object[[i]])) stop("QFeatures object does not contain assay ", i)
         if (!(fcol %in% colnames(rowData(object[[i]])))) stop("The rowData of Assay ", i, " of the QFeatures object does not contain variable", fcol)
+        if (ridge == FALSE & is.null(findbars(formula)) ){
+          stop("Formula contains no random effects.")
+        }
+          
+        if (length(formula) == 3) {
+          formula <- formula[-2]
+        }
+        
+        rowdata <- rowData(object)[[i]]
+        
+        #Get the variables from the formula and check if they are in the coldata or rowdata 
+        check_vars <- all.vars(formula) %in% c(colnames(rowdata), colnames(colData(object))) 
+        if (!all(check_vars)){
+          if(sum(!check_vars) >1) {
+            vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
+            stop(paste("Variables", vars_not_found, "are not found in coldata or rowdata"), sep = "")  
+          } else{
+            vars_not_found <- all.vars(formula)[!check_vars]
+            stop(paste0("Variable ", vars_not_found, " is not found in coldata or rowdata"), sep = "")  
+          }
+        }
+        
+        #If there is at least one variable from the formula in the rowdata then keep rowdata
+        #Otherwise return NULL
+        if(!(any(colnames(rowdata) %in% all.vars(formula)))){
+          rowdata <- NULL
+        } 
+        
         object <- QFeatures::aggregateFeatures(
-            object = object,
-            i = i,
-            fcol = fcol,
-            name = name,
-            fun = aggregateFun
+          object = object,
+          i = i,
+          fcol = fcol,
+          name = name,
+          fun = aggregateFun
         )
+        
         rowData(object[[name]])[[modelColumnName]] <- msqrobLmer(
             y = assay(object[[i]]),
             formula = formula,
             data = colData(object),
+            rowdata = rowdata,
             robust = robust,
+            ridge = ridge,
             maxitRob = maxitRob,
             tol = tol,
             doQR = doQR,
