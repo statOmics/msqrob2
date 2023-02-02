@@ -478,7 +478,7 @@ msqrobLmer <- function(y,
                     vcovUnscaled = vcovUnscaled,
                     sigma = sigma,
                     df.residual = df.residual,
-                    model = model)
+                    w = model@frame$`(weights)`)
     }
   }
   
@@ -556,7 +556,8 @@ msqrobLmer <- function(y,
       model <- list(coefficients = betas,
                     vcovUnscaled = vcov_tmp,
                     sigma = sigma,
-                    df.residual = df.residual)
+                    df.residual = df.residual,
+                    w = model@frame$`(weights)`)
     }
   }
   
