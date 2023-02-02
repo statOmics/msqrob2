@@ -1,3 +1,7 @@
+# msqrob2 1.5.4
+
+- Removed the full lmer model that was accidently left in the statmodel object.
+
 # msqrob2 1.5.3
 
 - Added the option to use mixed models without ridge regression
