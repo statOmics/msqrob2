@@ -434,7 +434,10 @@ msqrobLmer <- function(y,
         maxitRob <- maxitRob - 1
         res <- resid(model)
         model@frame$`(weights)` <- MASS::psi.huber(res / (mad(res, 0)))
-        model <- refit(model)
+        #Overparameterized models may create issues here. 
+        try({
+          model <- refit(model)
+        }, silent=TRUE)
         sse <- model@devcomp$cmp["pwrss"]
         if (abs(sseOld - sse) / sseOld <= tol) break
         sseOld <- sse
@@ -466,7 +469,9 @@ msqrobLmer <- function(y,
     }
     
     df.residual <- .getDfLmer(model)
-    
+    if(is.na(df.residual)){
+      df.residual <- 0
+    }
     if (df.residual<2L){
       model <- list(coefficients = NA,
                     vcovUnscaled = NA,
@@ -533,7 +538,10 @@ msqrobLmer <- function(y,
         maxitRob <- maxitRob - 1
         res <- resid(model)
         model@frame$`(weights)` <- MASS::psi.huber(res / (mad(res, 0)))
-        model <- refit(model)
+        #Overparameterized models may create issues here. 
+        try({
+          model <- refit(model)
+        }, silent=TRUE)
         sse <- model@devcomp$cmp["pwrss"]
         if (abs(sseOld - sse) / sseOld <= tol) break
         sseOld <- sse
@@ -545,7 +553,9 @@ msqrobLmer <- function(y,
     betas <- .getBetaB(model)
     vcov_tmp <- .getVcovBetaBUnscaled(model)
     df.residual <- .getDfLmer(model)
-    
+    if(is.na(df.residual)){
+      df.residual <- 0
+    }
     if (df.residual<2L){
       model <- list(coefficients = NA,
                     vcovUnscaled = NA,
