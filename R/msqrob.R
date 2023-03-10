@@ -424,54 +424,55 @@ msqrobLmer <- function(y,
     type <- "fitError"
     model <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA)
   } else {
-    type <- "lmer"
-    #extract deviance composition
-    #pwrss=penalied weighted residual sum of squares
-    model@frame$`(weights)` <- rep(1, dim(model@frame)[1])
-    sseOld <- model@devcomp$cmp['pwrss']
-    if (robust == TRUE){
-      while (maxitRob > 0) {
-        maxitRob <- maxitRob - 1
-        res <- resid(model)
-        model@frame$`(weights)` <- MASS::psi.huber(res / (mad(res, 0)))
-        #Overparameterized models may create issues here. 
-        try({
+    df.residual <- 0
+    try({
+      type <- "lmer"
+      #extract deviance composition
+      #pwrss=penalied weighted residual sum of squares
+      model@frame$`(weights)` <- rep(1, dim(model@frame)[1])
+      sseOld <- model@devcomp$cmp['pwrss']
+      if (robust == TRUE){
+        while (maxitRob > 0) {
+          maxitRob <- maxitRob - 1
+          res <- resid(model)
+          model@frame$`(weights)` <- MASS::psi.huber(res / (mad(res, 0)))
           model <- refit(model)
-        }, silent=TRUE)
-        sse <- model@devcomp$cmp["pwrss"]
-        if (abs(sseOld - sse) / sseOld <= tol) break
-        sseOld <- sse
-      }  
-    }
-    
-    sigma <- sigma(model)
-    betas <- .getBetaB(model)
-    vcovUnscaled <- as.matrix(.getVcovBetaBUnscaled(model))
-    if (nobars(formula)[[2]] != 1) {
-      if (doQR) {
-        if (colnames(data$fixed)[1] == "(Intercept)") {
-          
-          ids <- c(1, grep("ridge", names(betas)))
-        } else {
-          
-          ids <- grep("ridge", names(betas))
-        }
-        
-        Rinv <- diag(length(betas))
-        coefNames <- names(betas)
-        Rinv[ids, ids] <- solve(qr.R(qrFixed))
-        Rinv[1, 1] <- 1
-        betas <- c(Rinv %*% betas)
-        names(betas) <- coefNames
-        vcovUnscaled <- Rinv %*% vcovUnscaled %*% t(Rinv)
-        rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- names(betas)
+          sse <- model@devcomp$cmp["pwrss"]
+          if (abs(sseOld - sse) / sseOld <= tol) break
+          sseOld <- sse
+        }  
       }
-    }
+      
+      sigma <- sigma(model)
+      betas <- .getBetaB(model)
+      vcovUnscaled <- as.matrix(.getVcovBetaBUnscaled(model))
+      if (nobars(formula)[[2]] != 1) {
+        if (doQR) {
+          if (colnames(data$fixed)[1] == "(Intercept)") {
+            
+            ids <- c(1, grep("ridge", names(betas)))
+          } else {
+            
+            ids <- grep("ridge", names(betas))
+          }
+          
+          Rinv <- diag(length(betas))
+          coefNames <- names(betas)
+          Rinv[ids, ids] <- solve(qr.R(qrFixed))
+          Rinv[1, 1] <- 1
+          betas <- c(Rinv %*% betas)
+          names(betas) <- coefNames
+          vcovUnscaled <- Rinv %*% vcovUnscaled %*% t(Rinv)
+          rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- names(betas)
+        }
+      }
+      
+      df.residual <- .getDfLmer(model)
+      if(is.na(df.residual)){
+        df.residual <- 0
+      }
+    }, silent = TRUE)
     
-    df.residual <- .getDfLmer(model)
-    if(is.na(df.residual)){
-      df.residual <- 0
-    }
     if (df.residual<2L){
       model <- list(coefficients = NA,
                     vcovUnscaled = NA,
@@ -527,35 +528,35 @@ msqrobLmer <- function(y,
     type <- "fitError"
     model <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA)
   } else {
-    type <- "lmer"
-    #extract deviance composition
-    #pwrss=penalied weighted residual sum of squares
-    model@frame$`(weights)` <- rep(1, dim(model@frame)[1])
-    sseOld <- model@devcomp$cmp['pwrss']
-    
-    if (robust == TRUE){
-      while (maxitRob > 0) {
-        maxitRob <- maxitRob - 1
-        res <- resid(model)
-        model@frame$`(weights)` <- MASS::psi.huber(res / (mad(res, 0)))
-        #Overparameterized models may create issues here. 
-        try({
+    df.residual <- 0
+    try({
+      type <- "lmer"
+      #extract deviance composition
+      #pwrss=penalied weighted residual sum of squares
+      model@frame$`(weights)` <- rep(1, dim(model@frame)[1])
+      sseOld <- model@devcomp$cmp['pwrss']
+      
+      if (robust == TRUE){
+        while (maxitRob > 0) {
+          maxitRob <- maxitRob - 1
+          res <- resid(model)
+          model@frame$`(weights)` <- MASS::psi.huber(res / (mad(res, 0)))
           model <- refit(model)
-        }, silent=TRUE)
-        sse <- model@devcomp$cmp["pwrss"]
-        if (abs(sseOld - sse) / sseOld <= tol) break
-        sseOld <- sse
-      }  
-    }
+          sse <- model@devcomp$cmp["pwrss"]
+          if (abs(sseOld - sse) / sseOld <= tol) break
+          sseOld <- sse
+        }  
+      }
+      
+      sigma <- sigma(model)
+      betas <- .getBetaB(model)
+      vcov_tmp <- .getVcovBetaBUnscaled(model)
+      df.residual <- .getDfLmer(model)
+      if(is.na(df.residual)){
+        df.residual <- 0
+      }
+    }, silent = TRUE)
     
-    
-    sigma <- sigma(model)
-    betas <- .getBetaB(model)
-    vcov_tmp <- .getVcovBetaBUnscaled(model)
-    df.residual <- .getDfLmer(model)
-    if(is.na(df.residual)){
-      df.residual <- 0
-    }
     if (df.residual<2L){
       model <- list(coefficients = NA,
                     vcovUnscaled = NA,
