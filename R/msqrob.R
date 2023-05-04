@@ -70,6 +70,7 @@ msqrobLm <- function(y,
             if (sum(obs) > 0) {
                 ## subset to finite observations, attention with R column switching
                 X <- design[obs, , drop = FALSE]
+                X <- X[,colSums(X)>0 , drop = FALSE]
                 y <- y[obs]
 
                 if (robust) {
