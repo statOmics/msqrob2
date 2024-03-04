@@ -356,6 +356,10 @@ msqrobLmer <- function(y,
     colnames(data) <- c(colnames(coldata),colnames(rowdata))
   }
   
+  # Drop levels that are absent, for all factors
+  for (i in colnames(data)) {
+      if (is.factor(data[[i]])) data[[i]] <- droplevels(data[[i]])
+  }
   
   #all possible variables are now in data,  now we can create the fixed object if we use ridge regression
   fixed <- model.matrix(nobars(formula), data = data)  
