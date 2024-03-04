@@ -140,10 +140,11 @@ setMethod(
           fun = aggregateFun
         )
         
+        x <- getWithColData(object, i)
         rowData(object[[name]])[[modelColumnName]] <- msqrobLmer(
-            y = assay(object[[i]]),
+            y = assay(x),
             formula = formula,
-            data = colData(object),
+            data = colData(x),
             rowdata = rowdata,
             robust = robust,
             ridge = ridge,
