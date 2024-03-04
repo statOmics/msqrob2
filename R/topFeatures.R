@@ -48,7 +48,9 @@ topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alp
           if (ncol(contrast) > 1) {
                 stop("Argument contrast is matrix with more than one column, only one contrast is allowed")
             }
-      }
+    }
+  
+    contrast <- contrast[contrast !=0]
     logFC <- vapply(models,
         getContrast,
         numeric(1),

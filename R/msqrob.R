@@ -64,14 +64,17 @@ msqrobLm <- function(y,
             type <- "fitError"
             model <- list(
                 coefficients = NA, vcovUnscaled = NA,
-                sigma = NA, df.residual = NA, w = NULL
+                sigma = NA, df.residual = NA, w = NA,
+                non_estimable_parameters = NA,
             )
 
             if (sum(obs) > 0) {
                 ## subset to finite observations, attention with R column switching
                 X <- design[obs, , drop = FALSE]
-                X <- X[,colSums(X)>0 , drop = FALSE]
+                nonestimable_parameters <- limma::nonEstimable(X)
+                X <- X[,colMeans(X == 0) != 1 , drop = FALSE]
                 y <- y[obs]
+                colnames_orig <- colnames(design)
 
                 if (robust) {
                     ## use robust regression from MASS package, "M" estimation is used
@@ -107,12 +110,30 @@ msqrobLm <- function(y,
                 }
 
                 if (type != "fitError") {
+                    coef <- rep(NA, length(colnames_orig))
+                    names(coef) <- colnames_orig
+                    coef[names(mod$coef)] <- mod$coef
+                    vcovUnscaled <- matrix(NA, nrow =length(colnames_orig), ncol = length(colnames_orig))
+                    rownames(vcovUnscaled) <- colnames(vcovUnscaled) <-  colnames_orig
+                    vcovUnscaled[names(mod$coef), names(mod$coef)] <- msqrob2:::.vcovUnscaled(mod)
+                  
                     model <- list(
                         coefficients = mod$coef,
                         vcovUnscaled = .vcovUnscaled(mod),
                         sigma = sigma,
                         df.residual = df.residual,
-                        w = w
+                        w = w,
+                        non_estimable_parameters= nonestimable_parameters
+                    )
+                } else if (!is.null(nonestimable_parameters)){
+                    model <- list(
+                        coefficients = NA,
+                        vcovUnscaled = NA,
+                        sigma = NA,
+                        df.residual = NA,
+                        w = NA,
+                        non_estimable_parameters= NA
+                        
                     )
                 }
             }
@@ -584,11 +605,11 @@ msqrobLmer <- function(y,
 .vcovUnscaled <- function(model) {
     p1 <- 1L:model$rank
     p <- length(model$coefficients)
-
+    
     out <- matrix(NA, p, p)
-    out[p1, p1] <- chol2inv(model$qr$qr[p1, p1, drop = FALSE])
+    out[!is.na(model$coefficients), !is.na(model$coefficients)] <- chol2inv(model$qr$qr[p1, p1, drop = FALSE])
     colnames(out) <- rownames(out) <- names(model$coefficients)
-
+    
     return(out)
 }
 
