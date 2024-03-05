@@ -1,3 +1,8 @@
+# msqrob 1.6.2
+
+- Fixed issues related to residual degrees of freedom of overparameterized models.
+- Fixed issue relating to coldata variables as factors.
+
 # msqrob2 1.5.4
 
 - Removed the full lmer model that was accidently left in the statmodel object.
