@@ -385,6 +385,10 @@ msqrobLmer <- function(y,
   data$y <- as.matrix(y) 
   data <- data[!is.na(data$y), ]
   
+  #Should fix some of models that can't be fixed due to reference changes
+  nonestimable_paramaters <- limma::nonEstimable(data$fixed)
+  data$fixed <- data$fixed[,colMeans(data$fixed == 0) != 1 , drop = FALSE]
+  
   if (sum(!grepl("(Intercept)", colnames(fixed))) < 2 & nobars(formula)[[2]] != 1) {
     stop("The mean model must have more than two parameters for ridge regression.
               if you really want to adopt ridge regression when your factor has only two levels
@@ -484,6 +488,7 @@ msqrobLmer <- function(y,
           Rinv[1, 1] <- 1
           betas <- c(Rinv %*% betas)
           names(betas) <- coefNames
+          
           vcovUnscaled <- Rinv %*% vcovUnscaled %*% t(Rinv)
           rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- names(betas)
         }
