@@ -356,40 +356,15 @@ msqrobLmer <- function(y,
 .ridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, doQR, robust,maxitRob=1,tol = 1e-06){
   
   #Create the matrix containing the variable information
-  if (is.null(rowdata)){
-    if (nrow(y) >1){
-      data <- coldata[rep(1:nrow(coldata), each = nrow(y)), ]
-      #If coldata consists of one column then repeating the values will result in a vector
-      #Therefore we need to create the dataframe again
-      if (dim(coldata)[2] == 1 ){
-        data <- DataFrame(data)
-        colnames(data) <- colnames(coldata)
-      }  
-    } else{
-      data <- coldata
-    }
-    
-  } else {
-    data <- cbind(
-      coldata[rep(1:nrow(coldata), each = nrow(y)), ],
-      rowdata[rep(1:nrow(rowdata), ncol(y)),]
-    )
-    data <- DataFrame(data)
-    colnames(data) <- c(colnames(coldata),colnames(rowdata))
-  }
+  data <- .create_data(y,rowdata,coldata)
   
-  # Drop levels that are absent, for all factors
-  for (i in colnames(data)) {
-      if (is.factor(data[[i]])) data[[i]] <- droplevels(data[[i]])
-  }
-  
-  #all possible variables are now in data,  now we can create the fixed object if we use ridge regression
+  #all necessary variables are now in data,  now we can create the fixed object if we use ridge regression
   fixed <- model.matrix(nobars(formula), data = data)  
   data$fixed <- fixed
   data$y <- as.matrix(y) 
   data <- data[!is.na(data$y), ]
   
-  #Should fix some of models that can't be fixed due to reference changes
+  #Checking reference class changes
   nonestimable_paramaters <- limma::nonEstimable(data$fixed)
   data$fixed <- data$fixed[,colMeans(data$fixed == 0) != 1 , drop = FALSE]
   
@@ -462,15 +437,7 @@ msqrobLmer <- function(y,
       model@frame$`(weights)` <- rep(1, dim(model@frame)[1])
       sseOld <- model@devcomp$cmp['pwrss']
       if (robust == TRUE){
-        while (maxitRob > 0) {
-          maxitRob <- maxitRob - 1
-          res <- resid(model)
-          model@frame$`(weights)` <- MASS::psi.huber(res / (mad(res, 0)))
-          model <- refit(model)
-          sse <- model@devcomp$cmp["pwrss"]
-          if (abs(sseOld - sse) / sseOld <= tol) break
-          sseOld <- sse
-        }  
+        model <- .robust_fitting(model, maxitRob, sseOld, tol)
       }
       
       sigma <- sigma(model)
@@ -504,19 +471,7 @@ msqrobLmer <- function(y,
       }
     }, silent = TRUE)
     
-    if (df.residual<2L){
-      model <- list(coefficients = NA,
-                    vcovUnscaled = NA,
-                    sigma = NA,
-                    df.residual = NA,
-                    w = NA)
-    } else {
-      model <- list(coefficients = betas,
-                    vcovUnscaled = vcovUnscaled,
-                    sigma = sigma,
-                    df.residual = df.residual,
-                    w = model@frame$`(weights)`)
-    }
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model)
   }
   
   return(StatModel(type = type,
@@ -528,32 +483,25 @@ msqrobLmer <- function(y,
 ## Fit the mixed models without ridge regression
 .noridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, robust,maxitRob=0, tol = 1e-06  ){
   #Create the matrix containing the variable information
-  if (is.null(rowdata)){
-    data <- coldata[rep(1:nrow(coldata), each = nrow(y)), ]
-    if (!(is(data,"DFrame"))){
-      data <- DataFrame(data)
-      colnames(data) <- colnames(coldata)
-    }
-  } else {
-    data <- cbind(
-      coldata[rep(1:nrow(coldata), each = nrow(y)), ],
-      rowdata[rep(1:nrow(rowdata), ncol(y)),]
-    )
-    data <- DataFrame(data)
-    colnames(data) <- c(colnames(coldata),colnames(rowdata))
-  }
+  data <- .create_data(y,rowdata,coldata)
   
+  data_model_matrix <- model.matrix(nobars(formula), data = data)  
   formula <- update.formula(formula, y~.)
   
   data$y <- as.matrix(y)
   data <- data[!is.na(data$y), ]
+  data_model_matrix <- data_model_matrix[!is.na(data$y), ]
   
+  #Checking for reference class changes
+  nonestimable_parameters <- limma::nonEstimable(data_model_matrix)
+  data_model_matrix <- data_model_matrix[,colMeans(data_model_matrix == 0) != 1 , drop = FALSE]
   model <- NULL
   
-  try({
-    model <- lmer(formula,  as.data.frame(data))
-  }, silent=TRUE)
-  
+  if(qr(data_model_matrix)$rank == ncol(data_model_matrix)){
+    try({
+      model <- lmer(formula,  as.data.frame(data))
+    }, silent=TRUE)  
+  }
   
   if (is.null(model)) {
     type <- "fitError"
@@ -568,15 +516,7 @@ msqrobLmer <- function(y,
       sseOld <- model@devcomp$cmp['pwrss']
       
       if (robust == TRUE){
-        while (maxitRob > 0) {
-          maxitRob <- maxitRob - 1
-          res <- resid(model)
-          model@frame$`(weights)` <- MASS::psi.huber(res / (mad(res, 0)))
-          model <- refit(model)
-          sse <- model@devcomp$cmp["pwrss"]
-          if (abs(sseOld - sse) / sseOld <= tol) break
-          sseOld <- sse
-        }  
+        model <- .robust_fitting(model, maxitRob, sseOld, tol)  
       }
       
       sigma <- sigma(model)
@@ -588,19 +528,7 @@ msqrobLmer <- function(y,
       }
     }, silent = TRUE)
     
-    if (df.residual<2L){
-      model <- list(coefficients = NA,
-                    vcovUnscaled = NA,
-                    sigma = NA,
-                    df.residual = NA,
-                    w = NA)
-    } else {
-      model <- list(coefficients = betas,
-                    vcovUnscaled = vcov_tmp,
-                    sigma = sigma,
-                    df.residual = df.residual,
-                    w = model@frame$`(weights)`)
-    }
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model)
   }
   
   return(StatModel(type = type,
@@ -684,6 +612,50 @@ msqrobLmer <- function(y,
     sum((resid(object) * sqrt(w))^2) / sigma^2
 }
 
+.robust_fitting <- function(model, maxitRob, sseOld, tol){
+  while (maxitRob > 0) {
+    maxitRob <- maxitRob - 1
+    res <- resid(model)
+    model@frame$`(weights)` <- MASS::psi.huber(res / (mad(res, 0)))
+    model <- refit(model)
+    sse <- model@devcomp$cmp["pwrss"]
+    if (abs(sseOld - sse) / sseOld <= tol) break
+    sseOld <- sse
+  }
+  return(model)
+}
+
+.create_model <- function(betas, vcovUnscaled, sigma, df.residual, w, model){
+  if (df.residual<2L){
+    model <- list(coefficients = NA,
+                  vcovUnscaled = NA,
+                  sigma = NA,
+                  df.residual = NA,
+                  w = NA)
+  } else {
+    model <- list(coefficients = betas,
+                  vcovUnscaled = vcovUnscaled,
+                  sigma = sigma,
+                  df.residual = df.residual,
+                  w = model@frame$`(weights)`)
+  }
+  return(model)
+}
+
+
+.create_data <- function(y,rowdata,coldata){
+  if (is.null(rowdata)){
+    data <- coldata[rep(1:nrow(coldata), each = nrow(y)), , drop = FALSE]
+  } else {
+    data <- cbind(
+      coldata[rep(1:nrow(coldata), each = nrow(y)), ],
+      rowdata[rep(1:nrow(rowdata), ncol(y)),]
+    )
+    data <- DataFrame(data)
+    colnames(data) <- c(colnames(coldata),colnames(rowdata))
+  }
+  return(data)
+}
 
 #' Function to fit msqrob models to peptide counts using glm
 #'
