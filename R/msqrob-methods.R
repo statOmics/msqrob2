@@ -151,6 +151,8 @@ setMethod(
                 lmerArgs = lmerArgs
             )
         }
+      
+        rowData(object)[[modelColumnName]] <- rowData(object)[[modelColumnName]][rownames(rowData(object))]
         return(object)
     }
 )
@@ -229,6 +231,8 @@ setMethod(
                 lmerArgs = lmerArgs
             )
         }
+      
+        rowData(object[[i]])[[modelColumnName]] <- rowData(object[[i]])[[modelColumnName]][rownames(rowData(object[[i]]))]
         return(object)
     }
 )

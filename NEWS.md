@@ -1,3 +1,9 @@
+# msqrob 1.11.1
+
+- Fixed issues related to reference class changes in the models
+- Fixed issue related to colData assay levels
+- Refactored internal code
+
 # msqrob 1.6.2
 
 - Fixed issues related to residual degrees of freedom of overparameterized models.
