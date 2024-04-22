@@ -76,7 +76,7 @@ peptidesFile <- msdata::quant(pattern = "cptac_a_b_peptides", full.names = TRUE)
 ecols <- grep("Intensity\\.", names(read.delim(peptidesFile)))
 
 pe <- readQFeatures(
-    table = peptidesFile, fnames = 1, ecol = ecols,
+    assayData = read.delim(peptidesFile), fnames = 1, quantCols = ecols,
     name = "peptideRaw", sep = "\t"
 )
 ```
