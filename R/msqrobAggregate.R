@@ -138,7 +138,7 @@ setMethod(
         rowData(object)[[modelColumnName]] <- msqrobLmer(
             y = assay(object),
             formula = formula,
-            data = colData(object),
+            data = droplevels(colData(x)),
             rowdata = rowdata,
             robust = robust,
             ridge = ridge,
