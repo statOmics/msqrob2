@@ -88,63 +88,57 @@
 
 
 setMethod(
-    "msqrobAggregate", "QFeatures",
+    "msqrobAggregate", "SummarizedExperiment",
     function(object,
-    formula,
-    i,
-    fcol,
-    name = "msqrobAggregate",
-    aggregateFun = MsCoreUtils::robustSummary,
-    modelColumnName = "msqrobModels",
-    robust = TRUE,
-    ridge = FALSE,
-    maxitRob = 1,
-    tol = 1e-6,
-    doQR = TRUE,
-    lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
-        if (is.null(object[[i]])) stop("QFeatures object does not contain assay ", i)
-        if (!(fcol %in% colnames(rowData(object[[i]])))) stop("The rowData of Assay ", i, " of the QFeatures object does not contain variable", fcol)
+             formula,
+             fcol,
+             aggregateFun = MsCoreUtils::robustSummary,
+             modelColumnName = "msqrobModels",
+             robust = TRUE,
+             ridge = FALSE,
+             maxitRob = 1,
+             tol = 1e-6,
+             doQR = TRUE,
+             lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
+        if (!(fcol %in% colnames(rowData(object)))) stop("The rowData of Assay ", i, " of the QFeatures object does not contain variable", fcol)
         if (ridge == FALSE & is.null(findbars(formula)) ){
-          stop("Formula contains no random effects.")
-        }
-          
-        if (length(formula) == 3) {
-          formula <- formula[-2]
+            stop("Formula contains no random effects.")
         }
         
-        rowdata <- rowData(object)[[i]]
+        if (length(formula) == 3) {
+            formula <- formula[-2]
+        }
+        
+        rowdata <- rowData(object)
         
         #Get the variables from the formula and check if they are in the coldata or rowdata 
         check_vars <- all.vars(formula) %in% c(colnames(rowdata), colnames(colData(object))) 
         if (!all(check_vars)){
-          if(sum(!check_vars) >1) {
-            vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
-            stop(paste("Variables", vars_not_found, "are not found in coldata or rowdata"), sep = "")  
-          } else{
-            vars_not_found <- all.vars(formula)[!check_vars]
-            stop(paste0("Variable ", vars_not_found, " is not found in coldata or rowdata"), sep = "")  
-          }
+            if(sum(!check_vars) >1) {
+                vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
+                stop(paste("Variables", vars_not_found, "are not found in coldata or rowdata"), sep = "")  
+            } else{
+                vars_not_found <- all.vars(formula)[!check_vars]
+                stop(paste0("Variable ", vars_not_found, " is not found in coldata or rowdata"), sep = "")  
+            }
         }
         
         #If there is at least one variable from the formula in the rowdata then keep rowdata
         #Otherwise return NULL
         if(!(any(colnames(rowdata) %in% all.vars(formula)))){
-          rowdata <- NULL
+            rowdata <- NULL
         } 
         
         object <- QFeatures::aggregateFeatures(
-          object = object,
-          i = i,
-          fcol = fcol,
-          name = name,
-          fun = aggregateFun
+            object = object,
+            fcol = fcol,
+            fun = aggregateFun
         )
         
-        x <- getWithColData(object, i)
-        rowData(object[[name]])[[modelColumnName]] <- msqrobLmer(
-            y = assay(x),
+        rowData(object)[[modelColumnName]] <- msqrobLmer(
+            y = assay(object),
             formula = formula,
-            data = colData(x),
+            data = colData(object),
             rowdata = rowdata,
             robust = robust,
             ridge = ridge,
@@ -152,8 +146,43 @@ setMethod(
             tol = tol,
             doQR = doQR,
             lmerArgs = lmerArgs,
-            featureGroups = rowData(object[[i]])[[fcol]]
+            featureGroups = rowData(object)[[fcol]]
         )
         return(object)
+    }
+)
+
+setMethod(
+    "msqrobAggregate", "QFeatures",
+    function(object,
+             formula,
+             i,
+             fcol,
+             name = "msqrobAggregate",
+             aggregateFun = MsCoreUtils::robustSummary,
+             modelColumnName = "msqrobModels",
+             robust = TRUE,
+             ridge = FALSE,
+             maxitRob = 1,
+             tol = 1e-6,
+             doQR = TRUE,
+             lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
+        if (is.null(object[[i]])) stop("QFeatures object does not contain assay ", i)
+        x <- getWithColData(object, i)
+        x <- msqrobAggregate(
+            object = x,
+             formula = formula,
+             fcol = fcol,
+             aggregateFun = aggregateFun,
+             modelColumnName = modelColumnName,
+             robust = robust,
+             ridge = ridge,
+             maxitRob = maxitRob,
+             tol = tol,
+             doQR = doQR,
+             lmerArgs = lmerArgs
+        )
+        object <- addAssay(object, x, name)
+        addAssayLink(object, i, name, varFrom = fcol, varTo = fcol)
     }
 )
