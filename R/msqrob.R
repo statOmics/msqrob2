@@ -391,7 +391,7 @@ msqrobLmer <- function(y,
         Q <- Q[, -1]
       }
 
-      data$ridge <- as.factor(rep(colnames(Q), length = nrow(data)))
+      data$ridge <- factor(rep(colnames(Q), length = nrow(data)), levels = colnames(Q))
 
       #Parse the data and formula
       parsedFormulaC <- lFormula(formula,data = as.list(data))
