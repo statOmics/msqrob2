@@ -476,8 +476,8 @@ msqrobLmer <- function(y,
   formula <- update.formula(formula, y~.)
 
   data$y <- as.matrix(y)
-  data <- data[!is.na(data$y), ]
-  data_model_matrix <- data_model_matrix[!is.na(data$y), ]
+  data <- data[!is.na(data$y), , drop = FALSE]
+  data_model_matrix <- data_model_matrix[!is.na(data$y), , drop = FALSE]
 
   #Checking for reference class changes
   #nonestimable_parameters <- limma::nonEstimable(data_model_matrix)
@@ -508,7 +508,7 @@ msqrobLmer <- function(y,
 
       sigma <- sigma(model)
       betas <- .getBetaB(model)
-      vcov_tmp <- .getVcovBetaBUnscaled(model)
+      vcovUnscaled <- .getVcovBetaBUnscaled(model)
       df.residual <- .getDfLmer(model)
       if(is.na(df.residual)){
         df.residual <- 0
