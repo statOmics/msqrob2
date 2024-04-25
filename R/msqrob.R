@@ -349,7 +349,7 @@ msqrobLmer <- function(y,
   fixed <- model.matrix(nobars(formula), data = data)
   data$fixed <- fixed
   data$y <- as.matrix(y)
-  data <- data[!is.na(data$y), ]
+  data <- data[!is.na(data$y), , drop = FALSE]
 
   #Checking reference class changes
   #nonestimable_paramaters <- limma::nonEstimable(data$fixed)

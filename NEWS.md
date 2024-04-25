@@ -1,3 +1,8 @@
+# msqrob 1.11.2
+
+- Fixed issue related to levels of a ridge variable
+- Fixed issue when fitting only one random effect
+
 # msqrob 1.11.1
 
 - Fixed issues related to reference class changes in the models
