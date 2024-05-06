@@ -36,7 +36,7 @@
 #' se <- getWithColData(pe, "peptide")
 #' se <- msqrobAggregate(se, fcol = "Proteins",
 #'                       formula = ~condition + (1|samples) + (1|Sequence),
-#'                       #' ridge = TRUE)
+#'                       ridge = TRUE)
 #' getCoef(rowData(se)$msqrobModels[["P00956"]])
 #'
 #' @param object `QFeatures` instance
