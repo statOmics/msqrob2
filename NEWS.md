@@ -1,3 +1,19 @@
+# msqrob 1.13
+
+# msqrob 1.13.1
+
+- Implemented msqrobAggregate() method for SummarizedExperiment objects. 
+
+# msqrob 1.13.0
+
+- New Bioconductor devel release 3.20
+
+# msqrob 1.12
+
+# msqrob 1.12.0
+
+- New Bioconductor stable release 3.19
+
 # msqrob 1.11.2
 
 - Fixed issue related to levels of a ridge variable

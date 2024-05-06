@@ -27,10 +27,18 @@
 #' # the different peptide species in each sample and the correlation between
 #' # peptide intensities of peptides of the same protein in the same sample.
 #' colData(pe)$samples <- rownames(colData(pe))
-#' pe <- msqrobAggregate(pe, i = "peptide", fcol = "Proteins", 
+#' pe <- msqrobAggregate(pe, i = "peptide", fcol = "Proteins",
 #'      formula = ~condition + (1|samples) + (1|Sequence),
 #'      ridge = TRUE)
 #' getCoef(rowData(pe[["msqrobAggregate"]])$msqrobModels[["P00956"]])
+#'
+#' ## Same but on a SummarizedExperiment object
+#' se <- getWithColData(pe, "peptide")
+#' se <- msqrobAggregate(se, fcol = "Proteins",
+#'                       formula = ~condition + (1|samples) + (1|Sequence),
+#'                       #' ridge = TRUE)
+#' getCoef(rowData(se)$msqrobModels[["P00956"]])
+#'
 #' @param object `QFeatures` instance
 #'
 #' @param formula Model formula. The model is built based on the
@@ -39,7 +47,7 @@
 #' @param i `character` or `integer` to specify the element of the `QFeatures` that
 #'        contains the log expression intensities that will be modelled.
 #'
-#' @param fcol The feature variable of assay ‘i’ defining how to summerise
+#' @param fcol The feature variable of assay ‘i’ defining how to summarise
 #'        the features.
 #' @param name A ‘character(1)’ naming the new assay. Default is ‘newAssay’.
 #'       Note that the function will fail if there's already an assay
@@ -83,6 +91,8 @@
 #'
 #' @aliases msqrobAggregate msqrobAggregate,QFeatures-method
 #' @import SummarizedExperiment
+#' @importFrom QFeatures addAssay addAssayLink
+#' @importFrom MultiAssayExperiment getWithColData
 #'
 #' @export
 
@@ -100,45 +110,40 @@ setMethod(
              tol = 1e-6,
              doQR = TRUE,
              lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
-        if (!(fcol %in% colnames(rowData(object)))) stop("The rowData of Assay ", i, " of the QFeatures object does not contain variable", fcol)
+        if (!fcol %in% colnames(rowData(object)))
+            stop("The rowData does not contain variable '", fcol, "'.")
         if (ridge == FALSE & is.null(findbars(formula)) ){
             stop("Formula contains no random effects.")
         }
-        
+
         if (length(formula) == 3) {
             formula <- formula[-2]
         }
-        
+
         rowdata <- rowData(object)
-        
-        #Get the variables from the formula and check if they are in the coldata or rowdata 
-        check_vars <- all.vars(formula) %in% c(colnames(rowdata), colnames(colData(object))) 
+
+        #Get the variables from the formula and check if they are in the coldata or rowdata
+        check_vars <- all.vars(formula) %in% c(colnames(rowdata), colnames(colData(object)))
         if (!all(check_vars)){
             if(sum(!check_vars) >1) {
                 vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
-                stop(paste("Variables", vars_not_found, "are not found in coldata or rowdata"), sep = "")  
+                stop(paste("Variables", vars_not_found, "are not found in coldata or rowdata"), sep = "")
             } else{
                 vars_not_found <- all.vars(formula)[!check_vars]
-                stop(paste0("Variable ", vars_not_found, " is not found in coldata or rowdata"), sep = "")  
+                stop(paste0("Variable ", vars_not_found, " is not found in coldata or rowdata"), sep = "")
             }
         }
-        
+
         #If there is at least one variable from the formula in the rowdata then keep rowdata
         #Otherwise return NULL
         if(!(any(colnames(rowdata) %in% all.vars(formula)))){
             rowdata <- NULL
-        } 
-        
-        object <- QFeatures::aggregateFeatures(
-            object = object,
-            fcol = fcol,
-            fun = aggregateFun
-        )
-        
-        rowData(object)[[modelColumnName]] <- msqrobLmer(
+        }
+
+        modelOutput <- msqrobLmer(
             y = assay(object),
             formula = formula,
-            data = droplevels(colData(x)),
+            data = droplevels(colData(object)),
             rowdata = rowdata,
             robust = robust,
             ridge = ridge,
@@ -148,10 +153,20 @@ setMethod(
             lmerArgs = lmerArgs,
             featureGroups = rowData(object)[[fcol]]
         )
+
+        object <- QFeatures::aggregateFeatures(
+            object = object,
+            fcol = fcol,
+            fun = aggregateFun
+        )
+
+        rowData(object)[[modelColumnName]] <- modelOutput
+
         return(object)
     }
 )
 
+#' @rdname msqrobAggregate
 setMethod(
     "msqrobAggregate", "QFeatures",
     function(object,
@@ -171,16 +186,16 @@ setMethod(
         x <- getWithColData(object, i)
         x <- msqrobAggregate(
             object = x,
-             formula = formula,
-             fcol = fcol,
-             aggregateFun = aggregateFun,
-             modelColumnName = modelColumnName,
-             robust = robust,
-             ridge = ridge,
-             maxitRob = maxitRob,
-             tol = tol,
-             doQR = doQR,
-             lmerArgs = lmerArgs
+            formula = formula,
+            fcol = fcol,
+            aggregateFun = aggregateFun,
+            modelColumnName = modelColumnName,
+            robust = robust,
+            ridge = ridge,
+            maxitRob = maxitRob,
+            tol = tol,
+            doQR = doQR,
+            lmerArgs = lmerArgs
         )
         object <- addAssay(object, x, name)
         addAssayLink(object, i, name, varFrom = fcol, varTo = fcol)
