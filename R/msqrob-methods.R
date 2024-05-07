@@ -213,7 +213,7 @@ setMethod(
             rowData(object[[i]])[[modelColumnName]] <- msqrobLm(
                 y = assay(object[[i]]),
                 formula = formula,
-                data = droplevels(colData(getWithColData(object, i = i)))
+                data = droplevels(colData(getWithColData(object, i = i))),
                 robust = robust,
                 maxitRob = maxitRob
             )
