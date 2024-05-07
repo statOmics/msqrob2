@@ -15,8 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        ## Test using both Bioconductor devel and release
-        bioc-version: [devel, release]
+        bioc-version: [devel] ## Test on Bioconductor's latest devel
 
     runs-on: ${{ matrix.os }}
 

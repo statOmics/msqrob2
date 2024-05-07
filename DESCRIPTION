@@ -1,6 +1,6 @@
 Package: msqrob2
 Title: Robust statistical inference for quantitative LC-MS proteomics
-Version: 1.11.2
+Version: 1.13.0
 Authors@R: c(
       person(given = "Lieven",
            family = "Clement",
@@ -82,7 +82,7 @@ Collate: 'msqrob-framework.R' 'allGenerics.R'
 Encoding: UTF-8
 VignetteBuilder: knitr
 Roxygen: list(markdown=TRUE)
-RoxygenNote: 7.2.1
+RoxygenNote: 7.3.1
 biocViews:
     Proteomics,
     MassSpectrometry,
