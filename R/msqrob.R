@@ -279,7 +279,7 @@ msqrobLmer <- function(y,
   }
 
   #Select only the relevant columns
-  data <- data[colnames(data) %in% all.vars(formula)]
+  data <- data[,colnames(data) %in% all.vars(formula), drop = FALSE]
 
   y <- split.data.frame(y, featureGroups)
 
