@@ -66,7 +66,7 @@ Suggests:
     RefManageR,
     sessioninfo,
     rmarkdown,
-    testthat,
+    testthat (>= 3.0.0),
     tidyverse,
     plotly,
     msdata,
@@ -97,3 +97,4 @@ biocViews:
     Preprocessing
 URL: https://github.com/statOmics/msqrob2
 BugReports: https://github.com/statOmics/msqrob2/issues
+Config/testthat/edition: 3
