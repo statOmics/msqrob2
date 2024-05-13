@@ -55,7 +55,9 @@
 #' @param aggregateFun A function used for quantitative feature aggregation.
 #'        Details can be found in the documentation of the `aggregateFeatures`
 #'        of the `QFeatures` package.
-#'
+#'        
+#' @param ... Additional arguments passed to the function specified in the `aggregateFun` argument.
+#' 
 #' @param modelColumnName `character` to indicate the variable name that is used
 #'        to store the msqrob models in the rowData of the SummarizedExperiment
 #'        instance or of the assay of the QFeatures instance. Default is "msqrobModels".
