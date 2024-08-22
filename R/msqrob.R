@@ -57,22 +57,26 @@ msqrobLm <- function(y,
     robust = TRUE,
     maxitRob = 5) {
     myDesign <- model.matrix(formula, data)
+    paramNames <- colnames(myDesign)
     models <- apply(y, 1,
         function(y, design) {
             ## computatability check
             obs <- is.finite(y)
             type <- "fitError"
+
+            referencePresent <- checkReference(y, data, formula, colnames(myDesign))
             model <- list(
-                coefficients = NA, vcovUnscaled = NA,
-                sigma = NA, df.residual = NA, w = NA
+                referencePresent = referencePresent, coefficients = NA,
+                vcovUnscaled = NA, sigma = NA,
+                df.residual = NA, w = NA
             )
 
             if (sum(obs) > 0) {
                 ## subset to finite observations, attention with R column switching
                 X <- design[obs, , drop = FALSE]
-                X <- X[,colMeans(X == 0) != 1 , drop = FALSE]
+                qrX <- qr(X)
+                X <- X[, qrX$pivot[seq_len(qrX$rank)], drop = FALSE]
                 y <- y[obs]
-                colnames_orig <- colnames(design)
 
                 if (robust) {
                     ## use robust regression from MASS package, "M" estimation is used
@@ -108,16 +112,17 @@ msqrobLm <- function(y,
                 }
 
                 if (type != "fitError") {
-                    coef <- rep(NA, length(colnames_orig))
-                    names(coef) <- colnames_orig
+                    coef <- rep(NA, length(paramNames))
+                    names(coef) <- paramNames
                     coef[names(mod$coef)] <- mod$coef
-                    vcovUnscaled <- matrix(NA, nrow =length(colnames_orig), ncol = length(colnames_orig))
-                    rownames(vcovUnscaled) <- colnames(vcovUnscaled) <-  colnames_orig
+                    vcovUnscaled <- matrix(NA, nrow =length(paramNames), ncol = length(paramNames))
+                    rownames(vcovUnscaled) <- colnames(vcovUnscaled) <-  paramNames
                     vcovUnscaled[names(mod$coef), names(mod$coef)] <- msqrob2:::.vcovUnscaled(mod)
 
                     model <- list(
-                        coefficients = mod$coef,
-                        vcovUnscaled = .vcovUnscaled(mod),
+                        referencePresent = referencePresent,
+                        coefficients = coef,
+                        vcovUnscaled = vcovUnscaled,
                         sigma = sigma,
                         df.residual = df.residual,
                         w = w
@@ -770,3 +775,5 @@ msqrobGlm <- function(y,
 
     return(models)
 }
+
+

@@ -86,6 +86,40 @@ makeContrast <- function(contrasts, parameterNames) {
     return(t(.chrlinfct2matrix(contrasts, parameterNames)$K))
 }
 
+
+#' Check for presence of reference levels
+#' @description Check if the reference levels of the factors in the model are present for a specific feature.
+#'
+#' @param yFeature A numeric vector with the feature values for each sample.
+#'
+#' @param data A `DataFrame` with information on the design. It has
+#'        the same number of rows as the number of columns (samples) of
+#'        `y`.
+#' 
+#' @param formula Model formula. The model is built based on the
+#'        covariates in the data object.
+#'
+#' @param paramNames character vector specifying the model parameters that are present in the global model matrix
+#' 
+#' @return A logical vector indicating for each parameter in the model if his reference level has values for the current feature.
+#' 
+#' @rdname checkReference
+#'
+checkReference <- function(yFeature, data, formula, paramNames) {
+  vars <- all.vars(formula)
+  paramRef <- c(rep(NA, length(paramNames)))
+  names(params) <- paramNames
+  subset <- data[!is.na(yFeature), vars, drop = FALSE]
+  for (x in vars){
+    reference <- levels(data[[x]])[1]
+    design <- model.matrix(as.formula(paste("~ -1 +", x)), data = subset)
+    referencePresent <- sum(design[,paste0(x, reference)]) != 0
+    paramRef[grep(x, paramNames, value = FALSE)] <- referencePresent
+  }
+  return(paramRef)
+}
+
+
 ##### None exported functions from multcomp package is included here to
 ##### During R and Bioc checks
 
@@ -668,3 +702,4 @@ makeContrast <- function(contrasts, parameterNames) {
         ex, " to character"
     )
 }
+
