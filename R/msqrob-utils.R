@@ -107,16 +107,16 @@ makeContrast <- function(contrasts, parameterNames) {
 #'
 checkReference <- function(yFeature, data, formula, paramNames) {
   vars <- all.vars(formula)
-  paramRef <- c(rep(NA, length(paramNames)))
-  names(params) <- paramNames
+  referencePresent <- c(rep(NA, length(paramNames)))
+  names(referencePresent) <- paramNames
   subset <- data[!is.na(yFeature), vars, drop = FALSE]
   for (x in vars){
     reference <- levels(data[[x]])[1]
     design <- model.matrix(as.formula(paste("~ -1 +", x)), data = subset)
-    referencePresent <- sum(design[,paste0(x, reference)]) != 0
-    paramRef[grep(x, paramNames, value = FALSE)] <- referencePresent
+    varPres <- sum(design[,paste0(x, reference)]) != 0
+    referencePresent[grep(x, paramNames, value = FALSE)] <- varPres
   }
-  return(paramRef)
+  return(referencePresent)
 }
 
 
