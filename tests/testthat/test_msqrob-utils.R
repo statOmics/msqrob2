@@ -3,7 +3,7 @@
     names(y_no_ref) <- 1:15
     y_ref <- c(rep(1,5), rep(1,5), rep(1,5))
     names(y_ref) <- 1:15
-    data_no_ref <- data.frame(condition = as.factor(rep(letters[1:3], c(5,5,5))),
+    data <- data.frame(condition = as.factor(rep(letters[1:3], c(5,5,5))),
         numerical = c(1:5, 1:5, 1:5),
         row.names = 1:15)
     form <- formula(~ 1 + condition + numerical, data = data)
@@ -42,7 +42,7 @@ test_that("checkReference", {
     names(reference_present_ref) <- c("conditionb", "conditionc")
     expect_identical(reference_present_ref, msqrob2:::checkReference(y_ref, data, referenceCond))
 
-    expect_identical(NULL, msqrob2:::checkReference(data, form, NULL))
+    expect_identical(NULL, msqrob2:::checkReference(data, data, NULL))
 })
 
 test_that("referenceContrast", {
