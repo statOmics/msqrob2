@@ -39,7 +39,7 @@ setMethod(
     "getContrast", "StatModel",
     function(object, L, acceptDifferentReference = FALSE) {
         if (!is(L, "matrix")) L <- as.matrix(L)
-        referencePresent <- object@params$referencePresent
+        referencePresent <- getReferencePresent(object)
         if (!acceptDifferentReference && any(!referencePresent[rownames(L)])) {
             return(NA)
         }
@@ -59,7 +59,7 @@ setMethod(
     "varContrast", "StatModel",
     function(object, L, acceptDifferentReference = FALSE) {
         if (!is(L, "matrix")) L <- as.matrix(L)
-        referencePresent <- object@params$referencePresent
+        referencePresent <- getReferencePresent(object)
         if (!acceptDifferentReference && any(!referencePresent[rownames(L)])) {
             return(NA)
         }

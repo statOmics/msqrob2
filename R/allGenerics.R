@@ -5,7 +5,7 @@ setGeneric("getFitMethod", function(object) standardGeneric("getFitMethod"))
 #' @export
 setGeneric("getCoef", function(object) standardGeneric("getCoef"))
 #' @export
-setGeneric("varContrast", function(object, L, acceptDifferentReference) standardGeneric("varContrast"))
+setGeneric("varContrast", function(object, ...) standardGeneric("varContrast"))
 #' @export
 setGeneric("getVar", function(object) standardGeneric("getVar"))
 #' @export
@@ -21,7 +21,7 @@ setGeneric("getSigmaPosterior", function(object) standardGeneric("getSigmaPoster
 #' @export
 setGeneric("getReferencePresent", function(object) standardGeneric("getReferencePresent"))
 #' @export
-setGeneric("getContrast", function(object, L, acceptDifferentReference) standardGeneric("getContrast"))
+setGeneric("getContrast", function(object, ...) standardGeneric("getContrast"))
 #' @export
 setGeneric("getVcovUnscaled", function(object) standardGeneric("getVcovUnscaled"))
 #' @export

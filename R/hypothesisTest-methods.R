@@ -122,16 +122,16 @@ setMethod(
     adjust.method = "BH",
     modelColumn = "msqrobModels",
     resultsColumnNamePrefix = "",
-    overwrite = FALSE) {
+    overwrite = FALSE,
+    acceptDifferentReference = FALSE) {
         if (!(modelColumn %in% colnames(rowData(object)))) stop("There is no column named \'", modelColumn, "\' with stored models of an msqrob fit in the rowData of the SummarizedExperiment object")
         if (is.null(colnames(contrast)) & resultsColumnNamePrefix == "") resultsColumnNamePrefix <- "msqrobResults"
         if (is.null(colnames(contrast)) & ncol(contrast) > 1) colnames(contrast) <- seq_len(ncol(contrast))
         if ((sum(paste0(resultsColumnNamePrefix, colnames(contrast)) %in% colnames(rowData(object))) > 0) & !overwrite) stop("There is/are already column(s) with names starting with\'", resultsColumnNamePrefix, "\' in the rowData of the SummarizedExperiment object, set the argument overwrite=TRUE to replace the column(s) with the new results or use another name for the argument resultsColumnNamePrefix")
         for (j in seq_len(ncol(contrast)))
         {
-            contrHlp <- contrast[, j]
-            names(contrHlp) <- rownames(contrast)
-            rowData(object)[[paste0(resultsColumnNamePrefix, colnames(contrast)[j])]] <- topFeatures(rowData(object)[, modelColumn], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1)
+            contrHlp <- contrast[, j, drop = FALSE]
+            rowData(object)[[paste0(resultsColumnNamePrefix, colnames(contrast)[j])]] <- topFeatures(rowData(object)[, modelColumn], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1, acceptDifferentReference = acceptDifferentReference)
         }
         return(object)
     }

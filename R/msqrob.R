@@ -58,13 +58,14 @@ msqrobLm <- function(y,
     maxitRob = 5) {
     myDesign <- model.matrix(formula, data)
     paramNames <- colnames(myDesign)
+    referenceLevels <- getReferenceLevels(data, formula)
     models <- apply(y, 1,
         function(y, design) {
             ## computatability check
             obs <- is.finite(y)
             type <- "fitError"
 
-            referencePresent <- checkReference(y, data, formula, colnames(myDesign))
+            referencePresent <- checkReference(y, data, referenceLevels)
             model <- list(
                 referencePresent = referencePresent, coefficients = NA,
                 vcovUnscaled = NA, sigma = NA,

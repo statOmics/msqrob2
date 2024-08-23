@@ -90,7 +90,7 @@ makeContrast <- function(contrasts, parameterNames) {
 #' Check for presence of reference levels
 #' @description Check if the reference levels of the factors in the model are present for a specific feature.
 #'
-#' @param yFeature A numeric vector with the feature values for each sample.
+#' @param y A numeric vector with the feature values for each sample.
 #'
 #' @param data A `DataFrame` with information on the design. It has
 #'        the same number of rows as the number of columns (samples) of
@@ -105,18 +105,47 @@ makeContrast <- function(contrasts, parameterNames) {
 #' 
 #' @rdname checkReference
 #'
-checkReference <- function(yFeature, data, formula, paramNames) {
-  vars <- all.vars(formula)
-  referencePresent <- c(rep(NA, length(paramNames)))
-  names(referencePresent) <- paramNames
-  subset <- data[!is.na(yFeature), vars, drop = FALSE]
-  for (x in vars){
-    reference <- levels(data[[x]])[1]
-    design <- model.matrix(as.formula(paste("~ -1 +", x)), data = subset)
-    varPres <- sum(design[,paste0(x, reference)]) != 0
-    referencePresent[grep(x, paramNames, value = FALSE)] <- varPres
+checkReference <- function(y, data, referenceLevels) {
+  subset <- droplevels(data[!is.na(y), names(referenceLevels), drop = FALSE])
+  referencePresent <- list()
+  paramToVar <- list()
+  for (x in names(referenceLevels)){
+    paramNames <- paste0(x, levels(data[, x])[-1])
+    for (param in paramNames){
+      referencePresent[[param]] <- NA
+    }
+    paramToVar[[x]] <- paramNames
   }
-  return(referencePresent)
+  for (x in names(referenceLevels)){
+    if (!(referenceLevels[[x]] %in% levels(subset[, x]))){
+        referencePresent[names(referencePresent) %in% paramToVar[[x]]] <- FALSE
+    } else {
+        referencePresent[names(referencePresent) %in% paramToVar[[x]]] <- TRUE
+    }
+  }
+  return(unlist(referencePresent))
+}
+
+#' Get reference levels factors
+#' @description Get the reference levels of the factors of a data frame that are present in a formula
+#'
+#' @param dataFrame A `data.frame` that contains factors
+#' 
+#' @param formula A formula object associated with the data frame (the variables in the formula should be present in the data frame)
+#'
+#' @return A named list with the reference levels of the factors (named by the factor name)
+#' 
+#' @rdname getReferenceLevels
+#' 
+getReferenceLevels <- function(dataFrame, formula){
+    referenceLevels <- list()
+    vars <- all.vars(formula)
+    for (x in vars){
+        if (is.factor(dataFrame[, x])){
+            referenceLevels[[x]] <- levels(dataFrame[, x])[1]
+        }
+    }
+    return(unlist(referenceLevels))
 }
 
 
