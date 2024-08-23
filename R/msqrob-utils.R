@@ -96,12 +96,10 @@ makeContrast <- function(contrasts, parameterNames) {
 #'        the same number of rows as the number of columns (samples) of
 #'        `y`.
 #' 
-#' @param formula Model formula. The model is built based on the
-#'        covariates in the data object.
-#'
-#' @param paramNames character vector specifying the model parameters that are present in the global model matrix
+#' @param referenceLevels A named list with the reference levels of the factors (named by the factor name)
 #' 
-#' @return A logical vector indicating for each parameter in the model if his reference level has values for the current feature.
+#' @return A logical vector indicating for each parameter (that comes from a factor variable) in the model 
+#' if his reference level has values for the current feature.
 #' 
 #' @rdname checkReference
 #'

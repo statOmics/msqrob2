@@ -16,7 +16,8 @@ expression analysis}
   adjust.method = "BH",
   modelColumn = "msqrobModels",
   resultsColumnNamePrefix = "",
-  overwrite = FALSE
+  overwrite = FALSE,
+  acceptDifferentReference = FALSE
 )
 
 \S4method{hypothesisTestHurdle}{SummarizedExperiment}(

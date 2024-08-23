@@ -22,6 +22,7 @@
 \alias{getVar,StatModel-method}
 \alias{getSigma,StatModel-method}
 \alias{getVcovUnscaled,StatModel-method}
+\alias{getReferencePresent,StatModel-method}
 \title{Accessor functions for StatModel class}
 \usage{
 \S4method{getModel}{StatModel}(object)
@@ -43,6 +44,8 @@
 \S4method{getSigma}{StatModel}(object)
 
 \S4method{getVcovUnscaled}{StatModel}(object)
+
+\S4method{getReferencePresent}{StatModel}(object)
 }
 \arguments{
 \item{object}{\code{StatModel} object}
@@ -65,6 +68,8 @@ the empirical Bayes variance estimator}
 \item{getSigmaPosterior(object)}{to get the empirical Bayes standard deviation}
 \item{getVcovUnscaled(object)}{to get the unscaled variance covariance matrix
 of the model parameters}
+\item{getReferencePresent(object)}{to get the vector of logicals indicating if the
+reference level associated with a model parameter is present}
 }
 }
 \examples{
