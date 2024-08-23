@@ -148,6 +148,28 @@ getReferenceLevels <- function(dataFrame, formula){
     return(unlist(referenceLevels))
 }
 
+#' Check if the reference levels associated with the contrast are present
+#' @description Check if the reference levels associated with the contrast are present
+#'
+#' @param referencePresent A logical vector indicating for each parameter in the model 
+#' if his reference level has values for the current feature.
+#'
+#' @param L A numeric contrast matrix with rownames that equal the model parameters 
+#' that are involved in the contrasts
+#'
+#' @param acceptDifferentReference `boolean(1)` to indicate if the contrasts that involve
+#' parameters with modified reference levels are returned.
+#' 
+#' @return A boolean
+#' 
+#' @rdname referenceContrast
+#' 
+referenceContrast <- function(referencePresent, L, acceptDifferentReference) {
+  if (!acceptDifferentReference && any(!referencePresent[rownames(L)])) {
+    return(TRUE)
+  }
+  return(FALSE)
+}
 
 ##### None exported functions from multcomp package is included here to
 ##### During R and Bioc checks

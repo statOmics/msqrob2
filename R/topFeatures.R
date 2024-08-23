@@ -70,7 +70,14 @@ topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alp
     t <- logFC / se
     pval <- pt(-abs(t), df) * 2
     adjPval <- p.adjust(pval, method = adjust.method)
+
     out <- data.frame(logFC, se, df, t, pval, adjPval)
+    if (acceptDifferentReference) {
+        out[["DifferentReference"]] <- vapply(models, function(y){
+            any(!getReferencePresent(y)[rownames(contrast)])},
+            logical(1)
+        )
+    }
     if (sort) {
         if (alpha < 1) {
             ids <- adjPval < alpha

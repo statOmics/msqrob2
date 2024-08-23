@@ -39,8 +39,7 @@ setMethod(
     "getContrast", "StatModel",
     function(object, L, acceptDifferentReference = FALSE) {
         if (!is(L, "matrix")) L <- as.matrix(L)
-        referencePresent <- getReferencePresent(object)
-        if (!acceptDifferentReference && any(!referencePresent[rownames(L)])) {
+        if (referenceContrast(getReferencePresent(object), L, acceptDifferentReference)) {
             return(NA)
         }
         coefs <- getCoef(object)
@@ -59,8 +58,7 @@ setMethod(
     "varContrast", "StatModel",
     function(object, L, acceptDifferentReference = FALSE) {
         if (!is(L, "matrix")) L <- as.matrix(L)
-        referencePresent <- getReferencePresent(object)
-        if (!acceptDifferentReference && any(!referencePresent[rownames(L)])) {
+        if (referenceContrast(getReferencePresent(object), L, acceptDifferentReference)) {
             return(NA)
         }
         out <- matrix(NA, ncol(L), ncol(L))
