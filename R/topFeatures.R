@@ -47,7 +47,6 @@
 #' @export
 
 topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alpha = 1, acceptDifferentReference = FALSE) {
-    print(contrast)
     if (is(contrast, "matrix")) {
         if (ncol(contrast) > 1) {
             stop("Argument contrast is matrix with more than one column, only one contrast is allowed")
