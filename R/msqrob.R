@@ -57,15 +57,17 @@ msqrobLm <- function(y,
     robust = TRUE,
     maxitRob = 5) {
     myDesign <- model.matrix(formula, data)
+    missingSamples <- colSums(!is.na(y)) == 0
+    subsettedDesign <- myDesign[!missingSamples, , drop = FALSE]
+    stopifnot("The provided model must be full rank" = checkFullRank(subsettedDesign))
     paramNames <- colnames(myDesign)
-    referenceLevels <- getReferenceLevels(data, formula)
     models <- apply(y, 1,
         function(y, design) {
             ## computatability check
             obs <- is.finite(y)
             type <- "fitError"
 
-            referencePresent <- checkReference(y, data, referenceLevels)
+            referencePresent <- checkReference(y, data, paramNames, formula)
             model <- list(
                 referencePresent = referencePresent, coefficients = NA,
                 vcovUnscaled = NA, sigma = NA,

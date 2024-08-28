@@ -34,7 +34,7 @@
 }
 
 
-testthat("topFeatures", {
+test_that("topFeatures", {
     stat_model_list <- .create_minimal_data()
     L <- matrix(c(1, 0), nrow = 2, byrow = TRUE)
     colnames(L) <- "conditionb=0"

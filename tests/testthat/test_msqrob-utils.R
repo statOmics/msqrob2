@@ -8,8 +8,10 @@
         row.names = 1:15)
     form <- formula(~ 1 + condition + numerical, data = data)
     form_num <- formula(~ 1 + numerical, data = data)
+    form_no_intercept <- formula(~ -1 + condition + numerical, data = data)
     return(list(data = data, form = form,
         form_num = form_num,
+        form_no_intercept = form_no_intercept,
         y_no_ref = y_no_ref,
         y_ref = y_ref))
 }
@@ -30,19 +32,26 @@ test_that("checkReference", {
     data <- .create_minimal_data()$data
     y_no_ref <- .create_minimal_data()$y_no_ref
     y_ref <- .create_minimal_data()$y_ref
+    formula <- .create_minimal_data()$form
+    formula_no_intercept <- .create_minimal_data()$form_no_intercept
+    paramNames <- colnames(model.matrix(formula, data = data))
+    paramNames_no_intercept <- colnames(model.matrix(formula_no_intercept, data = data))
 
-    referenceCond <- "a"
-    names(referenceCond) <- "condition"
+    reference_present_no_ref <- c(NA, FALSE, FALSE, NA)
+    names(reference_present_no_ref) <- c("(Intercept)", "conditionb", "conditionc", "numerical")
+    expect_identical(reference_present_no_ref, msqrob2:::checkReference(y_no_ref, data, paramNames, formula))
 
-    reference_present_no_ref <- c(FALSE, FALSE)
-    names(reference_present_no_ref) <- c("conditionb", "conditionc")
-    expect_identical(reference_present_no_ref, msqrob2:::checkReference(y_no_ref, data, referenceCond))
+    reference_present_no_int <- c(TRUE, TRUE, TRUE, NA)
+    names(reference_present_no_int) <- c("conditiona", "conditionb", "conditionc", "numerical")
+    expect_identical(reference_present_no_int, msqrob2:::checkReference(y_no_ref, data, paramNames_no_intercept, formula_no_intercept))
 
-    reference_present_ref <- c(TRUE, TRUE)
-    names(reference_present_ref) <- c("conditionb", "conditionc")
-    expect_identical(reference_present_ref, msqrob2:::checkReference(y_ref, data, referenceCond))
+    reference_present_ref <- c(NA, TRUE, TRUE, NA)
+    names(reference_present_ref) <- c("(Intercept)", "conditionb", "conditionc", "numerical")
+    expect_identical(reference_present_ref, msqrob2:::checkReference(y_ref, data, paramNames, formula))
 
-    expect_identical(NULL, msqrob2:::checkReference(data, data, NULL))
+    reference_no_var <- c(NA)
+    names(reference_no_var) <- c("(Intercept)")
+    expect_identical(reference_no_var, msqrob2:::checkReference(y_ref, data, c("(Intercept)"), as.formula(~1)))
 })
 
 test_that("referenceContrast", {

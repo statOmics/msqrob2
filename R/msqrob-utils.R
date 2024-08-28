@@ -103,25 +103,31 @@ makeContrast <- function(contrasts, parameterNames) {
 #' 
 #' @rdname checkReference
 #'
-checkReference <- function(y, data, referenceLevels) {
-  subset <- droplevels(data[!is.na(y), names(referenceLevels), drop = FALSE])
-  referencePresent <- list()
-  paramToVar <- list()
-  for (x in names(referenceLevels)){
-    paramNames <- paste0(x, levels(data[, x])[-1])
-    for (param in paramNames){
+checkReference <- function(y, data, paramNames, formula) {
+    referenceLevels <- getReferenceLevels(data, formula)
+    factor <- names(referenceLevels)
+    subset <- droplevels(data[!is.na(y), factor, drop = FALSE])
+    referencePresent <- list()
+    for (param in paramNames) {
       referencePresent[[param]] <- NA
     }
-    paramToVar[[x]] <- paramNames
-  }
-  for (x in names(referenceLevels)){
-    if (!(referenceLevels[[x]] %in% levels(subset[, x]))){
-        referencePresent[names(referencePresent) %in% paramToVar[[x]]] <- FALSE
-    } else {
-        referencePresent[names(referencePresent) %in% paramToVar[[x]]] <- TRUE
+    paramSplit <- list()
+    for (x in factor) {
+        paramSplit[[x]] <- paramNames[grep(x, paramNames)]
     }
-  }
-  return(unlist(referencePresent))
+    for (x in factor){
+        noIntercept <- all(paste0(x, levels(as.factor(data[, x]))) %in% paramNames)
+        if (noIntercept || (referenceLevels[[x]] %in% levels(subset[, x]))) {
+            for (param in paramSplit[[x]]) {
+                referencePresent[[param]] <- TRUE
+            }
+        } else {
+            for (param in paramSplit[[x]]) {
+                referencePresent[[param]] <- FALSE
+            }
+        }
+    }
+    return(unlist(referencePresent))
 }
 
 #' Get reference levels factors
@@ -139,7 +145,10 @@ getReferenceLevels <- function(dataFrame, formula){
     referenceLevels <- list()
     vars <- all.vars(formula)
     for (x in vars){
-        if (is.factor(dataFrame[, x])){
+        if (is.factor(dataFrame[, x]) || is.character(dataFrame[, x])) {
+            if (is.character(dataFrame[, x])) {
+                dataFrame[, x] <- as.factor(dataFrame[, x])
+            }
             referenceLevels[[x]] <- levels(dataFrame[, x])[1]
         }
     }
@@ -167,6 +176,10 @@ referenceContrast <- function(referencePresent, L, acceptDifferentReference) {
     return(TRUE)
   }
   return(FALSE)
+}
+
+checkFullRank <- function(modelMatrix) {
+    return(qr(modelMatrix)$rank == ncol(modelMatrix))
 }
 
 ##### None exported functions from multcomp package is included here to
