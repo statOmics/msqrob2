@@ -177,29 +177,39 @@ checkFullRank <- function(modelMatrix) {
 ##### During R and Bioc checks
 
 propagateFalseStatus <- function(vectors, statuses) {
-    repeat {
+    # Initialize a flag to track if any status has changed
+    has_changed <- TRUE
+    
+    # Use a while loop that runs until no statuses change
+    while (has_changed) {
+        # Collect all elements from vectors marked as FALSE
         false_elements <- unique(unlist(vectors[statuses == FALSE]))
-
-        new_statuses <- map_lgl(seq_along(vectors), function(i) {
-            if (statuses[i] == TRUE && any(vectors[[i]] %in% false_elements)) {
-                return(FALSE)
-            } else {
-                return(statuses[i])
-            }
-        })
-
-        if (all(new_statuses == statuses)) break
-
+        
+        # Initialize new statuses as the current statuses
+        new_statuses <- statuses
+        
+        # Check each vector and update status if it contains any false element
+        for (i in seq_along(vectors)) {
+        if (statuses[i] == TRUE && any(vectors[[i]] %in% false_elements)) {
+            new_statuses[i] <- FALSE  # Change status to FALSE
+        }
+        }
+        
+        # Check if any status has changed
+        has_changed <- !all(new_statuses == statuses)
+        
+        # Update statuses with new values
         statuses <- new_statuses
     }
-
+    # Create a named vector of unique elements with their final statuses
     all_elements <- unique(unlist(vectors))
     element_status <- setNames(rep(TRUE, length(all_elements)), all_elements)
-
+    
+    # Set the final status of each element based on the propagated statuses
     for (i in seq_along(vectors)) {
         element_status[vectors[[i]]] <- statuses[i]
     }
-
+    
     return(element_status)
 }
 

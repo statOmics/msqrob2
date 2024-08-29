@@ -81,3 +81,26 @@ test_that("referenceContrast", {
     expect_identical(TRUE, msqrob2:::referenceContrast(reference_present_no_ref, L, TRUE))
     expect_identical(TRUE, msqrob2:::referenceContrast(reference_present_ref, L, TRUE))
 })
+
+test_that("propagateFalseStatus", {
+    vector1 <- c("A", "B", "C")
+    vector2 <- c("B", "D", "E")
+    vector3 <- c("E", "F", "G")
+    vector4 <- c("X", "Y", "Z")
+
+    statuses1 <- c(TRUE, FALSE, TRUE, TRUE)
+    statuses2 <- c(TRUE, TRUE, TRUE, TRUE)
+    statuses3 <- c(FALSE, TRUE, TRUE, FALSE)
+
+    vectors <- list(vector1, vector2, vector3, vector4)
+    nam <- c("A", "B", "C", "D", "E", "F", "G", "X", "Y", "Z")
+    exp_status1 <- c(rep(FALSE, 7), rep(TRUE, 3))
+    names(exp_status1) <- nam
+    exp_status2 <- c(rep(TRUE, 10))
+    names(exp_status2) <- nam
+    exp_status3 <- c(rep(FALSE, 10))
+    names(exp_status3) <- nam
+    expect_identical(exp_status1, msqrob2:::propagateFalseStatus(vectors, statuses1))
+    expect_identical(exp_status2, msqrob2:::propagateFalseStatus(vectors, statuses2))
+    expect_identical(exp_status3, msqrob2:::propagateFalseStatus(vectors, statuses3))
+})
