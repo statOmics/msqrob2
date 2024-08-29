@@ -165,10 +165,7 @@ getReferenceLevels <- function(dataFrame, formula){
 #' @rdname referenceContrast
 #' 
 referenceContrast <- function(referencePresent, L, acceptDifferentReference) {
-  if (!acceptDifferentReference && any(!referencePresent[rownames(L)])) {
-    return(TRUE)
-  }
-  return(FALSE)
+  acceptDifferentReference || is.null(referencePresent) || !any(!referencePresent[rownames(L)])
 }
 
 checkFullRank <- function(modelMatrix) {

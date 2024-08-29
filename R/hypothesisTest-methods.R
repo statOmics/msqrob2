@@ -149,7 +149,8 @@ setMethod(
     adjust.method = "BH",
     modelColumn = "msqrobHurdle",
     resultsColumnNamePrefix = "hurdle_",
-    overwrite = FALSE) {
+    overwrite = FALSE,
+    acceptDifferentReference = FALSE) {
         if (sum(paste0(modelColumn, c("Intensity", "Count")) %in% colnames(rowData(object))) != 2) stop("There are no columns for the models of the hurdle components in the rowData of the SummarizedExperiment")
         if (is.null(colnames(contrast)) & resultsColumnNamePrefix == "hurdle_") resultsColumnNamePrefix <- "hurdleResults"
         if (is.null(colnames(contrast)) & ncol(contrast) > 1) colnames(contrast) <- seq_len(ncol(contrast))
@@ -158,8 +159,8 @@ setMethod(
         {
             contrHlp <- contrast[, j]
             names(contrHlp) <- rownames(contrast)
-            intensityComponent <- topFeatures(rowData(object)[, paste0(modelColumn, "Intensity")], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1)
-            countComponent <- topFeatures(rowData(object)[, paste0(modelColumn, "Count")], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1)
+            intensityComponent <- topFeatures(rowData(object)[, paste0(modelColumn, "Intensity")], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1, acceptDifferentReference = acceptDifferentReference)
+            countComponent <- topFeatures(rowData(object)[, paste0(modelColumn, "Count")], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1, acceptDifferentReference = acceptDifferentReference)
 
             sam <- cbind(
                 intensityComponent[, seq_len(5)],
@@ -205,7 +206,8 @@ setMethod(
     adjust.method = "BH",
     modelColumn = "msqrobModels",
     resultsColumnNamePrefix = "",
-    overwrite = FALSE) {
+    overwrite = FALSE,
+    acceptDifferentReference = FALSE) {
         if (is.null(object[[i]])) stop("QFeatures object does not contain an assay with the name ", i)
         if (!(modelColumn %in% colnames(rowData(object[[i]])))) stop("There is no column named \'", modelColumn, "\' with stored models of an msqrob fit in the rowData of assay ", i, "of the QFeatures object.")
         if (is.null(colnames(contrast)) & resultsColumnNamePrefix == "") resultsColumnNamePrefix <- "msqrobResults"
@@ -215,7 +217,7 @@ setMethod(
         {
             contrHlp <- contrast[, j]
             names(contrHlp) <- rownames(contrast)
-            rowData(object[[i]])[[paste0(resultsColumnNamePrefix, colnames(contrast)[j])]] <- topFeatures(rowData(object[[i]])[, modelColumn], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1)
+            rowData(object[[i]])[[paste0(resultsColumnNamePrefix, colnames(contrast)[j])]] <- topFeatures(rowData(object[[i]])[, modelColumn], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1, acceptDifferentReference = acceptDifferentReference)
         }
         return(object)
     }
@@ -232,7 +234,8 @@ setMethod(
     adjust.method = "BH",
     modelColumn = "msqrobHurdle",
     resultsColumnNamePrefix = "hurdle_",
-    overwrite = FALSE) {
+    overwrite = FALSE,
+    acceptDifferentReference = FALSE) {
         if (is.null(object[[i]])) stop("QFeatures object does not contain an assay with the name ", i)
         if (sum(paste0(modelColumn, c("Intensity", "Count")) %in% colnames(rowData(object[[i]]))) != 2) stop("There are no columns for the models of the hurdle components in the rowData of assay ", i, "of the QFeatures object.")
         if (is.null(colnames(contrast)) & resultsColumnNamePrefix == "hurdle_") resultsColumnNamePrefix <- "hurdleResults"
@@ -242,8 +245,8 @@ setMethod(
         {
             contrHlp <- contrast[, j]
             names(contrHlp) <- rownames(contrast)
-            intensityComponent <- topFeatures(rowData(object[[i]])[, paste0(modelColumn, "Intensity")], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1)
-            countComponent <- topFeatures(rowData(object[[i]])[, paste0(modelColumn, "Count")], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1)
+            intensityComponent <- topFeatures(rowData(object[[i]])[, paste0(modelColumn, "Intensity")], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1, acceptDifferentReference = acceptDifferentReference)
+            countComponent <- topFeatures(rowData(object[[i]])[, paste0(modelColumn, "Count")], contrast = contrHlp, adjust.method = adjust.method, sort = FALSE, alpha = 1, acceptDifferentReference = acceptDifferentReference)
 
             sam <- cbind(
                 intensityComponent[, seq_len(5)],

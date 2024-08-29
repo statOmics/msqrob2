@@ -71,13 +71,13 @@ test_that("referenceContrast", {
     reference_present_no_ref <- c(FALSE, FALSE)
     names(reference_present_no_ref) <- c("conditionb", "conditionc")
 
-    expect_identical(TRUE, msqrob2:::referenceContrast(reference_present_no_ref, L, FALSE))
+    expect_identical(FALSE, msqrob2:::referenceContrast(reference_present_no_ref, L, FALSE))
 
     reference_present_ref <- c(TRUE, TRUE)
     names(reference_present_ref) <- c("conditionb", "conditionc")
 
-    expect_identical(FALSE, msqrob2:::referenceContrast(reference_present_ref, L, FALSE))
+    expect_identical(TRUE, msqrob2:::referenceContrast(reference_present_ref, L, FALSE))
 
-    expect_identical(FALSE, msqrob2:::referenceContrast(reference_present_no_ref, L, TRUE))
-    expect_identical(FALSE, msqrob2:::referenceContrast(reference_present_ref, L, TRUE))
+    expect_identical(TRUE, msqrob2:::referenceContrast(reference_present_no_ref, L, TRUE))
+    expect_identical(TRUE, msqrob2:::referenceContrast(reference_present_ref, L, TRUE))
 })

@@ -43,7 +43,7 @@ test_that("getContrast", {
     rownames(res_NA) <- "conditionb=0"
     res_NA_dbl <- matrix(as.double(NA))
     rownames(res_NA_dbl) <- "conditionb=0"
-    expect_identical(res_NA, getContrast(stat_model_list$feat1, L))
+    expect_equal(res_NA, getContrast(stat_model_list$feat1, L))
     expect_equal(res_NA_dbl, getContrast(stat_model_list$feat1, L, TRUE))
 
     res_2 <- matrix(2)

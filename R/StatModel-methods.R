@@ -41,7 +41,7 @@ setMethod(
         if (!is(L, "matrix")) L <- as.matrix(L)
         out <- matrix(rep(NA, ncol(L)))
         rownames(out) <- colnames(L)
-        if (referenceContrast(getReferencePresent(object), L, acceptDifferentReference)) {
+        if (!referenceContrast(getReferencePresent(object), L, acceptDifferentReference)) {
             return(out)
         }
         coefs <- getCoef(object)
@@ -60,7 +60,7 @@ setMethod(
         if (!is(L, "matrix")) L <- as.matrix(L)
         out <- matrix(NA, ncol(L), ncol(L))
         rownames(out) <- colnames(out) <- colnames(L)
-        if (referenceContrast(getReferencePresent(object), L, acceptDifferentReference)) {
+        if (!referenceContrast(getReferencePresent(object), L, acceptDifferentReference)) {
             return(out)
         }
         vcovTmp <- getVcovUnscaled(object) * object@varPosterior
