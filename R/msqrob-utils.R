@@ -103,20 +103,24 @@ makeContrast <- function(contrasts, parameterNames) {
 #' 
 #' @rdname checkReference
 #'
-checkReference <- function(y, data, paramNames, formula) {
-    referenceLevels <- getReferenceLevels(data, formula)
-    factor <- names(referenceLevels)
-    subset <- droplevels(data[!is.na(y), factor, drop = FALSE])
+checkReference <- function(y, data, paramNames, factorReference) {
+    if (length(factorReference) == 0) {
+        return(logical(0))
+    }
+    factors <- factorReference
+    subset <- droplevels(data[!is.na(y), names(factors), drop = FALSE])
     paramSplit <- list()
-    for (x in factor) {
+    for (x in names(factors)) {
         paramSplit[[x]] <- paramNames[grep(x, paramNames)]
     }
-    factor_status <- unlist(lapply(factor, function(x) {
-        noIntercept <- all(paste0(x, levels(as.factor(data[, x]))) %in% paramNames)
-        refPres <- referenceLevels[[x]] %in% levels(subset[, x])
+    factor_status <- unlist(lapply(names(factors), function(x) {
+        factorLevels <- factors[[x]]
+        referenceRef <- factorLevels[1]
+        noIntercept <- all(paste0(x, factorLevels) %in% paramNames)
+        refPres <- referenceRef %in% levels(subset[, x])
         return(noIntercept || refPres)
     }))
-    names(factor_status) <- factor
+    names(factor_status) <- names(factors)
 
     referencePresent <- propagateFalseStatus(paramSplit, factor_status)
 
@@ -146,6 +150,19 @@ getReferenceLevels <- function(dataFrame, formula){
         }
     }
     return(unlist(referenceLevels))
+}
+
+getFormulaFactors <- function(formula, dataFrame) {
+    vars <- all.vars(formula)
+    if(length(vars) == 0) {
+        return(character(0))
+    }
+    nam <- vars[sapply(vars, function(x) is.factor(dataFrame[, x]) || is.character(dataFrame[, x]) )]
+    res <- lapply(nam, function(x) {
+        levels(as.factor(dataFrame[, x]))
+    })
+    names(res) <- nam
+    return(res)
 }
 
 #' Check if the reference levels associated with the contrast are present

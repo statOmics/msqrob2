@@ -61,13 +61,13 @@ msqrobLm <- function(y,
     subsettedDesign <- myDesign[!missingSamples, , drop = FALSE]
     stopifnot("The provided model must be full rank" = checkFullRank(subsettedDesign))
     paramNames <- colnames(myDesign)
+    factorLevels <- getFormulaFactors(formula, data)
     models <- apply(y, 1,
         function(y, design) {
             ## computatability check
             obs <- is.finite(y)
             type <- "fitError"
-
-            referencePresent <- checkReference(y, data, paramNames, formula)
+            referencePresent <- checkReference(y, data, paramNames, factorLevels)
             model <- list(
                 referencePresent = referencePresent, coefficients = NA,
                 vcovUnscaled = NA, sigma = NA,

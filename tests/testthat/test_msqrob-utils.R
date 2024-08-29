@@ -43,24 +43,26 @@ test_that("checkReference", {
     paramNames_no_intercept <- colnames(model.matrix(formula_no_intercept, data = data))
     paramNames_interaction <- colnames(model.matrix(formula_interaction, data = data))
 
+    factorVars <- list(condition = c("a", "b", "c"))
+
     reference_present_no_ref <- c(FALSE, FALSE)
     names(reference_present_no_ref) <- c("conditionb", "conditionc")
-    expect_identical(reference_present_no_ref, msqrob2:::checkReference(y_no_ref, data, paramNames, formula))
+    expect_identical(reference_present_no_ref, msqrob2:::checkReference(y_no_ref, data, paramNames, factorVars))
 
     reference_present_no_int <- c(TRUE, TRUE, TRUE)
     names(reference_present_no_int) <- c("conditiona", "conditionb", "conditionc")
-    expect_identical(reference_present_no_int, msqrob2:::checkReference(y_no_ref, data, paramNames_no_intercept, formula_no_intercept))
+    expect_identical(reference_present_no_int, msqrob2:::checkReference(y_no_ref, data, paramNames_no_intercept, factorVars))
 
     reference_present_ref <- c(TRUE, TRUE)
     names(reference_present_ref) <- c("conditionb", "conditionc")
-    expect_identical(reference_present_ref, msqrob2:::checkReference(y_ref, data, paramNames, formula))
+    expect_identical(reference_present_ref, msqrob2:::checkReference(y_ref, data, paramNames, factorVars))
 
     reference_no_var <- logical(0)
-    expect_identical(reference_no_var, msqrob2:::checkReference(y_ref, data, c("(Intercept)"), as.formula(~1)))
+    expect_identical(reference_no_var, msqrob2:::checkReference(y_ref, data, c("(Intercept)"), character(0)))
 
     reference_interaction <- rep(FALSE, length(paramNames_interaction[-1]))
     names(reference_interaction) <- paramNames_interaction[-1]
-    expect_identical(reference_interaction, msqrob2:::checkReference(y_no_ref, data, paramNames_interaction, formula_interaction))
+    expect_identical(reference_interaction, msqrob2:::checkReference(y_no_ref, data, paramNames_interaction, factorVars))
 })
 
 test_that("referenceContrast", {
