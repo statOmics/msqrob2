@@ -23,11 +23,11 @@ test_that("msqrobLm", {
     Y <- .create_minimal_data()$Y
     msqrobLm_object <- msqrobLm(Y, form_cond, data, robust = FALSE)
 
-    reference_present_no_ref <- c(NA, FALSE, FALSE)
-    names(reference_present_no_ref) <- c("(Intercept)", "conditionb", "conditionc")
+    reference_present_no_ref <- c(FALSE, FALSE)
+    names(reference_present_no_ref) <- c("conditionb", "conditionc")
     expect_identical(reference_present_no_ref, msqrobLm_object$feat1@params$referencePresent)
 
-    reference_present_ref <- c(NA, TRUE, TRUE)
-    names(reference_present_ref) <- c("(Intercept)", "conditionb", "conditionc")
+    reference_present_ref <- c(TRUE, TRUE)
+    names(reference_present_ref) <- c("conditionb", "conditionc")
     expect_identical(reference_present_ref, msqrobLm_object$feat2@params$referencePresent)
     })

@@ -107,26 +107,19 @@ checkReference <- function(y, data, paramNames, formula) {
     referenceLevels <- getReferenceLevels(data, formula)
     factor <- names(referenceLevels)
     subset <- droplevels(data[!is.na(y), factor, drop = FALSE])
-    referencePresent <- list()
-    for (param in paramNames) {
-      referencePresent[[param]] <- NA
-    }
     paramSplit <- list()
     for (x in factor) {
         paramSplit[[x]] <- paramNames[grep(x, paramNames)]
     }
-    for (x in factor){
+    factor_status <- unlist(lapply(factor, function(x) {
         noIntercept <- all(paste0(x, levels(as.factor(data[, x]))) %in% paramNames)
-        if (noIntercept || (referenceLevels[[x]] %in% levels(subset[, x]))) {
-            for (param in paramSplit[[x]]) {
-                referencePresent[[param]] <- TRUE
-            }
-        } else {
-            for (param in paramSplit[[x]]) {
-                referencePresent[[param]] <- FALSE
-            }
-        }
-    }
+        refPres <- referenceLevels[[x]] %in% levels(subset[, x])
+        return(noIntercept || refPres)
+    }))
+    names(factor_status) <- factor
+
+    referencePresent <- propagateFalseStatus(paramSplit, factor_status)
+
     return(unlist(referencePresent))
 }
 
@@ -182,8 +175,36 @@ checkFullRank <- function(modelMatrix) {
     return(qr(modelMatrix)$rank == ncol(modelMatrix))
 }
 
+
 ##### None exported functions from multcomp package is included here to
 ##### During R and Bioc checks
+
+propagateFalseStatus <- function(vectors, statuses) {
+    repeat {
+        false_elements <- unique(unlist(vectors[statuses == FALSE]))
+
+        new_statuses <- map_lgl(seq_along(vectors), function(i) {
+            if (statuses[i] == TRUE && any(vectors[[i]] %in% false_elements)) {
+                return(FALSE)
+            } else {
+                return(statuses[i])
+            }
+        })
+
+        if (all(new_statuses == statuses)) break
+
+        statuses <- new_statuses
+    }
+
+    all_elements <- unique(unlist(vectors))
+    element_status <- setNames(rep(TRUE, length(all_elements)), all_elements)
+
+    for (i in seq_along(vectors)) {
+        element_status[vectors[[i]]] <- statuses[i]
+    }
+
+    return(element_status)
+}
 
 
 .chrlinfct2matrix <- function(ex, var) {
