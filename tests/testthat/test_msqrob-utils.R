@@ -19,16 +19,20 @@
         y_ref = y_ref))
 }
 
-test_that("getReferenceLevels", {
+test_that("getFormulaFactors", {
     data <- .create_minimal_data()$data
     form <- .create_minimal_data()$form
     form_num <- .create_minimal_data()$form_num
+    form_no_intercept <- .create_minimal_data()$form_no_intercept
+    form_interaction <- .create_minimal_data()$form_interaction
 
-    expect_identical(NULL, msqrob2:::getReferenceLevels(data, form_num))
-
-    referenceCond <- "a"
-    names(referenceCond) <- "condition"
-    expect_identical(referenceCond, msqrob2:::getReferenceLevels(data, form))
+    res <- list(condition = c("a", "b", "c"))
+    res_num <- setNames(list(), character(0))
+    res_interaction <- list(condition = c("a", "b", "c"), condition2 = c("a", "b", "c", "d", "e"))
+    expect_identical(res, getFormulaFactors(form, data))
+    expect_identical(res_num, getFormulaFactors(form_num, data))
+    expect_identical(res, getFormulaFactors(form_no_intercept, data))
+    expect_identical(res_interaction, getFormulaFactors(form_interaction, data))
 })
 
 test_that("checkReference", {
@@ -47,22 +51,22 @@ test_that("checkReference", {
 
     reference_present_no_ref <- c(FALSE, FALSE)
     names(reference_present_no_ref) <- c("conditionb", "conditionc")
-    expect_identical(reference_present_no_ref, msqrob2:::checkReference(y_no_ref, data, paramNames, factorVars))
+    expect_identical(reference_present_no_ref, checkReference(y_no_ref, data, paramNames, factorVars))
 
     reference_present_no_int <- c(TRUE, TRUE, TRUE)
     names(reference_present_no_int) <- c("conditiona", "conditionb", "conditionc")
-    expect_identical(reference_present_no_int, msqrob2:::checkReference(y_no_ref, data, paramNames_no_intercept, factorVars))
+    expect_identical(reference_present_no_int, checkReference(y_no_ref, data, paramNames_no_intercept, factorVars))
 
     reference_present_ref <- c(TRUE, TRUE)
     names(reference_present_ref) <- c("conditionb", "conditionc")
-    expect_identical(reference_present_ref, msqrob2:::checkReference(y_ref, data, paramNames, factorVars))
+    expect_identical(reference_present_ref, checkReference(y_ref, data, paramNames, factorVars))
 
     reference_no_var <- logical(0)
-    expect_identical(reference_no_var, msqrob2:::checkReference(y_ref, data, c("(Intercept)"), character(0)))
+    expect_identical(reference_no_var, checkReference(y_ref, data, c("(Intercept)"), character(0)))
 
     reference_interaction <- rep(FALSE, length(paramNames_interaction[-1]))
     names(reference_interaction) <- paramNames_interaction[-1]
-    expect_identical(reference_interaction, msqrob2:::checkReference(y_no_ref, data, paramNames_interaction, factorVars))
+    expect_identical(reference_interaction, checkReference(y_no_ref, data, paramNames_interaction, factorVars))
 })
 
 test_that("referenceContrast", {
@@ -73,15 +77,15 @@ test_that("referenceContrast", {
     reference_present_no_ref <- c(FALSE, FALSE)
     names(reference_present_no_ref) <- c("conditionb", "conditionc")
 
-    expect_identical(FALSE, msqrob2:::referenceContrast(reference_present_no_ref, L, FALSE))
+    expect_identical(FALSE, referenceContrast(reference_present_no_ref, L, FALSE))
 
     reference_present_ref <- c(TRUE, TRUE)
     names(reference_present_ref) <- c("conditionb", "conditionc")
 
-    expect_identical(TRUE, msqrob2:::referenceContrast(reference_present_ref, L, FALSE))
+    expect_identical(TRUE, referenceContrast(reference_present_ref, L, FALSE))
 
-    expect_identical(TRUE, msqrob2:::referenceContrast(reference_present_no_ref, L, TRUE))
-    expect_identical(TRUE, msqrob2:::referenceContrast(reference_present_ref, L, TRUE))
+    expect_identical(TRUE, referenceContrast(reference_present_no_ref, L, TRUE))
+    expect_identical(TRUE, referenceContrast(reference_present_ref, L, TRUE))
 })
 
 test_that("propagateFalseStatus", {
@@ -102,7 +106,7 @@ test_that("propagateFalseStatus", {
     names(exp_status2) <- nam
     exp_status3 <- c(rep(FALSE, 10))
     names(exp_status3) <- nam
-    expect_identical(exp_status1, msqrob2:::propagateFalseStatus(vectors, statuses1))
-    expect_identical(exp_status2, msqrob2:::propagateFalseStatus(vectors, statuses2))
-    expect_identical(exp_status3, msqrob2:::propagateFalseStatus(vectors, statuses3))
+    expect_identical(exp_status1, propagateFalseStatus(vectors, statuses1))
+    expect_identical(exp_status2, propagateFalseStatus(vectors, statuses2))
+    expect_identical(exp_status3, propagateFalseStatus(vectors, statuses3))
 })

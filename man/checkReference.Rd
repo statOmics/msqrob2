@@ -4,7 +4,7 @@
 \alias{checkReference}
 \title{Check for presence of reference levels}
 \usage{
-checkReference(y, data, referenceLevels)
+checkReference(y, data, paramNames, factorLevels)
 }
 \arguments{
 \item{y}{A numeric vector with the feature values for each sample.}
@@ -13,13 +13,14 @@ checkReference(y, data, referenceLevels)
 the same number of rows as the number of columns (samples) of
 \code{y}.}
 
-\item{formula}{Model formula. The model is built based on the
-covariates in the data object.}
+\item{paramNames}{A \code{character} vector with the names of the parameters in the model.}
 
-\item{paramNames}{character vector specifying the model parameters that are present in the global model matrix}
+\item{factorLevels}{A list with the levels of the factors in the model. The names of the list
+should correspond to the factor variables present in the model.}
 }
 \value{
-A logical vector indicating for each parameter in the model if his reference level has values for the current feature.
+A logical vector indicating for each parameter (that comes from a factor variable) in the model
+if his reference level has values for the current feature.
 }
 \description{
 Check if the reference levels of the factors in the model are present for a specific feature.
