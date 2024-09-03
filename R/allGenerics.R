@@ -19,7 +19,9 @@ setGeneric("getVarPosterior", function(object) standardGeneric("getVarPosterior"
 #' @export
 setGeneric("getSigmaPosterior", function(object) standardGeneric("getSigmaPosterior"))
 #' @export
-setGeneric("getContrast", function(object, L) standardGeneric("getContrast"))
+setGeneric("getReferencePresent", function(object) standardGeneric("getReferencePresent"))
+#' @export
+setGeneric("getContrast", function(object, ...) standardGeneric("getContrast"))
 #' @export
 setGeneric("getVcovUnscaled", function(object) standardGeneric("getVcovUnscaled"))
 #' @export

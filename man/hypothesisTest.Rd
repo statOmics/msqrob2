@@ -16,7 +16,8 @@ expression analysis}
   adjust.method = "BH",
   modelColumn = "msqrobModels",
   resultsColumnNamePrefix = "",
-  overwrite = FALSE
+  overwrite = FALSE,
+  acceptDifferentReference = FALSE
 )
 
 \S4method{hypothesisTestHurdle}{SummarizedExperiment}(
@@ -25,7 +26,8 @@ expression analysis}
   adjust.method = "BH",
   modelColumn = "msqrobHurdle",
   resultsColumnNamePrefix = "hurdle_",
-  overwrite = FALSE
+  overwrite = FALSE,
+  acceptDifferentReference = FALSE
 )
 
 \S4method{hypothesisTest}{QFeatures}(
@@ -35,7 +37,8 @@ expression analysis}
   adjust.method = "BH",
   modelColumn = "msqrobModels",
   resultsColumnNamePrefix = "",
-  overwrite = FALSE
+  overwrite = FALSE,
+  acceptDifferentReference = FALSE
 )
 
 \S4method{hypothesisTestHurdle}{QFeatures}(
@@ -45,7 +48,8 @@ expression analysis}
   adjust.method = "BH",
   modelColumn = "msqrobHurdle",
   resultsColumnNamePrefix = "hurdle_",
-  overwrite = FALSE
+  overwrite = FALSE,
+  acceptDifferentReference = FALSE
 )
 }
 \arguments{

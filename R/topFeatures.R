@@ -18,6 +18,9 @@
 #'        to statistical significance.
 #' @param alpha `numeric` specifying the cutoff value for adjusted p-values.
 #'        Only features with lower p-values are listed.
+#' @param acceptDifferentReference `boolean(1)` to indicate if the contrasts that involve
+#'        parameters with modified reference levels are returned. Watch out putting this
+#'        parameter to TRUE can change the interpretation of the logFC. Default is FALSE.
 #'
 #' @examples
 #' data(pe)
@@ -43,29 +46,36 @@
 #' @author Lieven Clement
 #' @export
 
-topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alpha = 1) {
-    if (is(contrast, "matrix")) {
-          if (ncol(contrast) > 1) {
-                stop("Argument contrast is matrix with more than one column, only one contrast is allowed")
-            }
+topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alpha = 1, acceptDifferentReference = FALSE) {
+    contrast  <- as.matrix(contrast)
+    if (ncol(contrast) > 1) {
+            stop("Argument contrast is matrix with more than one column, only one contrast is allowed")
     }
-  
-    contrast <- contrast[contrast !=0]
+    contrast <- contrast[contrast != 0, , drop = FALSE]
     logFC <- vapply(models,
         getContrast,
         numeric(1),
-        L = contrast
+        L = contrast,
+        acceptDifferentReference = acceptDifferentReference
     )
     se <- sqrt(vapply(models,
         varContrast,
         numeric(1),
-        L = contrast
+        L = contrast,
+        acceptDifferentReference = acceptDifferentReference
     ))
     df <- vapply(models, getDfPosterior, numeric(1))
     t <- logFC / se
     pval <- pt(-abs(t), df) * 2
     adjPval <- p.adjust(pval, method = adjust.method)
+
     out <- data.frame(logFC, se, df, t, pval, adjPval)
+    if (acceptDifferentReference) {
+        out[["DifferentReference"]] <- vapply(models, function(y){
+            any(!getReferencePresent(y)[rownames(contrast)])},
+            logical(1)
+        )
+    }
     if (sort) {
         if (alpha < 1) {
             ids <- adjPval < alpha

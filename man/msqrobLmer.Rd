@@ -90,7 +90,7 @@ pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
 
 # Fit MSqrob model using robust ridge regression upon summarization of
 # peptide intensities into protein expression values
-modelsRidge <- msqrobLmer(assay(pe[["protein"]]), ~condition, data = colData(pe), 
+modelsRidge <- msqrobLmer(assay(pe[["protein"]]), ~condition, data = colData(pe),
                           ridge = TRUE)
 getCoef(modelsRidge[[1]])
 

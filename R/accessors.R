@@ -14,6 +14,8 @@
 #'              \item{getSigmaPosterior(object)}{to get the empirical Bayes standard deviation}
 #'              \item{getVcovUnscaled(object)}{to get the unscaled variance covariance matrix
 #'                of the model parameters}
+#'              \item{getReferencePresent(object)}{to get the vector of logicals indicating if the
+#'               reference level associated with a model parameter is present}
 #'              }
 #'
 #' @rdname statModelAccessors
@@ -94,4 +96,10 @@ setMethod("getSigma",
 setMethod("getVcovUnscaled",
     signature = "StatModel",
     definition = function(object) object@params$vcovUnscaled
+)
+
+#' @rdname statModelAccessors
+setMethod("getReferencePresent",
+    signature = "StatModel",
+    definition = function(object) object@params$referencePresent
 )

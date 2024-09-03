@@ -1,0 +1,112 @@
+.create_minimal_data <- function() {
+    y_no_ref <- c(rep(NA,5), rep(1,10))
+    names(y_no_ref) <- 1:15
+    y_ref <- c(rep(1,5), rep(1,5), rep(1,5))
+    names(y_ref) <- 1:15
+    data <- data.frame(condition = as.factor(rep(letters[1:3], c(5,5,5))),
+        condition2 = as.factor(rep(letters[1:5], 3)),
+        numerical = c(1:5, 1:5, 1:5),
+        row.names = 1:15)
+    form <- formula(~ 1 + condition + numerical, data = data)
+    form_num <- formula(~ 1 + numerical, data = data)
+    form_no_intercept <- formula(~ -1 + condition + numerical, data = data)
+    form_interaction <- formula(~ 1 + condition*condition2, data = data)
+    return(list(data = data, form = form,
+        form_num = form_num,
+        form_no_intercept = form_no_intercept,
+        form_interaction = form_interaction,
+        y_no_ref = y_no_ref,
+        y_ref = y_ref))
+}
+
+test_that("getFormulaFactors", {
+    data <- .create_minimal_data()$data
+    form <- .create_minimal_data()$form
+    form_num <- .create_minimal_data()$form_num
+    form_no_intercept <- .create_minimal_data()$form_no_intercept
+    form_interaction <- .create_minimal_data()$form_interaction
+
+    res <- list(condition = c("a", "b", "c"))
+    res_num <- setNames(list(), character(0))
+    res_interaction <- list(condition = c("a", "b", "c"), condition2 = c("a", "b", "c", "d", "e"))
+    expect_identical(res, getFormulaFactors(form, data))
+    expect_identical(res_num, getFormulaFactors(form_num, data))
+    expect_identical(res, getFormulaFactors(form_no_intercept, data))
+    expect_identical(res_interaction, getFormulaFactors(form_interaction, data))
+})
+
+test_that("checkReference", {
+    data <- .create_minimal_data()$data
+    y_no_ref <- .create_minimal_data()$y_no_ref
+    y_ref <- .create_minimal_data()$y_ref
+    formula <- .create_minimal_data()$form
+    formula_no_intercept <- .create_minimal_data()$form_no_intercept
+    formula_interaction <- .create_minimal_data()$form_interaction
+
+    paramNames <- colnames(model.matrix(formula, data = data))
+    paramNames_no_intercept <- colnames(model.matrix(formula_no_intercept, data = data))
+    paramNames_interaction <- colnames(model.matrix(formula_interaction, data = data))
+
+    factorVars <- list(condition = c("a", "b", "c"))
+
+    reference_present_no_ref <- c(FALSE, FALSE)
+    names(reference_present_no_ref) <- c("conditionb", "conditionc")
+    expect_identical(reference_present_no_ref, checkReference(y_no_ref, data, paramNames, factorVars))
+
+    reference_present_no_int <- c(TRUE, TRUE, TRUE)
+    names(reference_present_no_int) <- c("conditiona", "conditionb", "conditionc")
+    expect_identical(reference_present_no_int, checkReference(y_no_ref, data, paramNames_no_intercept, factorVars))
+
+    reference_present_ref <- c(TRUE, TRUE)
+    names(reference_present_ref) <- c("conditionb", "conditionc")
+    expect_identical(reference_present_ref, checkReference(y_ref, data, paramNames, factorVars))
+
+    reference_no_var <- logical(0)
+    expect_identical(reference_no_var, checkReference(y_ref, data, c("(Intercept)"), character(0)))
+
+    reference_interaction <- rep(FALSE, length(paramNames_interaction[-1]))
+    names(reference_interaction) <- paramNames_interaction[-1]
+    expect_identical(reference_interaction, checkReference(y_no_ref, data, paramNames_interaction, factorVars))
+})
+
+test_that("referenceContrast", {
+    L <- matrix(c(1, 0), nrow = 2, byrow = TRUE)
+    colnames(L) <- "conditionb=0"
+    rownames(L) <- c("conditionb", "conditionc")
+
+    reference_present_no_ref <- c(FALSE, FALSE)
+    names(reference_present_no_ref) <- c("conditionb", "conditionc")
+
+    expect_identical(FALSE, referenceContrast(reference_present_no_ref, L, FALSE))
+
+    reference_present_ref <- c(TRUE, TRUE)
+    names(reference_present_ref) <- c("conditionb", "conditionc")
+
+    expect_identical(TRUE, referenceContrast(reference_present_ref, L, FALSE))
+
+    expect_identical(TRUE, referenceContrast(reference_present_no_ref, L, TRUE))
+    expect_identical(TRUE, referenceContrast(reference_present_ref, L, TRUE))
+})
+
+test_that("propagateFalseStatus", {
+    vector1 <- c("A", "B", "C")
+    vector2 <- c("B", "D", "E")
+    vector3 <- c("E", "F", "G")
+    vector4 <- c("X", "Y", "Z")
+
+    statuses1 <- c(TRUE, FALSE, TRUE, TRUE)
+    statuses2 <- c(TRUE, TRUE, TRUE, TRUE)
+    statuses3 <- c(FALSE, TRUE, TRUE, FALSE)
+
+    vectors <- list(vector1, vector2, vector3, vector4)
+    nam <- c("A", "B", "C", "D", "E", "F", "G", "X", "Y", "Z")
+    exp_status1 <- c(rep(FALSE, 7), rep(TRUE, 3))
+    names(exp_status1) <- nam
+    exp_status2 <- c(rep(TRUE, 10))
+    names(exp_status2) <- nam
+    exp_status3 <- c(rep(FALSE, 10))
+    names(exp_status3) <- nam
+    expect_identical(exp_status1, propagateFalseStatus(vectors, statuses1))
+    expect_identical(exp_status2, propagateFalseStatus(vectors, statuses2))
+    expect_identical(exp_status3, propagateFalseStatus(vectors, statuses3))
+})

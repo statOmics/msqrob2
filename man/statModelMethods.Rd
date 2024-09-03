@@ -9,9 +9,9 @@
 \alias{varContrast,StatModel-method}
 \title{Methods for StatModel class}
 \usage{
-\S4method{getContrast}{StatModel}(object, L)
+\S4method{getContrast}{StatModel}(object, L, acceptDifferentReference = FALSE)
 
-\S4method{varContrast}{StatModel}(object, L)
+\S4method{varContrast}{StatModel}(object, L, acceptDifferentReference = FALSE)
 }
 \arguments{
 \item{object}{A list with elements of the class \code{StatModel} that are
@@ -21,6 +21,10 @@ estimated using the \code{\link{msqrob}} function}
 the linear model coefficients to be tested equal to zero.
 The rownames of the matrix should be equal to the names of
 parameters of the model.}
+
+\item{acceptDifferentReference}{\code{boolean(1)} to indicate if the contrasts that involve
+parameters with modified reference levels are returned. Watch out putting this
+parameter to TRUE can change the interpretation of the logFC. Default is FALSE.}
 }
 \value{
 A matrix with the calculated contrasts or variance-covariance matrix of contrasts

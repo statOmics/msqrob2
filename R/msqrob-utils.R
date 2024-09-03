@@ -86,8 +86,141 @@ makeContrast <- function(contrasts, parameterNames) {
     return(t(.chrlinfct2matrix(contrasts, parameterNames)$K))
 }
 
+
+#' Check for presence of reference levels
+#' @description Check if the reference levels of the factors in the model are present for a specific feature.
+#'
+#' @param y A numeric vector with the feature values for each sample.
+#'
+#' @param data A `DataFrame` with information on the design. It has
+#'        the same number of rows as the number of columns (samples) of
+#'        `y`.
+#' 
+#' @param paramNames A `character` vector with the names of the parameters in the model.
+#' 
+#' @param factorLevels A list with the levels of the factors in the model. The names of the list
+#'       should correspond to the factor variables present in the model.
+#' 
+#' @return A logical vector indicating for each parameter (that comes from a factor variable) in the model 
+#' if his reference level has values for the current feature.
+#' 
+#' @rdname checkReference
+#'
+checkReference <- function(y, data, paramNames, factorLevels) {
+    if (length(factorLevels) == 0) {
+        return(logical(0))
+    }
+    factors <- factorLevels
+    subset <- droplevels(data[!is.na(y), names(factors), drop = FALSE])
+    paramSplit <- list()
+    for (x in names(factors)) {
+        paramSplit[[x]] <- paramNames[grep(x, paramNames)]
+    }
+    factor_status <- unlist(lapply(names(factors), function(x) {
+        factorLevels <- factors[[x]]
+        referenceRef <- factorLevels[1]
+        noIntercept <- all(paste0(x, factorLevels) %in% paramNames)
+        refPres <- referenceRef %in% levels(subset[, x])
+        return(noIntercept || refPres)
+    }))
+    names(factor_status) <- names(factors)
+
+    referencePresent <- propagateFalseStatus(paramSplit, factor_status)
+
+    return(unlist(referencePresent))
+}
+
+#' Get the levels of the factors in the model
+#' 
+#' @description Get the levels of the factors in the model associated with the factors
+#'            names.
+#' 
+#' @param data A `DataFrame` with information on the design. Contains the variables that are used in the model.
+#' 
+#' @param formula A `formula` object that specifies the model.
+#' 
+#' @return A list with the levels of the factors in the model. The names of the list
+#'        correspond to the factor variables present in the model.
+#' 
+#' @rdname getFormulaFactors
+#' 
+getFormulaFactors <- function(formula, dataFrame) {
+    vars <- all.vars(formula)
+    if(length(vars) == 0) {
+        return(character(0))
+    }
+    nam <- vars[sapply(vars, function(x) is.factor(dataFrame[, x]) || is.character(dataFrame[, x]) )]
+    res <- lapply(nam, function(x) {
+        levels(as.factor(dataFrame[, x]))
+    })
+    names(res) <- nam
+    return(res)
+}
+
+#' Check if the reference levels associated with the contrast are present
+#' @description Check if the reference levels associated with the contrast are present
+#'
+#' @param referencePresent A logical vector indicating for each parameter in the model 
+#' if his reference level has values for the current feature.
+#'
+#' @param L A numeric contrast matrix with rownames that equal the model parameters 
+#' that are involved in the contrasts
+#'
+#' @param acceptDifferentReference `boolean(1)` to indicate if the contrasts that involve
+#' parameters with modified reference levels are returned.
+#' 
+#' @return A boolean
+#' 
+#' @rdname referenceContrast
+#' 
+referenceContrast <- function(referencePresent, L, acceptDifferentReference) {
+  acceptDifferentReference || is.null(referencePresent) || !any(!referencePresent[rownames(L)])
+}
+
+checkFullRank <- function(modelMatrix) {
+    return(qr(modelMatrix)$rank == ncol(modelMatrix))
+}
+
+
 ##### None exported functions from multcomp package is included here to
 ##### During R and Bioc checks
+
+propagateFalseStatus <- function(vectors, statuses) {
+    # Initialize a flag to track if any status has changed
+    has_changed <- TRUE
+    
+    # Use a while loop that runs until no statuses change
+    while (has_changed) {
+        # Collect all elements from vectors marked as FALSE
+        false_elements <- unique(unlist(vectors[statuses == FALSE]))
+        
+        # Initialize new statuses as the current statuses
+        new_statuses <- statuses
+        
+        # Check each vector and update status if it contains any false element
+        for (i in seq_along(vectors)) {
+        if (statuses[i] == TRUE && any(vectors[[i]] %in% false_elements)) {
+            new_statuses[i] <- FALSE  # Change status to FALSE
+        }
+        }
+        
+        # Check if any status has changed
+        has_changed <- !all(new_statuses == statuses)
+        
+        # Update statuses with new values
+        statuses <- new_statuses
+    }
+    # Create a named vector of unique elements with their final statuses
+    all_elements <- unique(unlist(vectors))
+    element_status <- setNames(rep(TRUE, length(all_elements)), all_elements)
+    
+    # Set the final status of each element based on the propagated statuses
+    for (i in seq_along(vectors)) {
+        element_status[vectors[[i]]] <- statuses[i]
+    }
+    
+    return(element_status)
+}
 
 
 .chrlinfct2matrix <- function(ex, var) {
@@ -668,3 +801,4 @@ makeContrast <- function(contrasts, parameterNames) {
         ex, " to character"
     )
 }
+

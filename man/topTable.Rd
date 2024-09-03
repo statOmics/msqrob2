@@ -4,7 +4,14 @@
 \alias{topFeatures}
 \title{Toplist of DE proteins, peptides or features}
 \usage{
-topFeatures(models, contrast, adjust.method = "BH", sort = TRUE, alpha = 1)
+topFeatures(
+  models,
+  contrast,
+  adjust.method = "BH",
+  sort = TRUE,
+  alpha = 1,
+  acceptDifferentReference = FALSE
+)
 }
 \arguments{
 \item{models}{A list with elements of the class \code{StatModel} that are
@@ -27,6 +34,10 @@ to statistical significance.}
 
 \item{alpha}{\code{numeric} specifying the cutoff value for adjusted p-values.
 Only features with lower p-values are listed.}
+
+\item{acceptDifferentReference}{\code{boolean(1)} to indicate if the contrasts that involve
+parameters with modified reference levels are returned. Watch out putting this
+parameter to TRUE can change the interpretation of the logFC. Default is FALSE.}
 }
 \value{
 A dataframe with log2 fold changes (logFC), standard errors (se),
