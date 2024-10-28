@@ -116,7 +116,7 @@ msqrobLm <- function(y,
                     vcovUnscaled[names(mod$coef), names(mod$coef)] <- msqrob2:::.vcovUnscaled(mod)
 
                     model <- list(
-                        coefficients = mod$coef,
+                        coefficients = coef,
                         vcovUnscaled = .vcovUnscaled(mod),
                         sigma = sigma,
                         df.residual = df.residual,
