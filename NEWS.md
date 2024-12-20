@@ -1,3 +1,9 @@
+# msqrob 1.15
+
+# msqrob 1.15.0
+
+- New Bioconductor devel release 3.21
+
 # msqrob 1.14
 
 # msqrob 1.14.1
