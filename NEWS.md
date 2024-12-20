@@ -1,3 +1,14 @@
+# msqrob 1.14
+
+# msqrob 1.14.1
+
+- Added more flexibility in the msqrobLM function for models with missing variables
+- Fixed full rank check for models without ridge in certain cases
+
+# msqrob 1.14.0
+
+- New Bioconductor stable release 3.20
+
 # msqrob 1.13
 
 # msqrob 1.13.1
@@ -11,7 +22,7 @@
 # msqrob 1.12
 
 # msqrob 1.12.0
-
+ 
 - New Bioconductor stable release 3.19
 
 # msqrob 1.11.2
