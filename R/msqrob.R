@@ -116,7 +116,7 @@ msqrobLm <- function(y,
                     vcovUnscaled[names(mod$coef), names(mod$coef)] <- msqrob2:::.vcovUnscaled(mod)
 
                     model <- list(
-                        coefficients = mod$coef,
+                        coefficients = coef,
                         vcovUnscaled = .vcovUnscaled(mod),
                         sigma = sigma,
                         df.residual = df.residual,
@@ -476,9 +476,8 @@ msqrobLmer <- function(y,
   formula <- update.formula(formula, y~.)
 
   data$y <- as.matrix(y)
-  data <- data[!is.na(data$y), , drop = FALSE]
   data_model_matrix <- data_model_matrix[!is.na(data$y), , drop = FALSE]
-
+  data <- data[!is.na(data$y), , drop = FALSE]
   #Checking for reference class changes
   #nonestimable_parameters <- limma::nonEstimable(data_model_matrix)
   data_model_matrix <- data_model_matrix[,colMeans(data_model_matrix == 0) != 1 , drop = FALSE]
