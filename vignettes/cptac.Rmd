@@ -36,6 +36,7 @@ Examples on our peptide-based workflows and on the analysis of more complex desi
 Technical details on our methods can be found in [@goeminne2016], [@goeminne2020] and [@sticker2020].
 
 # Background
+
 This case-study is a subset of the data of the 6th study of the Clinical
 Proteomic Technology Assessment for Cancer (CPTAC).
 In this experiment, the authors spiked the Sigma Universal Protein Standard
@@ -56,7 +57,7 @@ this peptideRaws.txt file can be found by default in the
 "path_to_raw_files/combined/txt/" folder from the MaxQuant output,
 with "path_to_raw_files" the folder where the raw files were saved.
 In this vignette, we use a MaxQuant peptideRaws file which is a subset
-of the cptac study. This data is available in the `msdata` package.
+of the cptac study. This data is available in the `MsDataHub` package.
 To import the data we use the `QFeatures` package.
 
 We generate the object peptideRawFile with the path to the peptideRaws.txt file.
@@ -71,12 +72,10 @@ library(msqrob2)
 library(plotly)
 library(gridExtra)
 
-peptidesFile <- msdata::quant(pattern = "cptac_a_b_peptides", full.names = TRUE)
-
-ecols <- grep("Intensity\\.", names(read.delim(peptidesFile)))
-
+peptides <- read.delim(MsDataHub::cptac_a_b_peptides.txt())
+ecols <- grep("Intensity\\.", colnames(peptides))
 pe <- readQFeatures(
-    assayData = read.delim(peptidesFile), fnames = 1, quantCols = ecols,
+    assayData = peptides, fnames = "Sequence", quantCols = ecols,
     name = "peptideRaw", sep = "\t"
 )
 ```

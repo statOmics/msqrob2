@@ -1,7 +1,13 @@
 # msqrob 1.13
 
+# msqrob 1.13.2
+
+- (nothing yet)
+
 # msqrob 1.13.1
 
+- fix: fixed fnames in cptac vignette and moved away from `msdata` to 
+  rely on `MsDataHub` instead
 - Implemented msqrobAggregate() method for SummarizedExperiment objects. 
 
 # msqrob 1.13.0
