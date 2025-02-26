@@ -1,13 +1,29 @@
-# msqrob 1.13
+# msqrob 1.15
 
-# msqrob 1.13.2
-
-- (nothing yet)
-
-# msqrob 1.13.1
+# msqrob 1.15.1
 
 - fix: fixed fnames in cptac vignette and moved away from `msdata` to 
   rely on `MsDataHub` instead
+
+# msqrob 1.15.0
+
+- New Bioconductor devel release 3.21
+
+# msqrob 1.14
+
+# msqrob 1.14.1
+
+- Added more flexibility in the msqrobLM function for models with missing variables
+- Fixed full rank check for models without ridge in certain cases
+
+# msqrob 1.14.0
+
+- New Bioconductor stable release 3.20
+
+# msqrob 1.13
+
+# msqrob 1.13.1
+
 - Implemented msqrobAggregate() method for SummarizedExperiment objects. 
 
 # msqrob 1.13.0
@@ -17,7 +33,7 @@
 # msqrob 1.12
 
 # msqrob 1.12.0
-
+ 
 - New Bioconductor stable release 3.19
 
 # msqrob 1.11.2
