@@ -55,7 +55,9 @@
 #' @param aggregateFun A function used for quantitative feature aggregation.
 #'        Details can be found in the documentation of the `aggregateFeatures`
 #'        of the `QFeatures` package.
-#'
+#'        
+#' @param ... Additional arguments passed to the function specified in the `aggregateFun` argument.
+#' 
 #' @param modelColumnName `character` to indicate the variable name that is used
 #'        to store the msqrob models in the rowData of the SummarizedExperiment
 #'        instance or of the assay of the QFeatures instance. Default is "msqrobModels".
@@ -109,7 +111,8 @@ setMethod(
              maxitRob = 1,
              tol = 1e-6,
              doQR = TRUE,
-             lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
+             lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
+             ...) {
         if (!fcol %in% colnames(rowData(object)))
             stop("The rowData does not contain variable '", fcol, "'.")
         if (ridge == FALSE & is.null(findbars(formula)) ){
@@ -157,7 +160,8 @@ setMethod(
         object <- QFeatures::aggregateFeatures(
             object = object,
             fcol = fcol,
-            fun = aggregateFun
+            fun = aggregateFun,
+            ...
         )
 
         rowData(object)[[modelColumnName]] <- modelOutput
@@ -181,7 +185,8 @@ setMethod(
              maxitRob = 1,
              tol = 1e-6,
              doQR = TRUE,
-             lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
+             lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
+             ...) {
         if (is.null(object[[i]])) stop("QFeatures object does not contain assay ", i)
         x <- getWithColData(object, i)
         x <- msqrobAggregate(
@@ -195,7 +200,8 @@ setMethod(
             maxitRob = maxitRob,
             tol = tol,
             doQR = doQR,
-            lmerArgs = lmerArgs
+            lmerArgs = lmerArgs,
+            ...
         )
         object <- addAssay(object, x, name)
         addAssayLink(object, i, name, varFrom = fcol, varTo = fcol)
