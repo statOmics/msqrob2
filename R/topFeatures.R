@@ -67,13 +67,12 @@ topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alp
     pval <- pt(-abs(t), df) * 2
     adjPval <- p.adjust(pval, method = adjust.method)
     out <- data.frame(logFC, se, df, t, pval, adjPval)
-    if (sort) {
-        if (alpha < 1) {
-            ids <- adjPval < alpha
-            out <- na.exclude(out[ids, ])
-        }
-        return(out[order(out$pval), ])
-    } else {
-        return(out)
+    if (alpha < 1) {
+        signif <- adjPval < alpha
+        out <- na.exclude(out[signif, ])
     }
+    if (sort) {
+        out <- out[order(out$pval), ]
+    }
+    return(out)
 }
