@@ -53,13 +53,14 @@
 #' @export
 msqrobLm <- function(y,
     formula,
-    data,
+    colsMetadata,
     robust = TRUE,
     maxitRob = 5) {
-    myDesign <- model.matrix(formula, data)
+    myDesign <- model.matrix(formula, colsMetadata)
+    # apply the model to each protein
     models <- apply(y, 1,
         function(y, design) {
-            ## computatability check
+            ## computability check
             obs <- is.finite(y)
             type <- "fitError"
             model <- list(
