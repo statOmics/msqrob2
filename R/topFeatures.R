@@ -44,13 +44,14 @@
 #' @export
 
 topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alpha = 1) {
-    if (is(contrast, "matrix")) {
-        if (ncol(contrast) > 1) {
-            stop("Argument contrast is matrix with more than one column, only one contrast is allowed")
-        }
-        # remove unused coefficients
-        contrast <- contrast[rowSums(contrast) != 0, , drop = FALSE]
+    if (!is(contrast, "matrix")) {
+        contrast <- as.matrix(contrast)
     }
+    if (ncol(contrast) > 1) {
+        stop("The 'contrast' argument has more than one column, only one contrast is allowed")
+    }
+    # remove unused coefficients
+    contrast <- contrast[rowSums(contrast) != 0, , drop = FALSE]
 
     logFC <- vapply(models,
         getContrast,
