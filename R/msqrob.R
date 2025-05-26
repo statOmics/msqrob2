@@ -56,6 +56,7 @@ msqrobLm <- function(y,
     data,
     robust = TRUE,
     maxitRob = 5) {
+    data <- .matchQuantColsOrder(data, y)
     myDesign <- model.matrix(formula, data)
     # apply the model to each protein
     models <- apply(y, 1,
