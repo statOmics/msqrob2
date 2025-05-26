@@ -668,3 +668,27 @@ makeContrast <- function(contrasts, parameterNames) {
         ex, " to character"
     )
 }
+
+# Match Quantitative Columns Order for msqrobLmxxx() methods
+.matchQuantColsOrder <- function(colsMetadata, data) {
+    if (!"quantCols" %in% names(colsMetadata)) {
+        warning("colsMetadata does not contain a 'quantCols' column. Skipping reordering.")
+        return(colsMetadata)
+    }
+
+    data_cols <- names(data)
+    quant_cols_values <- colsMetadata$quantCols
+
+    missing_cols <- setdiff(data_cols, quant_cols_values)
+    if (length(missing_cols) > 0) {
+        stop(
+            "Column(s) '", paste(missing_cols, collapse = "', '"),
+            "' from data not found in colsMetadata$quantCols."
+        )
+    }
+
+    match_indices <- match(data_cols, quant_cols_values)
+    reordered_metadata <- colsMetadata[match_indices, , drop = FALSE]
+
+    return(reordered_metadata)
+}
