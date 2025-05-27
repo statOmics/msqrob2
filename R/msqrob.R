@@ -342,7 +342,8 @@ msqrobLmer <- function(y,
 }
 
 ## Fit the mixed models with ridge regression
-.ridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, doQR, robust,maxitRob=1,tol = 1e-06){
+.ridge_msqrobLmer <- function(y, rowdata=NULL, formula, coldata, doQR,
+                              robust, maxitRob=1, tol = 1e-06){
 
   #Create the matrix containing the variable information
   data <- .create_data(y,rowdata,coldata)
@@ -470,7 +471,8 @@ msqrobLmer <- function(y,
 }
 
 ## Fit the mixed models without ridge regression
-.noridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, robust,maxitRob=0, tol = 1e-06  ){
+.noridge_msqrobLmer <- function(y, rowdata=NULL, formula, coldata,
+                                robust, maxitRob=0, tol = 1e-06){
   #Create the matrix containing the variable information
   data <- .create_data(y,rowdata,coldata)
 
