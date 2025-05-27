@@ -285,49 +285,24 @@ msqrobLmer <- function(y,
 
   y <- split.data.frame(y, featureGroups)
 
-  if (ridge == TRUE){
-    if(is.null(rowdata)){
-      models <- bplapply(y,
-                         FUN = .ridge_msqrobLmer,
-                         "formula" = formula,
-                         "coldata" = data,
-                         "doQR" = doQR,
-                         "robust"=robust,
-                         "maxitRob" = maxitRob,
-                         "tol"  =tol)
-    } else{
-      models <- bpmapply(FUN = .ridge_msqrobLmer,
-                         y, rowdata,
-                         MoreArgs = list("formula" = formula,
-                                         "coldata" = data,
-                                         "doQR" = doQR,
-                                         "robust"=robust,
-                                         "maxitRob" = maxitRob,
-                                         "tol"  =tol))
-    }
-
-  }else{
-
-    if(is.null(rowdata)){
-      models <- bplapply(y,
-                         FUN = .noridge_msqrobLmer,
-                         "formula" = formula,
-                         "coldata" = data,
-                          "robust"=robust,
-                         "maxitRob" = maxitRob,
-                         "tol"  =tol)
-    } else{
-      models <- bpmapply(FUN = .noridge_msqrobLmer,
-                         y, rowdata,
-                         MoreArgs = list("formula" = formula,
-                                         "coldata" = data,
-                                         "robust"=robust,
-                                         "maxitRob" = maxitRob,
-                                         "tol"  =tol))
-    }
+  fit_args <- list(
+    formula = formula,
+    coldata = data,
+    robust = robust,
+    maxitRob = maxitRob,
+    tol = tol
+  )
+  if (ridge) {
+    fit_func <- .ridge_msqrobLmer
+    fit_args$doQR <- doQR
+  } else {
+    fit_func <- .noridge_msqrobLmer
   }
-
-
+  models <- if(is.null(rowdata)){
+    do.call(bplapply, append(list(y, FUN=fit_func), fit_args))
+  } else {
+    bpmapply(FUN = fit_func, y, rowdata, MoreArgs = fit_args)
+  }
 
   hlp <- limma::squeezeVar(
     var = vapply(models, getVar, numeric(1)),
