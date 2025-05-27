@@ -304,13 +304,18 @@ msqrobLmer <- function(y,
     bpmapply(FUN = fit_func, y, rowdata, MoreArgs = fit_args)
   }
 
+  modelVars <- vapply(models, getVar, numeric(1))
+  modelDfs <- vapply(models, getDF, numeric(1))
+  modelMask <- !is.na(modelVars) & !is.na(modelDfs)
+  varPosterior <- rep_along(models, NA_real_)
   hlp <- limma::squeezeVar(
-    var = vapply(models, getVar, numeric(1)),
-    df = vapply(models, getDF, numeric(1))
+    var = modelVars[modelMask],
+    df = modelDfs[modelMask],
   )
+  varPosterior[modelMask] <- hlp$var.post
 
   for (i in seq_len(length(models))) {
-    models[[i]]@varPosterior <- as.numeric(hlp$var.post[[i]])
+    models[[i]]@varPosterior <- as.numeric(varPosterior[[i]])
     models[[i]]@dfPosterior <- as.numeric(hlp$df.prior + getDF(models[[i]]))
   }
   return(models)
