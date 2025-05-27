@@ -267,7 +267,8 @@ msqrobLmer <- function(y,
                        maxitRob = 1,
                        doQR = TRUE,
                        featureGroups=NULL,
-                       lmerArgs = list(control = lmerControl(calc.derivs = FALSE))){
+                       lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
+                       keep.model = FALSE) {
 
   #Get the featureGroups variable
   if (is.null(featureGroups)){
@@ -290,7 +291,8 @@ msqrobLmer <- function(y,
     coldata = data,
     robust = robust,
     maxitRob = maxitRob,
-    tol = tol
+    tol = tol,
+    keep.model = keep.model
   )
   if (ridge) {
     fit_func <- .ridge_msqrobLmer
@@ -323,7 +325,8 @@ msqrobLmer <- function(y,
 
 ## Fit the mixed models with ridge regression
 .ridge_msqrobLmer <- function(y, rowdata=NULL, formula, coldata, doQR,
-                              robust, maxitRob=1, tol = 1e-06){
+                              robust, maxitRob=1, tol = 1e-06,
+                              keep.model = FALSE){
 
   #Create the matrix containing the variable information
   data <- .create_data(y,rowdata,coldata)
@@ -441,7 +444,7 @@ msqrobLmer <- function(y,
       }
     }, silent = TRUE)
 
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model)
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model, keep.model = keep.model)
   }
 
   return(StatModel(type = type,
@@ -452,7 +455,8 @@ msqrobLmer <- function(y,
 
 ## Fit the mixed models without ridge regression
 .noridge_msqrobLmer <- function(y, rowdata=NULL, formula, coldata,
-                                robust, maxitRob=0, tol = 1e-06){
+                                robust, maxitRob=0, tol = 1e-06,
+                                keep.model = FALSE){
   #Create the matrix containing the variable information
   data <- .create_data(y,rowdata,coldata)
 
@@ -498,7 +502,8 @@ msqrobLmer <- function(y,
       }
     }, silent = TRUE)
 
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model)
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w,
+                           model, keep.model = keep.model)
   }
 
   return(StatModel(type = type,
@@ -574,6 +579,7 @@ msqrobLmer <- function(y,
     betaB
 }
 
+#' Calculate the weighted REML residual degrees of freedom
 #' @importFrom stats resid
 .getDfLmer <- function(object) {
     w <- object@frame$"(weights)"
@@ -595,21 +601,24 @@ msqrobLmer <- function(y,
   return(model)
 }
 
-.create_model <- function(betas, vcovUnscaled, sigma, df.residual, w, model){
+.create_model <- function(betas, vcovUnscaled, sigma, df.residual, w, model, keep.model = FALSE){
   if (df.residual<2L){
-    model <- list(coefficients = NA,
-                  vcovUnscaled = NA,
-                  sigma = NA,
-                  df.residual = NA,
-                  w = NA)
+    res <- list(coefficients = NA,
+                vcovUnscaled = NA,
+                sigma = NA,
+                df.residual = NA,
+                w = NA)
   } else {
-    model <- list(coefficients = betas,
-                  vcovUnscaled = vcovUnscaled,
-                  sigma = sigma,
-                  df.residual = df.residual,
-                  w = model@frame$`(weights)`)
+    res <- list(coefficients = betas,
+                vcovUnscaled = vcovUnscaled,
+                sigma = sigma,
+                df.residual = df.residual,
+                w = model@frame$`(weights)`)
   }
-  return(model)
+  if (keep.model) {
+    res$model <- model
+  }
+  return(res)
 }
 
 
