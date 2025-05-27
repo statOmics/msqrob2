@@ -147,7 +147,7 @@ msqrobLm <- function(y,
     ## Put variance and degrees of freedom in appropriate slots
     for (i in seq_len(length(models))) {
         mydf <- hlp$df.prior + getDF(models[[i]])
-        models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
+        models[[i]]@varPosterior <- as.numeric(hlp$var.post[[i]])
         models[[i]]@dfPosterior <- as.numeric(mydf)
     }
 
@@ -335,7 +335,7 @@ msqrobLmer <- function(y,
   )
 
   for (i in seq_len(length(models))) {
-    models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
+    models[[i]]@varPosterior <- as.numeric(hlp$var.post[[i]])
     models[[i]]@dfPosterior <- as.numeric(hlp$df.prior + getDF(models[[i]]))
   }
   return(models)
