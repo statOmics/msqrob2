@@ -44,13 +44,15 @@
 #' @export
 
 topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alpha = 1) {
-    if (is(contrast, "matrix")) {
-          if (ncol(contrast) > 1) {
-                stop("Argument contrast is matrix with more than one column, only one contrast is allowed")
-            }
+    if (!is(contrast, "matrix")) {
+        contrast <- as.matrix(contrast)
     }
-  
-    contrast <- contrast[contrast !=0]
+    if (ncol(contrast) > 1) {
+        stop("The 'contrast' argument has more than one column, only one contrast is allowed")
+    }
+    # remove unused coefficients
+    contrast <- contrast[rowSums(contrast) != 0, , drop = FALSE]
+
     logFC <- vapply(models,
         getContrast,
         numeric(1),
@@ -66,13 +68,12 @@ topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alp
     pval <- pt(-abs(t), df) * 2
     adjPval <- p.adjust(pval, method = adjust.method)
     out <- data.frame(logFC, se, df, t, pval, adjPval)
-    if (sort) {
-        if (alpha < 1) {
-            ids <- adjPval < alpha
-            out <- na.exclude(out[ids, ])
-        }
-        return(out[order(out$pval), ])
-    } else {
-        return(out)
+    if (alpha < 1) {
+        signif <- adjPval < alpha
+        out <- na.exclude(out[signif, ])
     }
+    if (sort) {
+        out <- out[order(out$pval), ]
+    }
+    return(out)
 }
