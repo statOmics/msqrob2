@@ -449,8 +449,8 @@ msqrobLmer <- function(y,
 
   return(StatModel(type = type,
                    params = model,
-                   varPosterior = as.numeric(NA),
-                   dfPosterior = as.numeric(NA)))
+                   varPosterior = NA_real_,
+                   dfPosterior = NA_real_))
 }
 
 ## Fit the mixed models without ridge regression
@@ -508,8 +508,8 @@ msqrobLmer <- function(y,
 
   return(StatModel(type = type,
                    params = model,
-                   varPosterior = as.numeric(NA),
-                   dfPosterior = as.numeric(NA)))
+                   varPosterior = NA_real_,
+                   dfPosterior = NA_real_))
 }
 
 
