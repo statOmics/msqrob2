@@ -53,11 +53,11 @@
 #' @export
 msqrobLm <- function(y,
     formula,
-    colsMetadata,
+    data,
     robust = TRUE,
     maxitRob = 5) {
-    colsMetadata <- .matchQuantColsOrder(colsMetadata, y)
-    myDesign <- model.matrix(formula, colsMetadata)
+    data <- .matchQuantColsOrder(data, y)
+    myDesign <- model.matrix(formula, data)
     # apply the model to each protein
     models <- apply(y, 1,
         function(y, design) {
