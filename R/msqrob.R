@@ -352,7 +352,7 @@ msqrobLmer <- function(y,
     formula <- formula(y ~ (1|ridge))
   } else {
     if (nobars(formula)[[2]] != ~1){
-      #udpate formula to remove any fixed effect variables and replace with ridge
+      # update formula to remove any fixed effect variables and replace with ridge
       formula <- formula(
         paste0("y ~ (1|ridge) + ", paste0("(",paste(findbars(formula), collapse=")+("),")")))
     } else {
