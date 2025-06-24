@@ -444,7 +444,8 @@ msqrobLmer <- function(y,
       }
     }, silent = TRUE)
 
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model, keep.model = keep.model)
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual,
+                           model, keep.model = keep.model)
   }
 
   return(StatModel(type = type,
@@ -502,7 +503,7 @@ msqrobLmer <- function(y,
       }
     }, silent = TRUE)
 
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w,
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual,
                            model, keep.model = keep.model)
   }
 
@@ -601,7 +602,7 @@ msqrobLmer <- function(y,
   return(model)
 }
 
-.create_model <- function(betas, vcovUnscaled, sigma, df.residual, w, model, keep.model = FALSE){
+.create_model <- function(betas, vcovUnscaled, sigma, df.residual, model, keep.model = FALSE){
   if (df.residual<2L){
     res <- list(coefficients = NA,
                 vcovUnscaled = NA,
