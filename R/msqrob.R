@@ -211,6 +211,9 @@ msqrobLm <- function(y,
 #'        ‘lmerControl’ documentation of the lme4 package for more details.
 #'        Default is `list(control = lmerControl(calc.derivs = FALSE))`
 #'
+#' @param keep.model `boolean(1)` to specify if the `lme4` fitted model should be kept in the
+#'        `$model` field of the output. Default is `FALSE`.
+#'
 #' @examples
 #'
 #' # Load example data
