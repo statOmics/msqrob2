@@ -1,58 +1,76 @@
+
+# msqrob 1.17
+
+## msqrob 1.17.1
+
+- Fixed NEWS file
+- Fixed vignette upon renaming of longFormat to longForm
+
+## msqrob 1.17.0
+
+- New Bioconductor devel release 3.22
+
+# msqrob 1.16
+
+## msqrob 1.16.0
+
+- New Bioconductor stable release 3.21
+
 # msqrob 1.15
 
-# msqrob 1.15.1
+## msqrob 1.15.1
 
 - fix: fixed fnames in cptac vignette and moved away from `msdata` to 
   rely on `MsDataHub` instead
 
-# msqrob 1.15.0
+## msqrob 1.15.0
 
 - New Bioconductor devel release 3.21
 
 # msqrob 1.14
 
-# msqrob 1.14.1
+## msqrob 1.14.1
 
 - Added more flexibility in the msqrobLM function for models with missing variables
 - Fixed full rank check for models without ridge in certain cases
 
-# msqrob 1.14.0
+## msqrob 1.14.0
 
 - New Bioconductor stable release 3.20
 
 # msqrob 1.13
 
-# msqrob 1.13.1
+## msqrob 1.13.1
 
 - Implemented msqrobAggregate() method for SummarizedExperiment objects. 
 
-# msqrob 1.13.0
+## msqrob 1.13.0
 
 - New Bioconductor devel release 3.20
 
 # msqrob 1.12
 
-# msqrob 1.12.0
+## msqrob 1.12.0
  
 - New Bioconductor stable release 3.19
 
-# msqrob 1.11.2
+## msqrob 1.11.2
 
 - Fixed issue related to levels of a ridge variable
 - Fixed issue when fitting only one random effect
 
-# msqrob 1.11.1
+## msqrob 1.11.1
 
 - Fixed issues related to reference class changes in the models
 - Fixed issue related to colData assay levels
 - Refactored internal code
 
-# msqrob 1.6.2
+## msqrob 1.6.2
 
 - Fixed issues related to residual degrees of freedom of overparameterized models.
 - Fixed issue relating to coldata variables as factors.
 
-# msqrob2 1.5.4
+## msqrob2 1.5.4
 
 - Removed the full lmer model that was accidently left in the statmodel object.
 
