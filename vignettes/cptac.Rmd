@@ -309,7 +309,7 @@ if (length(sigNames) > topN) {
     for (protName in sigNames[1:topN])
     {
         pePlot <- pe[protName, , c("peptideNorm", "protein")]
-        pePlotDf <- data.frame(longFormat(pePlot))
+        pePlotDf <- data.frame(longForm(pePlot))
         pePlotDf$assay <- factor(pePlotDf$assay,
             levels = c("peptideNorm", "protein")
         )
