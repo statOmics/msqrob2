@@ -1,6 +1,10 @@
 
 # msqrob 1.17
 
+## msqrob 1.17.2
+
+(nothing yet)
+
 ## msqrob 1.17.1
 
 - Fixed NEWS file
