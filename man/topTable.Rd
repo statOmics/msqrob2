@@ -4,7 +4,14 @@
 \alias{topFeatures}
 \title{Toplist of DE proteins, peptides or features}
 \usage{
-topFeatures(models, contrast, adjust.method = "BH", sort = TRUE, alpha = 1)
+topFeatures(
+  models,
+  contrast,
+  adjust.method = "BH",
+  ddf.method = c("residual", "ML1", "KenwardRoger", "Satterthwaite"),
+  sort = TRUE,
+  alpha = 1
+)
 }
 \arguments{
 \item{models}{A list with elements of the class \code{StatModel} that are
@@ -20,7 +27,24 @@ the p-values for multiple testing.
 Options, in increasing conservatism, include ‘"none"’,
 ‘"BH"’, ‘"BY"’ and ‘"holm"’.  See ‘p.adjust’ for the complete
 list of options. Default is "BH" the Benjamini-Hochberg method
-to controle the False Discovery Rate (FDR).}
+to control the \emph{False Discovery Rate} (FDR).}
+
+\item{ddf.method}{\code{character} specifying the method to calculate the
+\emph{denominator degrees of freedom} (DoF) for the t-test.
+Options are:
+- "residual": (default) use the posterior residual DoF (\code{getDfPosterior}),
+which was the only DDoF method for \emph{msqrob2} before v2.XX.
+It can significantly overestimate the denominator DoF,
+resulting in overly significant p-values.
+- "ML1": use the \code{dof_ml1} function from the \emph{parameters} package for
+heuristic approximation of the DDoF, which is much faster than
+the Kenward-Roger method, while still providing an adequate approximation.
+- "KenwardRoger": use the \code{dof_kenward} function from the \emph{parameters} package for
+\emph{Kenward-Roger approximation} of the DDoF. This is the most accurate, but
+also most computationally intensive method.
+- "Satterthwaite": use the \code{dof_satterthwaite} function from the \emph{parameters} package for
+\emph{Satterthwaite approximation} of the DDoF. This is a faster, but less accurate
+alternative to \emph{Kenward-Roger} method, which may not work well for small sample sizes.}
 
 \item{sort}{\code{boolean(1)} to indicate if the features have to be sorted according
 to statistical significance.}

@@ -15,7 +15,8 @@ msqrobLmer(
   maxitRob = 1,
   doQR = TRUE,
   featureGroups = NULL,
-  lmerArgs = list(control = lmerControl(calc.derivs = FALSE))
+  lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
+  keep.model = FALSE
 )
 }
 \arguments{
@@ -61,6 +62,9 @@ containing control parameters, including the nonlinear optimizer to be used
 and parameters to be passed through to the nonlinear optimizer, see the
 ‘lmerControl’ documentation of the lme4 package for more details.
 Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
+
+\item{keep.model}{\code{boolean(1)} to specify if the \code{lme4} fitted model should be kept in the
+\verb{$model} field of the output. Default is \code{FALSE}.}
 }
 \value{
 A list of objects of the \code{StatModel} class.
