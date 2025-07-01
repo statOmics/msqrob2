@@ -676,7 +676,7 @@ makeContrast <- function(contrasts, parameterNames) {
         return(colsMetadata)
     }
 
-    data_cols <- names(data)
+    data_cols <- colnames(data)
     quant_cols_values <- colsMetadata$quantCols
 
     missing_cols <- setdiff(data_cols, quant_cols_values)
