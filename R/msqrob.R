@@ -292,7 +292,8 @@ msqrobLmer <- function(y,
                          "doQR" = doQR,
                          "robust"=robust,
                          "maxitRob" = maxitRob,
-                         "tol"  =tol)
+                         "tol"  =tol,
+                         "lmerArgs" = lmerArgs)
     } else{
       models <- bpmapply(FUN = .ridge_msqrobLmer,
                          y, rowdata,
@@ -301,7 +302,8 @@ msqrobLmer <- function(y,
                                          "doQR" = doQR,
                                          "robust"=robust,
                                          "maxitRob" = maxitRob,
-                                         "tol"  =tol))
+                                         "tol"  =tol,
+                                         "lmerArgs" = lmerArgs))
     }
 
   }else{
@@ -313,7 +315,8 @@ msqrobLmer <- function(y,
                          "coldata" = data,
                           "robust"=robust,
                          "maxitRob" = maxitRob,
-                         "tol"  =tol)
+                         "tol"  =tol,
+                         "lmerArgs" = lmerArgs)
     } else{
       models <- bpmapply(FUN = .noridge_msqrobLmer,
                          y, rowdata,
@@ -321,7 +324,8 @@ msqrobLmer <- function(y,
                                          "coldata" = data,
                                          "robust"=robust,
                                          "maxitRob" = maxitRob,
-                                         "tol"  =tol))
+                                         "tol"  =tol,
+                                         "lmerArgs" = lmerArgs))
     }
   }
 
@@ -340,7 +344,8 @@ msqrobLmer <- function(y,
 }
 
 ## Fit the mixed models with ridge regression
-.ridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, doQR, robust,maxitRob=1,tol = 1e-06){
+.ridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, doQR, 
+                              robust,maxitRob=1,tol = 1e-06, lmerArgs = NULL){
 
   #Create the matrix containing the variable information
   data <- .create_data(y,rowdata,coldata)
@@ -394,7 +399,7 @@ msqrobLmer <- function(y,
       data$ridge <- factor(rep(colnames(Q), length = nrow(data)), levels = colnames(Q))
 
       #Parse the data and formula
-      parsedFormulaC <- lFormula(formula,data = as.list(data))
+      parsedFormulaC <- lFormula(formula,data = as.list(data), control = lmerArgs$control)
       parsedFormulaC$reTrms$cnms$ridge <- ""
       ridgeId <- grep(names(parsedFormulaC$reTrms$Ztlist), pattern = "ridge")
       parsedFormulaC$reTrms$Ztlist[[ridgeId]] <- as(Matrix(t(Q)), class(parsedFormulaC$reTrms$Ztlist[[ridgeId]]))
@@ -403,7 +408,7 @@ msqrobLmer <- function(y,
       #Create deviance function to be optimized
       devianceFunctionC <- do.call(mkLmerDevfun, parsedFormulaC)
       #optimize deviance function
-      optimizerOutputC <- optimizeLmer(devianceFunctionC)
+      optimizerOutputC <- optimizeLmer(devianceFunctionC, control = lmerArgs$control)
       #Package up the results
       model <- mkMerMod(rho = environment(devianceFunctionC),
                         opt = optimizerOutputC,
@@ -468,7 +473,8 @@ msqrobLmer <- function(y,
 }
 
 ## Fit the mixed models without ridge regression
-.noridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, robust,maxitRob=0, tol = 1e-06  ){
+.noridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, robust,
+                                maxitRob=0, tol = 1e-06, lmerArgs = NULL){
   #Create the matrix containing the variable information
   data <- .create_data(y,rowdata,coldata)
 
@@ -485,7 +491,7 @@ msqrobLmer <- function(y,
 
   if(qr(data_model_matrix)$rank == ncol(data_model_matrix)){
     try({
-      model <- lmer(formula,  as.data.frame(data))
+      model <- lmer(formula,  as.data.frame(data), control = lmerArgs$control)
     }, silent=TRUE)
   }
 
