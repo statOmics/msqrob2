@@ -462,8 +462,8 @@ msqrobLmer <- function(y,
         df.residual <- 0
       }
     }, silent = TRUE)
-
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model)
+    
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, model@frame$`(weights)`)
   }
 
   return(StatModel(type = type,
@@ -519,8 +519,9 @@ msqrobLmer <- function(y,
         df.residual <- 0
       }
     }, silent = TRUE)
-
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model)
+    
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, 
+                           model@frame$`(weights)`)
   }
 
   return(StatModel(type = type,
@@ -617,7 +618,7 @@ msqrobLmer <- function(y,
   return(model)
 }
 
-.create_model <- function(betas, vcovUnscaled, sigma, df.residual, w, model){
+.create_model <- function(betas, vcovUnscaled, sigma, df.residual, w){
   if (df.residual<2L){
     model <- list(coefficients = NA,
                   vcovUnscaled = NA,
@@ -629,7 +630,7 @@ msqrobLmer <- function(y,
                   vcovUnscaled = vcovUnscaled,
                   sigma = sigma,
                   df.residual = df.residual,
-                  w = model@frame$`(weights)`)
+                  w = w)
   }
   return(model)
 }
