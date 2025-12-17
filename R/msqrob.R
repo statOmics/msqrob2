@@ -419,7 +419,7 @@ msqrobLmer <- function(y,
 
   if (is.null(model)) {
     type <- "fitError"
-    model <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA)
+    model <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA, w = NA)
   } else {
     df.residual <- 0
     try({
@@ -497,7 +497,7 @@ msqrobLmer <- function(y,
 
   if (is.null(model)) {
     type <- "fitError"
-    model <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA)
+    model <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA, w = NA)
   } else {
     df.residual <- 0
     try({
