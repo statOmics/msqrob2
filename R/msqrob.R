@@ -259,12 +259,12 @@ msqrobLmer <- function(y,
                        formula,
                        data,
                        rowdata = NULL,
-                       tol  =1e-6,
+                       tol = 1e-6,
                        robust = TRUE,
                        ridge = FALSE,
                        maxitRob = 1,
                        doQR = TRUE,
-                       featureGroups=NULL,
+                       featureGroups = NULL,
                        lmerArgs = list(control = lmerControl(calc.derivs = FALSE))){
 
   #Get the featureGroups variable
@@ -287,12 +287,12 @@ msqrobLmer <- function(y,
     if(is.null(rowdata)){
       models <- bplapply(y,
                          FUN = .ridge_msqrobLmer,
-                         "formula" = formula,
-                         "coldata" = data,
-                         "doQR" = doQR,
-                         "robust"=robust,
-                         "maxitRob" = maxitRob,
-                         "tol"  =tol)
+                         formula = formula,
+                         coldata = data,
+                         doQR = doQR,
+                         robust = robust,
+                         maxitRob = maxitRob,
+                         tol = tol)
     } else{
       models <- bpmapply(FUN = .ridge_msqrobLmer,
                          y, rowdata,
