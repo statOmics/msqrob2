@@ -56,10 +56,12 @@ msqrobLm <- function(y,
     data,
     robust = TRUE,
     maxitRob = 5) {
+    data <- .matchQuantColsOrder(data, y)
     myDesign <- model.matrix(formula, data)
+    # apply the model to each protein
     models <- apply(y, 1,
         function(y, design) {
-            ## computatability check
+            ## computability check
             obs <- is.finite(y)
             type <- "fitError"
             model <- list(
@@ -145,7 +147,7 @@ msqrobLm <- function(y,
     ## Put variance and degrees of freedom in appropriate slots
     for (i in seq_len(length(models))) {
         mydf <- hlp$df.prior + getDF(models[[i]])
-        models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
+        models[[i]]@varPosterior <- as.numeric(hlp$var.post[[i]])
         models[[i]]@dfPosterior <- as.numeric(mydf)
     }
 
@@ -209,6 +211,9 @@ msqrobLm <- function(y,
 #'        ‘lmerControl’ documentation of the lme4 package for more details.
 #'        Default is `list(control = lmerControl(calc.derivs = FALSE))`
 #'
+#' @param keep.model `boolean(1)` to specify if the `lme4` fitted model should be kept in the
+#'        `$model` field of the output. Default is `FALSE`.
+#'
 #' @examples
 #'
 #' # Load example data
@@ -265,7 +270,8 @@ msqrobLmer <- function(y,
                        maxitRob = 1,
                        doQR = TRUE,
                        featureGroups=NULL,
-                       lmerArgs = list(control = lmerControl(calc.derivs = FALSE))){
+                       lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
+                       keep.model = FALSE) {
 
   #Get the featureGroups variable
   if (is.null(featureGroups)){
@@ -283,64 +289,47 @@ msqrobLmer <- function(y,
 
   y <- split.data.frame(y, featureGroups)
 
-  if (ridge == TRUE){
-    if(is.null(rowdata)){
-      models <- bplapply(y,
-                         FUN = .ridge_msqrobLmer,
-                         "formula" = formula,
-                         "coldata" = data,
-                         "doQR" = doQR,
-                         "robust"=robust,
-                         "maxitRob" = maxitRob,
-                         "tol"  =tol)
-    } else{
-      models <- bpmapply(FUN = .ridge_msqrobLmer,
-                         y, rowdata,
-                         MoreArgs = list("formula" = formula,
-                                         "coldata" = data,
-                                         "doQR" = doQR,
-                                         "robust"=robust,
-                                         "maxitRob" = maxitRob,
-                                         "tol"  =tol))
-    }
-
-  }else{
-
-    if(is.null(rowdata)){
-      models <- bplapply(y,
-                         FUN = .noridge_msqrobLmer,
-                         "formula" = formula,
-                         "coldata" = data,
-                          "robust"=robust,
-                         "maxitRob" = maxitRob,
-                         "tol"  =tol)
-    } else{
-      models <- bpmapply(FUN = .noridge_msqrobLmer,
-                         y, rowdata,
-                         MoreArgs = list("formula" = formula,
-                                         "coldata" = data,
-                                         "robust"=robust,
-                                         "maxitRob" = maxitRob,
-                                         "tol"  =tol))
-    }
+  fit_args <- list(
+    formula = formula,
+    coldata = data,
+    robust = robust,
+    maxitRob = maxitRob,
+    tol = tol,
+    keep.model = keep.model
+  )
+  if (ridge) {
+    fit_func <- .ridge_msqrobLmer
+    fit_args$doQR <- doQR
+  } else {
+    fit_func <- .noridge_msqrobLmer
+  }
+  models <- if(is.null(rowdata)){
+    do.call(bplapply, append(list(y, FUN=fit_func), fit_args))
+  } else {
+    bpmapply(FUN = fit_func, y, rowdata, MoreArgs = fit_args)
   }
 
-
-
+  modelVars <- vapply(models, getVar, numeric(1))
+  modelDfs <- vapply(models, getDF, numeric(1))
+  modelMask <- !is.na(modelVars) & !is.na(modelDfs)
+  varPosterior <- rep_along(models, NA_real_)
   hlp <- limma::squeezeVar(
-    var = vapply(models, getVar, numeric(1)),
-    df = vapply(models, getDF, numeric(1))
+    var = modelVars[modelMask],
+    df = modelDfs[modelMask],
   )
+  varPosterior[modelMask] <- hlp$var.post
 
   for (i in seq_len(length(models))) {
-    models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
+    models[[i]]@varPosterior <- as.numeric(varPosterior[[i]])
     models[[i]]@dfPosterior <- as.numeric(hlp$df.prior + getDF(models[[i]]))
   }
   return(models)
 }
 
 ## Fit the mixed models with ridge regression
-.ridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, doQR, robust,maxitRob=1,tol = 1e-06){
+.ridge_msqrobLmer <- function(y, rowdata=NULL, formula, coldata, doQR,
+                              robust, maxitRob=1, tol = 1e-06,
+                              keep.model = FALSE){
 
   #Create the matrix containing the variable information
   data <- .create_data(y,rowdata,coldata)
@@ -366,7 +355,7 @@ msqrobLmer <- function(y,
     formula <- formula(y ~ (1|ridge))
   } else {
     if (nobars(formula)[[2]] != ~1){
-      #udpate formula to remove any fixed effect variables and replace with ridge
+      # update formula to remove any fixed effect variables and replace with ridge
       formula <- formula(
         paste0("y ~ (1|ridge) + ", paste0("(",paste(findbars(formula), collapse=")+("),")")))
     } else {
@@ -458,17 +447,20 @@ msqrobLmer <- function(y,
       }
     }, silent = TRUE)
 
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model)
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual,
+                           model, keep.model = keep.model)
   }
 
   return(StatModel(type = type,
                    params = model,
-                   varPosterior = as.numeric(NA),
-                   dfPosterior = as.numeric(NA)))
+                   varPosterior = NA_real_,
+                   dfPosterior = NA_real_))
 }
 
 ## Fit the mixed models without ridge regression
-.noridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, robust,maxitRob=0, tol = 1e-06  ){
+.noridge_msqrobLmer <- function(y, rowdata=NULL, formula, coldata,
+                                robust, maxitRob=0, tol = 1e-06,
+                                keep.model = FALSE){
   #Create the matrix containing the variable information
   data <- .create_data(y,rowdata,coldata)
 
@@ -514,13 +506,14 @@ msqrobLmer <- function(y,
       }
     }, silent = TRUE)
 
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model)
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual,
+                           model, keep.model = keep.model)
   }
 
   return(StatModel(type = type,
                    params = model,
-                   varPosterior = as.numeric(NA),
-                   dfPosterior = as.numeric(NA)))
+                   varPosterior = NA_real_,
+                   dfPosterior = NA_real_))
 }
 
 
@@ -590,6 +583,7 @@ msqrobLmer <- function(y,
     betaB
 }
 
+#' Calculate the weighted REML residual degrees of freedom
 #' @importFrom stats resid
 .getDfLmer <- function(object) {
     w <- object@frame$"(weights)"
@@ -611,21 +605,24 @@ msqrobLmer <- function(y,
   return(model)
 }
 
-.create_model <- function(betas, vcovUnscaled, sigma, df.residual, w, model){
+.create_model <- function(betas, vcovUnscaled, sigma, df.residual, model, keep.model = FALSE){
   if (df.residual<2L){
-    model <- list(coefficients = NA,
-                  vcovUnscaled = NA,
-                  sigma = NA,
-                  df.residual = NA,
-                  w = NA)
+    res <- list(coefficients = NA,
+                vcovUnscaled = NA,
+                sigma = NA,
+                df.residual = NA,
+                w = NA)
   } else {
-    model <- list(coefficients = betas,
-                  vcovUnscaled = vcovUnscaled,
-                  sigma = sigma,
-                  df.residual = df.residual,
-                  w = model@frame$`(weights)`)
+    res <- list(coefficients = betas,
+                vcovUnscaled = vcovUnscaled,
+                sigma = sigma,
+                df.residual = df.residual,
+                w = model@frame$`(weights)`)
   }
-  return(model)
+  if (keep.model) {
+    res$model <- model
+  }
+  return(res)
 }
 
 
