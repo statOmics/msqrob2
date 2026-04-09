@@ -2,6 +2,10 @@
 % Please edit documentation in R/calculateNormFactors.R
 \name{nfLogMedianOfRatios}
 \alias{nfLogMedianOfRatios}
+\alias{nfLogMedianOfRatios,}
+\alias{SummarizedExperiment-method}
+\alias{QFeatures-method}
+\alias{matrix-method}
 \title{Methods to calculate log-scale normalization factors using the median-of-ratios method}
 \usage{
 nfLogMedianOfRatios(object, na.rm = TRUE, ...)
@@ -19,8 +23,7 @@ A numeric vector of log2-scale normalization factors, one per sample (column).
 \description{
 Computes sample-specific normalization factors on the log2 scale using a
 median-of-ratios approach similar to that used in DESeq2 for bulk RNA-seq data.
-}
-\details{
+
 The method proceeds as follows:
 \enumerate{
 \item A pseudo-reference sample is constructed as the row-wise mean of the
@@ -29,7 +32,8 @@ log2 intensities (equivalent to the log2-transformed geometric mean).
 \item The normalization factor for each sample is obtained as the median of
 these log2 ratios (column-wise median).
 }
-
+}
+\details{
 This implementation assumes that the assay values are already on the log scale.
 The normalization factors are computed on the log scale.
 }
@@ -74,7 +78,7 @@ data(pe)
 se <- getWithColData(pe, i="peptide")
 
 # Calculate log2 norm factor
-nf_log <- nfLogMedianOfRatios(se, i="peptide")
+nf_log <- nfLogMedianOfRatios(se, i=1)
 nf_log
 
 # Normalise peptide level data and store it as a new assay in

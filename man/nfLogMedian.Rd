@@ -2,6 +2,10 @@
 % Please edit documentation in R/calculateNormFactors.R
 \name{nfLogMedian}
 \alias{nfLogMedian}
+\alias{nfLogMedian,}
+\alias{SummarizedExperiment-method}
+\alias{QFeatures-method}
+\alias{matrix-method}
 \title{Methods to computes sample-specific normalization factors on the log scale
 using conventional median summarisation.}
 \usage{

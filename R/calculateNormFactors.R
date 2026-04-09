@@ -28,6 +28,8 @@
 #' Methods to computes sample-specific normalization factors on the log scale 
 #' using conventional median summarisation.
 #'
+#' @aliases nfLogMedian nfLogMedian, SummarizedExperiment-method nfLogMedian, QFeatures-method nfLogMedian, matrix-method nfLogMedian
+#'
 #' @param object A \code{matrix}, \code{SummarizedExperiment} or \code{QFeatures} object.
 #' @param i An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}
 #' @param na.rm Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.
@@ -178,7 +180,7 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
 
 #' Methods to calculate log-scale normalization factors using the median-of-ratios method
 #'
-#' Computes sample-specific normalization factors on the log2 scale using a
+#' @description Computes sample-specific normalization factors on the log2 scale using a
 #' median-of-ratios approach similar to that used in DESeq2 for bulk RNA-seq data.
 #'
 #' The method proceeds as follows:
@@ -190,6 +192,7 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
 #'   these log2 ratios (column-wise median).
 #' }
 #'
+#' @aliases nfLogMedianOfRatios nfLogMedianOfRatios, SummarizedExperiment-method nfLogMedianOfRatios, QFeatures-method nfLogMedianOfRatios, matrix-method nfLogMedianOfRatios
 #' @param object A \code{matrix}, \code{SummarizedExperiment} or \code{QFeatures} object.
 #' @param i An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}
 #' @param na.rm Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.
@@ -241,7 +244,7 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
 #' se <- getWithColData(pe, i="peptide")
 #' 
 #' # Calculate log2 norm factor
-#' nf_log <- nfLogMedianOfRatios(se, i="peptide")
+#' nf_log <- nfLogMedianOfRatios(se, i=1)
 #' nf_log
 #' 
 #' # Normalise peptide level data and store it as a new assay in
