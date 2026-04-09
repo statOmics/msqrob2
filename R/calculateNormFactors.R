@@ -13,6 +13,8 @@
 #' @details
 #' This implementation assumes that the assay values are already on the log scale.
 #' The normalization factors are computed on the log scale. 
+#' @importFrom stats median
+
 
 .computeNfLogMedian <- function(mat, na.rm = TRUE) {
   # 1. Calculates the sample medians of the intensity assay of summarised experiment `i` in qfeatures object `qf` 
@@ -117,6 +119,7 @@
 #' boxplot(matnorm)
 #'
 #' @importFrom matrixStats colMedians
+#' @importFrom stats median
 #' @export
 
 
