@@ -57,7 +57,8 @@ Imports:
     limma,
     SummarizedExperiment,
     MultiAssayExperiment,
-    codetools
+    codetools, 
+    matrixStats
 Suggests:
     multcomp,
     gridExtra,
