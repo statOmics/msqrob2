@@ -28,7 +28,7 @@
 #' Methods to computes sample-specific normalization factors on the log scale 
 #' using conventional median summarisation.
 #'
-#' @aliases nfLogMedian nfLogMedian, SummarizedExperiment-method nfLogMedian, QFeatures-method nfLogMedian, matrix-method nfLogMedian
+#' @aliases nfLogMedian nfLogMedian,SummarizedExperiment-method nfLogMedian,QFeatures-method nfLogMedian,matrix-method
 #'
 #' @param object A \code{matrix}, \code{SummarizedExperiment} or \code{QFeatures} object.
 #' @param i An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}
@@ -192,7 +192,7 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
 #'   these log2 ratios (column-wise median).
 #' }
 #'
-#' @aliases nfLogMedianOfRatios nfLogMedianOfRatios, SummarizedExperiment-method nfLogMedianOfRatios, QFeatures-method nfLogMedianOfRatios, matrix-method nfLogMedianOfRatios
+#' @aliases nfLogMedianOfRatios nfLogMedianOfRatios,SummarizedExperiment-method nfLogMedianOfRatios,QFeatures-method nfLogMedianOfRatios,matrix-method
 #' @param object A \code{matrix}, \code{SummarizedExperiment} or \code{QFeatures} object.
 #' @param i An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}
 #' @param na.rm Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.

@@ -2,10 +2,9 @@
 % Please edit documentation in R/calculateNormFactors.R
 \name{nfLogMedianOfRatios}
 \alias{nfLogMedianOfRatios}
-\alias{nfLogMedianOfRatios,}
-\alias{SummarizedExperiment-method}
-\alias{QFeatures-method}
-\alias{matrix-method}
+\alias{nfLogMedianOfRatios,SummarizedExperiment-method}
+\alias{nfLogMedianOfRatios,QFeatures-method}
+\alias{nfLogMedianOfRatios,matrix-method}
 \title{Methods to calculate log-scale normalization factors using the median-of-ratios method}
 \usage{
 nfLogMedianOfRatios(object, na.rm = TRUE, ...)
