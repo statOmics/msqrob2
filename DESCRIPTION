@@ -72,7 +72,6 @@ Suggests:
     plotly,
     MsDataHub,
     MSnbase,
-    matrixStats,
     MsCoreUtils,
     covr
 License: Artistic-2.0

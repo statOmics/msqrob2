@@ -113,11 +113,12 @@ msqrobLm <- function(y,
                     coef[names(mod$coef)] <- mod$coef
                     vcovUnscaled <- matrix(NA, nrow =length(colnames_orig), ncol = length(colnames_orig))
                     rownames(vcovUnscaled) <- colnames(vcovUnscaled) <-  colnames_orig
-                    vcovUnscaled[names(mod$coef), names(mod$coef)] <- msqrob2:::.vcovUnscaled(mod)
+                    vcovUnscaled[names(mod$coef), names(mod$coef)] <- .vcovUnscaled(mod)
 
                     model <- list(
                         coefficients = coef,
-                        vcovUnscaled = .vcovUnscaled(mod),
+                        vcovUnscaled = vcovUnscaled,
+                        #vcovUnscaled = .vcovUnscaled(mod),
                         sigma = sigma,
                         df.residual = df.residual,
                         w = w
@@ -458,7 +459,8 @@ msqrobLmer <- function(y,
       }
     }, silent = TRUE)
 
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model)
+    #model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model) # w in model! 
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, model)
   }
 
   return(StatModel(type = type,
@@ -514,7 +516,8 @@ msqrobLmer <- function(y,
       }
     }, silent = TRUE)
 
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model)
+    # model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model) # w in model
+    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, model)
   }
 
   return(StatModel(type = type,
@@ -611,7 +614,8 @@ msqrobLmer <- function(y,
   return(model)
 }
 
-.create_model <- function(betas, vcovUnscaled, sigma, df.residual, w, model){
+# .create_model <- function(betas, vcovUnscaled, sigma, df.residual, w, model){ # w in model
+.create_model <- function(betas, vcovUnscaled, sigma, df.residual, model){
   if (df.residual<2L){
     model <- list(coefficients = NA,
                   vcovUnscaled = NA,
