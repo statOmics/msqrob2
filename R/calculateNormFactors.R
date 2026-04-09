@@ -1,11 +1,11 @@
 ##########################################################################################################
-# median normalisation
+# Median Normalisation Factors
 ##########################################################################################################
 
 #' Helper function to calculate sample-specific normalization factors on the log2 scale using 
 #' conventional median normalisation
 #'
-#' @mat object A \code{matrix} object.
+#' @param object A \code{matrix} object.
 #' @param na.rm Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.
 #'
 #' @return A numeric vector of log2-scale normalization factors, one per sample (column).
@@ -49,6 +49,8 @@
 #' ### Example on QFeatures object
 #' ###############################
 #' 
+#' data(pe)
+#'
 #' # Calculate log2 norm factor
 #' nf_log <- nfLogMedian(pe, i="peptide")
 #' nf_log
@@ -69,6 +71,8 @@
 #' ### Example on SummarizedExperiment object
 #' ###############################
 #' 
+#' data(pe)
+#'
 #' # Extract a summarised experiment from QFeatures object pe
 #' se <- getWithColData(pe, i="peptide")
 #' 
@@ -93,7 +97,9 @@
 #' ###############################
 #' ### Example on matrix object
 #' ###############################
-#' 
+#'
+#' data(pe)
+#'
 #' # Extract log2 transformed intensity  matrix from QFeatures object pe
 #' mat <- assay(pe,"peptide")
 #' 
@@ -132,7 +138,7 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
           })
 
 ##########################################################################################################
-# median-of-ratios normalisation
+# Median-of-Ratios Normalisation Factors
 ##########################################################################################################
 
 #' Helper function to calculate sample-specific normalization factors on the log2 scale using a
@@ -146,7 +152,7 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
 #'   \item The normalization factor for each sample is obtained as the median of
 #'   these log2 ratios (column-wise median).
 #' }
-#' @mat object A \code{matrix} object.
+#' @param object A \code{matrix} object.
 #' @param na.rm Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.
 #'
 #' @return A numeric vector of log2-scale normalization factors, one per sample (column).
@@ -204,6 +210,8 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
 #' ### Example on QFeatures object
 #' ###############################
 #' 
+#' data(pe)
+#'
 #' # Calculate log2 norm factor
 #' nf_log <- nfLogMedianOfRatios(pe, i="peptide")
 #' nf_log
@@ -224,6 +232,8 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
 #' ### Example on SummarizedExperiment object
 #' ###############################
 #' 
+#' data(pe)
+#'
 #' # Extract a summarised experiment from QFeatures object pe
 #' se <- getWithColData(pe, i="peptide")
 #' 
@@ -249,6 +259,8 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
 #' ### Example on matrix object
 #' ###############################
 #' 
+#' data(pe)
+#'
 #' mat <- assay(pe,"peptide")
 #' 
 #' nf <- nfLogMedianOfRatios(mat)
