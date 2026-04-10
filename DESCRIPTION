@@ -62,7 +62,9 @@ Imports:
     ggplot2, 
     assertthat, 
     dplyr,
-    grDevices
+    grDevices,
+    utils,
+    rlang
 Suggests:
     multcomp,
     gridExtra,

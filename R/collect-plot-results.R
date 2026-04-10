@@ -82,6 +82,8 @@ msqrobCollect <- function(object, contrast, resultsColumnNamePrefix = "",
 #' @importFrom ggplot2 aes ggplot geom_point theme_bw  ylab scale_color_manual labs
 #' @importFrom dplyr filter
 #' @importFrom grDevices col2rgb
+#' @importFrom rlang .data
+
 #'
 #' @examples
 #'
@@ -134,13 +136,13 @@ plotVolcano <- function(resultsTable, significanceLevel  = 0.05, significance_co
   
   volcano_out <- 
     resultsTable |> 
-    dplyr::filter(is.finite(adjPval)) |> 
+    dplyr::filter(is.finite(.data$adjPval)) |> 
     ggplot2::ggplot( 
-      ggplot2::aes(x = logFC,
-          y = -log10(pval), col = adjPval < significanceLevel )) + 
-    
+      ggplot2::aes(x = .data$logFC,
+          y = -log10(.data$pval), 
+          col = .data$adjPval < significanceLevel )
+      ) + 
     ggplot2::geom_point(size = 1, alpha = opacity) + 
-    
     ggplot2::theme_bw() +
     ylab("-log10(p-value)") +
     ggplot2::scale_color_manual(values = significance_colors, breaks = c("TRUE", "FALSE")) +

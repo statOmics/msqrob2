@@ -718,6 +718,8 @@ makeContrast <- function(contrasts, parameterNames) {
 #' createPairwiseContrasts(~ -1 + condition, colData(pe), "condition")
 #' 
 #' @importFrom assertthat assert_that
+#' @importFrom stats terms
+#' @importFrom utils combn
 #' @export
 createPairwiseContrasts <- function(formula, coldata, var, ridge = FALSE, nullHypothesis = " = 0") {
   assertthat::assert_that(class(formula)=="formula", msg = "'formula' should be of the 'formula' class")
