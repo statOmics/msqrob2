@@ -58,7 +58,11 @@ Imports:
     SummarizedExperiment,
     MultiAssayExperiment,
     codetools, 
-    matrixStats
+    matrixStats,
+    ggplot2, 
+    assertthat, 
+    dplyr,
+    grDevices
 Suggests:
     multcomp,
     gridExtra,
@@ -78,7 +82,7 @@ License: Artistic-2.0
 Collate: 'msqrob-framework.R' 'allGenerics.R' 'calculateNormFactors.R'
         'accessors.R' 'msqrob.R' 'msqrob-utils.R' 'StatModel-methods.R'
         'hypothesisTest-methods.R' 'msqrob-methods.R' 'msqrobAggregate.R'
-        'topFeatures.R' 'data.R' 'msqrobQB.R' 'msqrobHurdle-methods.R'
+        'topFeatures.R' 'data.R' 'msqrobQB.R' 'msqrobHurdle-methods.R' 'collect-plot-results.R'
 Encoding: UTF-8
 VignetteBuilder: knitr
 Roxygen: list(markdown=TRUE)
