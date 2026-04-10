@@ -5,7 +5,8 @@
 \alias{nfLogMedianOfRatios}
 \alias{nfLogMedianOfRatios,SummarizedExperiment-method}
 \alias{nfLogMedianOfRatios,QFeatures-method}
-\title{Methods to calculate log-scale normalization factors using the median-of-ratios method}
+\title{Methods to calculate log-scale normalization factors using
+the median-of-ratios method}
 \usage{
 \S4method{nfLogMedianOfRatios}{matrix}(object, na.rm = TRUE)
 
@@ -14,24 +15,29 @@
 \S4method{nfLogMedianOfRatios}{QFeatures}(object, i, na.rm = TRUE)
 }
 \arguments{
-\item{object}{A \code{matrix}, \code{SummarizedExperiment} or \code{QFeatures} object.}
+\item{object}{\code{matrix}, \code{SummarizedExperiment} or
+\code{QFeatures} object.}
 
-\item{na.rm}{Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.}
+\item{na.rm}{Logical; indicates if missing values are to be removed.
+Default is \code{TRUE} as missing values typically occur in proteomics data.}
 
-\item{i}{An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}}
+\item{i}{An integer or character specifying which assay to use,
+only needed when object is \code{SummarizedExperiment} or \code{QFeatures}}
 }
 \value{
-A numeric vector of log2-scale normalization factors, one per sample (column).
+A numeric vector of log2-scale normalization factors,
+one per sample (column).
 }
 \description{
-Computes sample-specific normalization factors on the log2 scale using a
-median-of-ratios approach similar to that used in DESeq2 for bulk RNA-seq data.
+Computes sample-specific normalization factors on the log2 scale
+using a median-of-ratios approach similar to that used in DESeq2 for bulk
+RNA-seq data.
 
 The method proceeds as follows:
 \enumerate{
 \item A pseudo-reference sample is constructed as the row-wise mean of the
 log2 intensities (equivalent to the log2-transformed geometric mean).
-\item For each sample, log2 ratios relative to the pseudo-reference are computed.
+\item For each sample, log2 ratios relative to pseudo-reference are computed.
 \item The normalization factor for each sample is obtained as the median of
 these log2 ratios (column-wise median).
 }
@@ -120,7 +126,6 @@ boxplot(matnorm)
 
 }
 \references{
-Love, M.I., Huber, W., Anders, S. (2014).
-Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2.
-Genome Biology, 15(12), 550.
+Love, M.I., Huber, W., Anders, S. (2014). Moderated estimation of fold change
+and dispersion for RNA-seq data with DESeq2. Genome Biology, 15(12), 550.
 }

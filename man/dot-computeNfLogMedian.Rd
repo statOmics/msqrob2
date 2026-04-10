@@ -2,24 +2,26 @@
 % Please edit documentation in R/calculateNormFactors.R
 \name{.computeNfLogMedian}
 \alias{.computeNfLogMedian}
-\title{Helper function to calculate sample-specific normalization factors on the log2 scale using
-conventional median normalisation}
+\title{Helper function to calculate sample-specific normalization factors on
+the log2 scale using conventional median normalisation}
 \usage{
 .computeNfLogMedian(mat, na.rm = TRUE)
 }
 \arguments{
 \item{mat}{A \code{matrix} object.}
 
-\item{na.rm}{Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.}
+\item{na.rm}{Logical; indicates if missing values are to be removed.
+Default is \code{TRUE} as missing values typically occur in proteomics data.}
 }
 \value{
-A numeric vector of log-scale normalization factors, one per sample (column).
+A numeric vector of log-scale normalization factors,
+one per sample (column).
 }
 \description{
-Helper function to calculate sample-specific normalization factors on the log2 scale using
-conventional median normalisation
+Helper function to calculate sample-specific normalization factors on
+the log2 scale using conventional median normalisation
 }
 \details{
-This implementation assumes that the assay values are already on the log scale.
+Implementation assumes that the assay values are already on the log scale.
 The normalization factors are computed on the log scale.
 }

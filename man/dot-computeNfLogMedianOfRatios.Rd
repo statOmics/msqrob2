@@ -2,30 +2,35 @@
 % Please edit documentation in R/calculateNormFactors.R
 \name{.computeNfLogMedianOfRatios}
 \alias{.computeNfLogMedianOfRatios}
-\title{Helper function to calculate sample-specific normalization factors on the log2 scale using a
-median-of-ratios approach similar to that used in DESeq2 for bulk RNA-seq data.}
+\title{Helper function to calculate sample-specific normalization factors}
 \usage{
 .computeNfLogMedianOfRatios(mat, na.rm = TRUE)
 }
 \arguments{
 \item{mat}{A \code{matrix} object.}
 
-\item{na.rm}{Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.}
+\item{na.rm}{Logical; indicates if missing values are to be removed.
+Default is \code{TRUE} as missing values typically occur in proteomics data.}
 }
 \value{
-A numeric vector of log2-scale normalization factors, one per sample (column).
+A numeric vector of log2-scale normalization factors,
+one per sample (column).
 }
 \description{
+Helper function to calculate sample-specific normalization factors
+on the log2 scale using a median-of-ratios approach similar to that used in
+DESeq2 for bulk RNA-seq data.
+
 The method proceeds as follows:
 \enumerate{
 \item A pseudo-reference sample is constructed as the row-wise mean of the
 log2 intensities (equivalent to the log2-transformed geometric mean).
-\item For each sample, log2 ratios relative to the pseudo-reference are computed.
+\item For each sample, log2 ratios relative to pseudo-reference are computed.
 \item The normalization factor for each sample is obtained as the median of
 these log2 ratios (column-wise median).
 }
 }
 \details{
-This implementation assumes that the assay values are already on the log scale.
+This implementation assumes that assay values are already on the log scale.
 The normalization factors are computed on the log scale.
 }

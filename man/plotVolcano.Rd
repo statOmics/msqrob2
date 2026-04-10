@@ -12,21 +12,25 @@ plotVolcano(
 )
 }
 \arguments{
-\item{resultsTable}{a data frame returned by the msqrob2 hypothesisTest method}
+\item{resultsTable}{data frame returned by the msqrob2 hypothesisTest method}
 
-\item{significanceLevel}{nominal FDR-level at which features are considered significant (value between 0 and 1)}
+\item{significanceLevel}{nominal FDR-level at which features are considered
+significant (value between 0 and 1)}
 
-\item{significance_colors}{a named vector with two colors, one for non-significant features named 'FALSE' and
-one for significant features named 'TRUE'. The default is 'c('FALSE' = 'black', 'TRUE' = 'red')'.}
+\item{significance_colors}{a named vector with two colors, one for
+non-significant features named 'FALSE' and one for significant features
+named 'TRUE'. The default is 'c('FALSE' = 'black', 'TRUE' = 'red')'.}
 
-\item{opacity}{refers to the opacity of the dots in the plot. Values of opacity range from 0 to 1,
-with lower values corresponding to more transparent colors. The default is \code{opacity = 0.5}.}
+\item{opacity}{refers to the opacity of the dots in the plot.
+Values of opacity range from 0 to 1, with lower values corresponding to more
+transparent colors. The default is \code{opacity = 0.5}.}
 }
 \value{
 A ggplot object with the volcano plot.
 }
 \description{
-\code{plot_volcano} generates a volcano plot for the results of hypothesis tests generated with the msqrob2 hypothesisTest method.
+\code{plot_volcano} generates a volcano plot for the results of hypothesis
+tests generated with the msqrob2 hypothesisTest method.
 }
 \examples{
 
@@ -40,7 +44,10 @@ data(pe)
 
 # Aggregate peptide intensities in protein expression values 
 # Note that the peptide intensities were already normalised!
-pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
+pe <- aggregateFeatures(pe, 
+                        i = "peptide", 
+                        fcol = "Proteins", 
+                        name = "protein")
 
 # Fit msqrob model
 pe <- msqrob(pe, i = "protein", formula = ~condition)

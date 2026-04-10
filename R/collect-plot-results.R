@@ -1,17 +1,20 @@
 .makeResultColumns <- function(contrast, resultsColumnNamePrefix) {
   assertthat::assert_that(
     is.matrix(contrast)|is.character(contrast), 
-    msg = "'contrast' should be a contrast matrix or a vector with the contrast names")
+    msg = "'contrast' should be a contrast matrix or 
+    a vector with the contrast names")
+  
   if(is.matrix(contrast)){
-  if (is.null(colnames(contrast))) {
-    if (resultsColumnNamePrefix == "")
-      resultsColumnNamePrefix <- "msqrobResults"
-    if (ncol(contrast) > 1)
-      colnames(contrast) <- seq_len(ncol(contrast))
+    if (is.null(colnames(contrast))) {
+      if (resultsColumnNamePrefix == "")
+        resultsColumnNamePrefix <- "msqrobResults"
+      if (ncol(contrast) > 1)
+        colnames(contrast) <- seq_len(ncol(contrast))
+      }
+    return(paste0(resultsColumnNamePrefix, colnames(contrast)))
+    } else 
+      return(paste0(resultsColumnNamePrefix, contrast))
   }
-  return(paste0(resultsColumnNamePrefix, colnames(contrast)))
-  } else return(paste0(resultsColumnNamePrefix, contrast))
-}
 
 .getMsqrob2Results <- function(object, row_var) {
   if (!row_var %in% colnames(rowData(object)))
@@ -43,7 +46,7 @@
 #'     name of the modelled feature (this information is taken from
 #'     the rownames of the tables, but this are made unique upon
 #'     combining).
-#' @return Result tables for the contrasts combined in a single inference table or list
+#' @return Result tables for contrasts combined in a single table or list
 #' @examples
 #'
 #' ## Load example data
@@ -56,7 +59,10 @@
 #'
 #' ## Aggregate peptide intensities in protein expression values 
 #' ## Note that the peptide intensities were already normalised!
-#' pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
+#' pe <- aggregateFeatures(pe, 
+#'                         i = "peptide", 
+#'                         fcol = "Proteins", 
+#'                         name = "protein")
 #'
 #' ## Fit msqrob model
 #' pe <- msqrob(pe, i = "protein", formula = ~condition)
@@ -89,7 +95,8 @@ msqrobCollect <- function(object, contrast, resultsColumnNamePrefix = "",
     msg = "'object' should be of the 'SummarizedExperiment' class")
   assertthat::assert_that(
     is.matrix(contrast)|is.character(contrast), 
-    msg = "'contrast' should be a contrast matrix or a vector with the contrast names")
+    msg = "'contrast' should be a contrast matrix or 
+    a vector with the contrast names")
   assertthat::assert_that(is.character(resultsColumnNamePrefix))
   assertthat::assert_that(is.logical(combine))
   
@@ -108,18 +115,22 @@ msqrobCollect <- function(object, contrast, resultsColumnNamePrefix = "",
 
 #' Volcano plot
 #'
-#' \code{plot_volcano} generates a volcano plot for the results of hypothesis tests generated with the msqrob2 hypothesisTest method. 
+#' \code{plot_volcano} generates a volcano plot for the results of hypothesis 
+#' tests generated with the msqrob2 hypothesisTest method. 
 #'
-#' @param resultsTable a data frame returned by the msqrob2 hypothesisTest method
-#' @param significanceLevel nominal FDR-level at which features are considered significant (value between 0 and 1)
-#' @param  significance_colors a named vector with two colors, one for non-significant features named 'FALSE' and 
-#' one for significant features named 'TRUE'. The default is 'c('FALSE' = 'black', 'TRUE' = 'red')'. 
-#' @param opacity refers to the opacity of the dots in the plot. Values of opacity range from 0 to 1, 
-#' with lower values corresponding to more transparent colors. The default is `opacity = 0.5`.
+#' @param resultsTable data frame returned by the msqrob2 hypothesisTest method
+#' @param significanceLevel nominal FDR-level at which features are considered 
+#' significant (value between 0 and 1)
+#' @param  significance_colors a named vector with two colors, one for 
+#' non-significant features named 'FALSE' and one for significant features 
+#' named 'TRUE'. The default is 'c('FALSE' = 'black', 'TRUE' = 'red')'. 
+#' @param opacity refers to the opacity of the dots in the plot. 
+#' Values of opacity range from 0 to 1, with lower values corresponding to more 
+#' transparent colors. The default is `opacity = 0.5`.
 #' @return A ggplot object with the volcano plot. 
 #' 
 #' @importFrom assertthat assert_that
-#' @importFrom ggplot2 aes ggplot geom_point theme_bw  ylab scale_color_manual labs
+#' @importFrom ggplot2 aes ggplot geom_point theme_bw ylab scale_color_manual labs
 #' @importFrom dplyr filter
 #' @importFrom grDevices col2rgb
 #' @importFrom rlang .data
@@ -137,7 +148,10 @@ msqrobCollect <- function(object, contrast, resultsColumnNamePrefix = "",
 #'
 #' # Aggregate peptide intensities in protein expression values 
 #' # Note that the peptide intensities were already normalised!
-#' pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
+#' pe <- aggregateFeatures(pe, 
+#'                         i = "peptide", 
+#'                         fcol = "Proteins", 
+#'                         name = "protein")
 #'
 #' # Fit msqrob model
 #' pe <- msqrob(pe, i = "protein", formula = ~condition)
@@ -162,17 +176,48 @@ msqrobCollect <- function(object, contrast, resultsColumnNamePrefix = "",
 #' plotVolcano(rowData(pe[["protein"]])$`conditionc - conditionb`)
 #' @export
 
-plotVolcano <- function(resultsTable, significanceLevel  = 0.05, significance_colors = c("FALSE" = "black", "TRUE" = "red"), opacity = .5)
+plotVolcano <- function(resultsTable, 
+                        significanceLevel  = 0.05, 
+                        significance_colors = 
+                          c("FALSE" = "black", "TRUE" = "red"), 
+                        opacity = .5)
 {
-  assertthat::assert_that(is.data.frame(resultsTable), msg =  "argument 'resultsTable' is no proper 'msqrob2::hypothesisTest' object")
-  if (!all(c("logFC", "adjPval", "pval") %in% names(resultsTable))) stop("argument 'resultsTable' is no proper 'msqrob2::hypothesisTest' object")
-  assertthat::assert_that(min(resultsTable$pval, na.rm = TRUE) >=0 & max(resultsTable$pval, na.rm = TRUE) <=1, msg = "p-values are not between 0 and 1")
-  assertthat::assert_that(min(resultsTable$adjPval, na.rm = TRUE) >=0 & max(resultsTable$adjPval, na.rm = TRUE) <=1, msg = "Adjusted p-values are not between 0 and 1")
+  assertthat::assert_that(
+    is.data.frame(resultsTable), 
+    msg = "'resultsTable' is no proper 'msqrob2::hypothesisTest' object")
+  
+  if (!all(c("logFC", "adjPval", "pval") %in% names(resultsTable))) 
+    stop("'resultsTable' is no proper 'msqrob2::hypothesisTest' object")
+  
+  assertthat::assert_that(
+    min(resultsTable$pval, na.rm = TRUE) >=0 & 
+      max(resultsTable$pval, na.rm = TRUE) <=1, 
+    msg = "p-values are not between 0 and 1")
+  
+  assertthat::assert_that(
+    min(resultsTable$adjPval, na.rm = TRUE) >=0 & 
+      max(resultsTable$adjPval, na.rm = TRUE) <=1, 
+    msg = "Adjusted p-values are not between 0 and 1")
+  
   assertthat::assert_that(is.numeric(resultsTable$logFC))
-  assertthat::assert_that(significanceLevel  >=0 & significanceLevel  <= 1, msg = "significance level is not between 0 and 1")
-  assertthat::assert_that( opacity >=0 &  opacity <= 1, msg = "Opacity is not between 0 and 1")
-  assertthat::assert_that(all(names(significance_colors) %in% c("FALSE","TRUE")), msg = "significance colors are not named 'FALSE' and 'TRUE'")
-  assertthat::assert_that(tryCatch({grDevices::col2rgb(significance_colors);TRUE}, error = function(e) {FALSE}), msg = "significance_colors are no valid colors")
+  
+  assertthat::assert_that(
+    significanceLevel  >=0 & significanceLevel  <= 1, 
+    msg = "significance level is not between 0 and 1")
+  
+  assertthat::assert_that(
+    opacity >=0 &  opacity <= 1, 
+    msg = "Opacity is not between 0 and 1")
+  
+  assertthat::assert_that(
+    all(names(significance_colors) %in% c("FALSE","TRUE")), 
+    msg = "significance colors are not named 'FALSE' and 'TRUE'")
+  
+  assertthat::assert_that(
+    tryCatch(
+      {grDevices::col2rgb(significance_colors);TRUE}, 
+      error = function(e) {FALSE}), 
+    msg = "significance_colors are no valid colors")
   
   volcano_out <- 
     resultsTable |> 
@@ -185,7 +230,9 @@ plotVolcano <- function(resultsTable, significanceLevel  = 0.05, significance_co
     ggplot2::geom_point(size = 1, alpha = opacity) + 
     ggplot2::theme_bw() +
     ylab("-log10(p-value)") +
-    ggplot2::scale_color_manual(values = significance_colors, breaks = c("TRUE", "FALSE")) +
+    ggplot2::scale_color_manual(
+      values = significance_colors, 
+      breaks = c("TRUE", "FALSE")) +
     ggplot2::labs(color=paste0("FDR < ",significanceLevel ))
   return(volcano_out)
 }

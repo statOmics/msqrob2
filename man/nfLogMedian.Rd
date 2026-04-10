@@ -15,21 +15,25 @@ using conventional median summarisation.}
 \S4method{nfLogMedian}{QFeatures}(object, i, na.rm = TRUE)
 }
 \arguments{
-\item{object}{A \code{matrix}, \code{SummarizedExperiment} or \code{QFeatures} object.}
+\item{object}{\code{matrix}, \code{SummarizedExperiment} or
+\code{QFeatures} object.}
 
-\item{na.rm}{Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.}
+\item{na.rm}{Logical; indicates if missing values are to be removed.
+Default is \code{TRUE} as missing values typically occur in proteomics data.}
 
-\item{i}{An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}}
+\item{i}{An integer or character specifying which assay to use,
+only needed when object is \code{SummarizedExperiment} or \code{QFeatures}}
 }
 \value{
-A numeric vector of log2-scale normalization factors, one per sample (column).
+A numeric vector of log2-scale normalization factors,
+one per sample (column).
 }
 \description{
 Methods to computes sample-specific normalization factors on the log scale
 using conventional median summarisation.
 }
 \details{
-This implementation assumes that the assay values are already on the log scale.
+Implementation assumes that the assay values are already on the log scale.
 The normalization factors are computed on the log scale.
 }
 \examples{
