@@ -8,9 +8,9 @@ median-of-ratios approach similar to that used in DESeq2 for bulk RNA-seq data.}
 .computeNfLogMedianOfRatios(mat, na.rm = TRUE)
 }
 \arguments{
-\item{na.rm}{Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.}
+\item{mat}{A \code{matrix} object.}
 
-\item{object}{A \code{matrix} object.}
+\item{na.rm}{Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.}
 }
 \value{
 A numeric vector of log2-scale normalization factors, one per sample (column).

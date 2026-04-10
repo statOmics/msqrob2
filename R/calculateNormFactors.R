@@ -5,10 +5,10 @@
 #' Helper function to calculate sample-specific normalization factors on the log2 scale using 
 #' conventional median normalisation
 #'
-#' @param object A \code{matrix} object.
+#' @param mat A \code{matrix} object.
 #' @param na.rm Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.
 #'
-#' @return A numeric vector of log2-scale normalization factors, one per sample (column).
+#' @return A numeric vector of log-scale normalization factors, one per sample (column).
 #'
 #' @details
 #' This implementation assumes that the assay values are already on the log scale.
@@ -19,6 +19,7 @@
 .computeNfLogMedian <- function(mat, na.rm = TRUE) {
   # 1. Calculates the sample medians of the intensity assay of summarised experiment `i` in qfeatures object `qf` 
   # 2. Defines the log norm factor by subtracting the median of the sample medians from each sample median,  so as to center the intensities of all samples around the median intensity in the experiment. 
+  message("This function aims to calculate norm factors on a log scale, the input data are assumed to be on the log-scale!")
   nf_log <- mat |>  
     colMedians(na.rm = na.rm) #1.
   nf_log <- nf_log - median(nf_log) #2. 
@@ -31,7 +32,6 @@
 #' @aliases nfLogMedian nfLogMedian,SummarizedExperiment-method nfLogMedian,QFeatures-method nfLogMedian,matrix-method
 #'
 #' @param object A \code{matrix}, \code{SummarizedExperiment} or \code{QFeatures} object.
-#' @param i An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}
 #' @param na.rm Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.
 #'
 #' @return A numeric vector of log2-scale normalization factors, one per sample (column).
@@ -123,22 +123,29 @@
 #' @importFrom matrixStats colMedians
 #' @importFrom stats median
 #' @export
-
-
-setGeneric("nfLogMedian", function(object, na.rm = TRUE, ...) standardGeneric("nfLogMedian"))
-
+#' @rdname nfLogMedian
 setMethod("nfLogMedian", signature(object = "matrix"),
           function(object, na.rm = TRUE) {
             .computeNfLogMedian(mat = object, na.rm=na.rm)
           })
 
+#' @param i An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}
+#' @export
+#' @rdname nfLogMedian
 setMethod("nfLogMedian", signature(object = "SummarizedExperiment"),
           function(object, i, na.rm = TRUE) {
+            if (missing(i)) stop("No assay provided, please define argument 'i'")
+            if (class(try(object[[i]], silent=TRUE)) %in% c("try-error","NULL")) stop("Object does not contain an assay with the name ", i)
             .computeNfLogMedian(mat = SummarizedExperiment::assay(object, i), na.rm=na.rm)
           })
 
+#' @param i An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}
+#' @export
+#' @rdname nfLogMedian
 setMethod("nfLogMedian", signature(object = "QFeatures"),
           function(object, i, na.rm = TRUE) {
+            if (missing(i)) stop("No assay provided, please define argument 'i'")
+            if (class(try(object[[i]], silent=TRUE)) %in% c("try-error","NULL")) stop("Object does not contain an assay with the name ", i)
             .computeNfLogMedian(mat = SummarizedExperiment::assay(object, i), na.rm=na.rm)
           })
 
@@ -157,7 +164,7 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
 #'   \item The normalization factor for each sample is obtained as the median of
 #'   these log2 ratios (column-wise median).
 #' }
-#' @param object A \code{matrix} object.
+#' @param mat A \code{matrix} object.
 #' @param na.rm Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.
 #'
 #' @return A numeric vector of log2-scale normalization factors, one per sample (column).
@@ -173,10 +180,12 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
   #   By default FUN argument in sweep is "-" (subtract)
   #   Margin = 1 --> adopt FUN on rows
   #3. Calculate median logFC per sample, which is the final log scale norm factor
+  message("This function aims to calculate norm factors on a log scale, the input data are assumed to be on the log-scale!")
   pseudoref <- rowMeans(mat, na.rm = na.rm) #1. 
   sweep(mat, MARGIN = 1, pseudoref) |>      #2.
     matrixStats::colMedians(na.rm = na.rm)  #3.
 }
+
 
 #' Methods to calculate log-scale normalization factors using the median-of-ratios method
 #'
@@ -194,7 +203,6 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
 #'
 #' @aliases nfLogMedianOfRatios nfLogMedianOfRatios,SummarizedExperiment-method nfLogMedianOfRatios,QFeatures-method nfLogMedianOfRatios,matrix-method
 #' @param object A \code{matrix}, \code{SummarizedExperiment} or \code{QFeatures} object.
-#' @param i An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}
 #' @param na.rm Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.
 #'
 #' @return A numeric vector of log2-scale normalization factors, one per sample (column).
@@ -288,21 +296,28 @@ setMethod("nfLogMedian", signature(object = "QFeatures"),
 #'
 #' @importFrom matrixStats colMedians
 #' @export
-
-
-setGeneric("nfLogMedianOfRatios", function(object, na.rm = TRUE, ...) standardGeneric("nfLogMedianOfRatios"))
-
+#' @rdname nfLogMedianOfRatios
 setMethod("nfLogMedianOfRatios", signature(object = "matrix"),
           function(object, na.rm = TRUE) {
             .computeNfLogMedianOfRatios(mat = object, na.rm=na.rm)
           })
 
+#' @param i An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}
+#' @export
+#' @rdname nfLogMedianOfRatios
 setMethod("nfLogMedianOfRatios", signature(object = "SummarizedExperiment"),
           function(object, i, na.rm = TRUE) {
+            if (missing(i)) stop("No assay provided, please define argument 'i'")
+            if (class(try(object[[i]], silent=TRUE)) %in% c("try-error","NULL")) stop("Object does not contain an assay with the name ", i)
             .computeNfLogMedianOfRatios(mat = SummarizedExperiment::assay(object, i), na.rm=na.rm)
           })
 
+#' @param i An integer or character specifying which assay to use, only needed when object is \code{SummarizedExperiment} or \code{QFeatures}
+#' @export
+#' @rdname nfLogMedianOfRatios
 setMethod("nfLogMedianOfRatios", signature(object = "QFeatures"),
           function(object, i, na.rm = TRUE) {
+            if (missing(i)) stop("No assay provided, please define argument 'i'")
+            if (class(try(object[[i]], silent=TRUE)) %in% c("try-error","NULL")) stop("Object does not contain an assay with the name ", i)
             .computeNfLogMedianOfRatios(mat = SummarizedExperiment::assay(object, i), na.rm=na.rm)
           })

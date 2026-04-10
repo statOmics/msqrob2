@@ -34,3 +34,7 @@ setGeneric("msqrobQB", function(object, ...) standardGeneric("msqrobQB"))
 setGeneric("msqrobHurdle", function(object, ...) standardGeneric("msqrobHurdle"))
 #' @export
 setGeneric("hypothesisTestHurdle", function(object, ...) standardGeneric("hypothesisTestHurdle"))
+#' @export
+setGeneric("nfLogMedianOfRatios", function(object, i, na.rm = TRUE, ...) standardGeneric("nfLogMedianOfRatios"))
+#' @export
+setGeneric("nfLogMedian", function(object, i, na.rm = TRUE, ...) standardGeneric("nfLogMedian"))

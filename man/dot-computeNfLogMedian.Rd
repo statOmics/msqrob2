@@ -8,12 +8,12 @@ conventional median normalisation}
 .computeNfLogMedian(mat, na.rm = TRUE)
 }
 \arguments{
-\item{na.rm}{Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.}
+\item{mat}{A \code{matrix} object.}
 
-\item{object}{A \code{matrix} object.}
+\item{na.rm}{Logical; should missing values be removed? Default is \code{TRUE} as missing values typically occur in proteomics data.}
 }
 \value{
-A numeric vector of log2-scale normalization factors, one per sample (column).
+A numeric vector of log-scale normalization factors, one per sample (column).
 }
 \description{
 Helper function to calculate sample-specific normalization factors on the log2 scale using
