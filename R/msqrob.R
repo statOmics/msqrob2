@@ -249,6 +249,7 @@ msqrobLm <- function(y,
 #' @importFrom MASS psi.huber
 #' @importFrom stats resid update.formula resid mad
 #' @importFrom methods as is
+#' @importFrom reformulas nobars
 #' @import lme4
 #' @import Matrix
 #' @importFrom BiocParallel bplapply bpmapply
@@ -347,7 +348,7 @@ msqrobLmer <- function(y,
   data <- .create_data(y,rowdata,coldata)
 
   #all necessary variables are now in data,  now we can create the fixed object if we use ridge regression
-  fixed <- model.matrix(nobars(formula), data = data)
+  fixed <- model.matrix(reformulas::nobars(formula), data = data)
   data$fixed <- fixed
   data$y <- as.matrix(y)
   data <- data[!is.na(data$y), , drop = FALSE]
@@ -356,7 +357,7 @@ msqrobLmer <- function(y,
   #nonestimable_paramaters <- limma::nonEstimable(data$fixed)
   data$fixed <- data$fixed[,colMeans(data$fixed == 0) != 1 , drop = FALSE]
 
-  if (sum(!grepl("(Intercept)", colnames(fixed))) < 2 & nobars(formula)[[2]] != 1) {
+  if (sum(!grepl("(Intercept)", colnames(fixed))) < 2 & reformulas::nobars(formula)[[2]] != 1) {
     stop("The mean model must have more than two parameters for ridge regression.
               if you really want to adopt ridge regression when your factor has only two levels
               rerun the function with a formula where you drop the intercept. e.g. ~-1+condition
@@ -366,7 +367,7 @@ msqrobLmer <- function(y,
   if(is.null(findbars(formula))) {
     formula <- formula(y ~ (1|ridge))
   } else {
-    if (nobars(formula)[[2]] != ~1){
+    if (reformulas::nobars(formula)[[2]] != ~1){
       #udpate formula to remove any fixed effect variables and replace with ridge
       formula <- formula(
         paste0("y ~ (1|ridge) + ", paste0("(",paste(findbars(formula), collapse=")+("),")")))
@@ -431,7 +432,7 @@ msqrobLmer <- function(y,
       sigma <- sigma(model)
       betas <- .getBetaB(model)
       vcovUnscaled <- as.matrix(.getVcovBetaBUnscaled(model))
-      if (nobars(formula)[[2]] != 1) {
+      if (reformulas::nobars(formula)[[2]] != 1) {
         if (doQR) {
           if (colnames(data$fixed)[1] == "(Intercept)") {
 
@@ -474,7 +475,7 @@ msqrobLmer <- function(y,
   #Create the matrix containing the variable information
   data <- .create_data(y,rowdata,coldata)
 
-  data_model_matrix <- model.matrix(nobars(formula), data = data)
+  data_model_matrix <- model.matrix(reformulas::nobars(formula), data = data)
   formula <- update.formula(formula, y~.)
 
   data$y <- as.matrix(y)
@@ -635,11 +636,11 @@ msqrobLmer <- function(y,
 
 .create_data <- function(y,rowdata,coldata){
   if (is.null(rowdata)){
-    data <- coldata[rep(1:nrow(coldata), each = nrow(y)), , drop = FALSE]
+    data <- coldata[rep(seq_len(nrow(coldata)), each = nrow(y)), , drop = FALSE]
   } else {
     data <- cbind(
-      coldata[rep(1:nrow(coldata), each = nrow(y)), ],
-      rowdata[rep(1:nrow(rowdata), ncol(y)),]
+      coldata[rep(seq_len(nrow(coldata)), each = nrow(y)), ],
+      rowdata[rep(seq_len(nrow(rowdata)), ncol(y)),]
     )
     data <- DataFrame(data)
     colnames(data) <- c(colnames(coldata),colnames(rowdata))

@@ -121,10 +121,10 @@ setMethod(
       if (!all(check_vars)){
         if(sum(!check_vars) >1) {
           vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
-          stop(paste("Variables", vars_not_found, "are not found in coldata"), sep = "")
+          stop(sprintf("Variables %s is not found in coldata or rowdata", vars_not_found))
         } else{
           vars_not_found <- all.vars(formula)[!check_vars]
-          stop(paste0("Variable ", vars_not_found, " is not found in coldata"), sep = "")
+          stop(sprintf("Variable %s is not found in coldata or rowdata", vars_not_found))
         }
       }
 
@@ -202,10 +202,10 @@ setMethod(
       if (!all(check_vars)){
         if(sum(!check_vars) >1) {
           vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
-          stop(paste("Variables", vars_not_found, "are not found in coldata"), sep = "")
+          stop(sprintf("Variables %s are not found in coldata or rowdata", vars_not_found))
         } else{
           vars_not_found <- all.vars(formula)[!check_vars]
-          stop(paste0("Variable ", vars_not_found, " is not found in coldata"), sep = "")
+          stop(sprintf("Variable %s is not found in coldata or rowdata", vars_not_found))
         }
       }
 

@@ -673,8 +673,9 @@ makeContrast <- function(contrasts, parameterNames) {
 ## functions to generate parameter names based on a formula, 
 ## column data, variable name in the formula and logical indicating
 ## if msqrob models are fitted with or without ridge regression.
+#' @importFrom reformulas nobars
 .getParamNames <- function(formula, coldata, var, ridge) {
-  params <- lme4::nobars(formula) |>
+  params <- reformulas::nobars(formula) |>
     model.matrix(, data = coldata) |>
     colnames()
   params <- params[grepl(var, params)]
@@ -701,6 +702,8 @@ makeContrast <- function(contrasts, parameterNames) {
 #'        The default is 'ridge = FALSE'
 #' @param nullHypothesis object of type character that specifies the value of the contrast under the null
 #'        hypothesis. The default is ' = 0'.
+#'        
+#' @return Vector of type character with nulhypotheses for all contrasts.
 #'
 #' @examples
 #' # Load example data
@@ -722,8 +725,8 @@ makeContrast <- function(contrasts, parameterNames) {
 #' @importFrom utils combn
 #' @export
 createPairwiseContrasts <- function(formula, coldata, var, ridge = FALSE, nullHypothesis = " = 0") {
-  assertthat::assert_that(class(formula)=="formula", msg = "'formula' should be of the 'formula' class")
-  assertthat::assert_that(class(coldata) %in% c("data.frame", "DFrame"), msg = "'coldata' should be of class 'data.frame' or 'DFrame'")
+  assertthat::assert_that(is(formula, "formula"), msg = "'formula' should be of the 'formula' class")
+  assertthat::assert_that(is(coldata, "data.frame") | is(coldata, "DFrame"), msg = "'coldata' should be of class 'data.frame' or 'DFrame'")
   assertthat::assert_that(!is.numeric(coldata[[var]]), msg = "variable 'var' is not a factor")
   assertthat::assert_that(nlevels(as.factor(as.character(coldata[[var]]))) == nlevels(as.factor(coldata[[var]])), 
                           msg = "No data is available for one or more factor levels of variable 'var'")

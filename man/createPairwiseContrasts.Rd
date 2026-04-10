@@ -26,6 +26,9 @@ The default is 'ridge = FALSE'}
 \item{nullHypothesis}{object of type character that specifies the value of the contrast under the null
 hypothesis. The default is ' = 0'.}
 }
+\value{
+Vector of type character with nulhypotheses for all contrasts.
+}
 \description{
 Construct all contrasts for all pairwise comparisons between all levels of a factor.
 }

@@ -48,7 +48,7 @@
 msqrobCollect <- function(object, contrast, resultsColumnNamePrefix = "",
                           combine = TRUE) {
   # check type of arguments
-  assertthat::assert_that(class(object)=="SummarizedExperiment", msg = "'object' should be of the 'SummarizedExperiment' class")
+  assertthat::assert_that(is(object, "SummarizedExperiment"), msg = "'object' should be of the 'SummarizedExperiment' class")
   assertthat::assert_that(is.matrix(contrast)|is.character(contrast), msg = "'contrast' should be a contrast matrix or a vector with the contrast names")
   assertthat::assert_that(is.character(resultsColumnNamePrefix))
   assertthat::assert_that(is.logical(combine))

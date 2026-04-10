@@ -64,7 +64,8 @@ Imports:
     dplyr,
     grDevices,
     utils,
-    rlang
+    rlang, 
+    reformulas
 Suggests:
     multcomp,
     gridExtra,
@@ -91,6 +92,7 @@ Roxygen: list(markdown=TRUE)
 RoxygenNote: 7.3.3
 biocViews:
     Proteomics,
+    Metabolomics,
     MassSpectrometry,
     DifferentialExpression,
     MultipleComparison,

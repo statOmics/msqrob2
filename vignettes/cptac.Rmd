@@ -562,7 +562,7 @@ we illustrate the benefit of ridge regression when dealing with more complex exp
 
 # Additional Examples
 
-On our companion website [msqrob2Examples](https://statomics.github.io/msqrob2Examples)
+On our companion website [msqrob2book](https://statomics.github.io/msqrob2book)
 you can find:
 
 - Examples with all msqrob2 workflows
@@ -576,3 +576,9 @@ Details to the methods and workflows in `msqrob2` can be found in
 Please refer to these papers when you use our tools.
 
 # References
+
+# SessionInfo
+
+```{r}
+sessionInfo()
+```
