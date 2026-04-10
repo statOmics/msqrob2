@@ -2,6 +2,7 @@
 
 export(.StatModel)
 export(StatModel)
+export(createPairwiseContrasts)
 export(getCoef)
 export(getContrast)
 export(getDF)

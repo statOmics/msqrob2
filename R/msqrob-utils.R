@@ -668,3 +668,71 @@ makeContrast <- function(contrasts, parameterNames) {
         ex, " to character"
     )
 }
+
+
+## functions to generate parameter names based on a formula, 
+## column data, variable name in the formula and logical indicating
+## if msqrob models are fitted with or without ridge regression.
+.getParamNames <- function(formula, coldata, var, ridge) {
+  params <- lme4::nobars(formula) |>
+    model.matrix(, data = coldata) |>
+    colnames()
+  params <- params[grepl(var, params)]
+  if (length(params) == 0)
+    stop(sQuote(var), " not found as fixed effect in formula.")
+  if (any(grepl("[:]", params)))
+    stop("You cannot automatically create pairwise contrasts for a variable involved in an interaction.")
+  if (ridge) params <- paste0("ridge", params)
+  unique(params)
+}
+
+
+
+#' Construct all contrasts for all pairwise comparisons between all levels of a factor
+#'
+#' @description  Construct all contrasts for all pairwise comparisons between all levels of a factor.
+#'
+#'
+#' @param formula Model formula. The model is built based on the covariates in the 'coldata' object.
+#' @param coldata data.frame or DFrame with information on the design. 
+#' @param var object of type 'character' with the name of the factor in the formula for which the
+#'        pairwise comparisons will be made. 
+#' @param ridge logical indicating if the msqrob models are fitted with or without ridge regression. 
+#'        The default is 'ridge = FALSE'
+#' @param nullHypothesis object of type character that specifies the value of the contrast under the null
+#'        hypothesis. The default is ' = 0'.
+#'
+#' @examples
+#' # Load example data
+#' # The data are a Feature object containing
+#' # a SummarizedExperiment named "peptide" with MaxQuant peptide intensities
+#' # The data are a subset of spike-in the human-ecoli study
+#' # The variable condition in the colData of the Feature object
+#' # contains information on the spike in condition a-e (from low to high)
+#' data(pe)
+#' 
+#' # Model with intercept (conditiona is reference class)
+#' createPairwiseContrasts(~ condition, colData(pe), "condition")
+#' 
+#' # Model without intercept
+#' createPairwiseContrasts(~ -1 + condition, colData(pe), "condition")
+#' 
+#' @importFrom assertthat assert_that
+#' @export
+createPairwiseContrasts <- function(formula, coldata, var, ridge = FALSE, nullHypothesis = " = 0") {
+  assertthat::assert_that(class(formula)=="formula", msg = "'formula' should be of the 'formula' class")
+  assertthat::assert_that(class(coldata) %in% c("data.frame", "DFrame"), msg = "'coldata' should be of class 'data.frame' or 'DFrame'")
+  assertthat::assert_that(!is.numeric(coldata[[var]]), msg = "variable 'var' is not a factor")
+  assertthat::assert_that(nlevels(as.factor(as.character(coldata[[var]]))) == nlevels(as.factor(coldata[[var]])), 
+                          msg = "No data is available for one or more factor levels of variable 'var'")
+  params <- .getParamNames(formula, coldata, var, ridge)
+  if (length(params) > 1) {
+    out <- combn(params, 2)
+    out <- paste0(out[2, ], " - ", out[1, ])
+    hasIntercept <- attr(terms(formula), "intercept")
+    isFirst <- labels(terms(formula))[[1]] == var
+  if (nlevels(as.factor(as.character(coldata[[var]])))>length(params))
+    out <- c(params, out)} else
+      out <- params
+  paste0(out, nullHypothesis)
+}
