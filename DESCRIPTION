@@ -64,8 +64,7 @@ Imports:
     dplyr,
     grDevices,
     utils,
-    rlang, 
-    reformulas
+    rlang
 Suggests:
     multcomp,
     gridExtra,

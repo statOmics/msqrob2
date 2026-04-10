@@ -1,5 +1,7 @@
 .makeResultColumns <- function(contrast, resultsColumnNamePrefix) {
-  assertthat::assert_that(is.matrix(contrast)|is.character(contrast), msg = "'contrast' should be a contrast matrix or a vector with the contrast names")
+  assertthat::assert_that(
+    is.matrix(contrast)|is.character(contrast), 
+    msg = "'contrast' should be a contrast matrix or a vector with the contrast names")
   if(is.matrix(contrast)){
   if (is.null(colnames(contrast))) {
     if (resultsColumnNamePrefix == "")
@@ -42,14 +44,52 @@
 #'     the rownames of the tables, but this are made unique upon
 #'     combining).
 #' @return Result tables for the contrasts combined in a single inference table or list
+#' @examples
+#'
+#' ## Load example data
+#' ## The data are a Feature object containing
+#' ## a SummarizedExperiment named "peptide" with MaxQuant peptide intensities
+#' ## The data are a subset of spike-in the human-ecoli study
+#' ## The variable condition in the colData of the Feature object
+#' ## contains information on the spike in condition a-e (from low to high)
+#' data(pe)
+#'
+#' ## Aggregate peptide intensities in protein expression values 
+#' ## Note that the peptide intensities were already normalised!
+#' pe <- aggregateFeatures(pe, i = "peptide", fcol = "Proteins", name = "protein")
+#'
+#' ## Fit msqrob model
+#' pe <- msqrob(pe, i = "protein", formula = ~condition)
+#'
+#' ## Define contrast
+#' design <- model.matrix(~condition, data = colData(pe))
+#' 
+#' ## Assess log2 fold change between reference condition a and condition b
+#' L <- makeContrast(
+#'     contrasts = c("conditionb = 0",
+#'                   "conditionc = 0",
+#'                   "conditionc - conditionb = 0"),
+#'     parameterNames = colnames(design))
+#' 
+#'
+#' pe <- hypothesisTest(pe, i = "protein", L)
+#' 
+#' ## Extract Results
+#' inference <- msqrobCollect(pe[["protein"]], L) 
+#' head(inference)
+#' 
 #' @importFrom assertthat assert_that
 #' @export
 
 msqrobCollect <- function(object, contrast, resultsColumnNamePrefix = "",
                           combine = TRUE) {
   # check type of arguments
-  assertthat::assert_that(is(object, "SummarizedExperiment"), msg = "'object' should be of the 'SummarizedExperiment' class")
-  assertthat::assert_that(is.matrix(contrast)|is.character(contrast), msg = "'contrast' should be a contrast matrix or a vector with the contrast names")
+  assertthat::assert_that(
+    is(object, "SummarizedExperiment"), 
+    msg = "'object' should be of the 'SummarizedExperiment' class")
+  assertthat::assert_that(
+    is.matrix(contrast)|is.character(contrast), 
+    msg = "'contrast' should be a contrast matrix or a vector with the contrast names")
   assertthat::assert_that(is.character(resultsColumnNamePrefix))
   assertthat::assert_that(is.logical(combine))
   
