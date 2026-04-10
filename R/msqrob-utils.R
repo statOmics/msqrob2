@@ -673,9 +673,8 @@ makeContrast <- function(contrasts, parameterNames) {
 ## functions to generate parameter names based on a formula, 
 ## column data, variable name in the formula and logical indicating
 ## if msqrob models are fitted with or without ridge regression.
-#' @importFrom reformulas nobars
 .getParamNames <- function(formula, coldata, var, ridge) {
-  params <- reformulas::nobars(formula) |>
+  params <- lme4::nobars(formula) |>
     model.matrix(, data = coldata) |>
     colnames()
   params <- params[grepl(var, params)]
