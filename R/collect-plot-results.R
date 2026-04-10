@@ -113,6 +113,7 @@ msqrobCollect <- function(object, contrast, resultsColumnNamePrefix = "",
 #' pe <- hypothesisTest(pe, i = "protein", L)
 #' 
 #' # Volcano plots
+#' library(ggplot2)
 #' inference <- msqrobCollect(pe[["protein"]], L) 
 #' plotVolcano(inference) + facet_wrap(~contrast)
 #' plotVolcano(rowData(pe[["protein"]])$`conditionc`)
