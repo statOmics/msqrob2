@@ -84,7 +84,11 @@ Suggests:
     MsDataHub,
     MSnbase,
     MsCoreUtils,
-    covr
+    covr, 
+    arrow, 
+    data.table,
+    ggcorrplot, 
+    iq
 License: Artistic-2.0
 Collate: 'msqrob-framework.R' 'allGenerics.R' 'calculateNormFactors.R'
         'accessors.R' 'msqrob.R' 'msqrob-utils.R' 'StatModel-methods.R'
