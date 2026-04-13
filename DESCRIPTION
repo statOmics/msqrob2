@@ -66,6 +66,11 @@ Imports:
     utils,
     rlang
 Suggests:
+    stringr, 
+    ExploreModelMatrix,
+    kableExtra,
+    ComplexHeatmap,
+    scater,
     multcomp,
     gridExtra,
     knitr,
