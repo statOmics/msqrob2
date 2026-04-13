@@ -1,3 +1,15 @@
+# msqrob 1.19
+
+## msqrob 1.19.1
+
+- Add functions to calculate log-normalisation factors that can be used with 
+  sweep function
+- Add function msqrobCollect to collect results tables
+- Add function plotVolcano to make volcanoplots for hypothesisTest tables
+- Add function createPairwiseContrasts to generate contrasts for all pairwise 
+  comparisons
+- Illustrate these new functionalities in the vignettes
+- New Vignettes for DIA (DIA-NN and Spectronaut)
 
 # msqrob 1.17
 
