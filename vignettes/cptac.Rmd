@@ -376,7 +376,7 @@ $$
 y_{ip}^{\text{norm}} = y_{ip} - \log_2(nf_i)
 $$
 
-with $y_ip$ the log2-transformed intensities and $nf_i$ the log2-transformed 
+with $y_{ip}$ the log2-transformed intensities and $\log_2(nf_i)$ the log2-transformed 
 norm factor. Upon normalisation, we can see that the distribution of the 
 $y_{ip}^{\text{norm}}$ nicely overlap (using the same code as above)
 
@@ -401,7 +401,7 @@ Here, we summarise the peptide-level data into protein intensities using
 of a `rowData` column to group the peptides into proteins (or
 protein groups), here `Proteins`. We can provide the summarisation
 approach through the `fun` argument. 
-We use the standard sumarisation in aggregateFeatures, which is a
+We use the standard summarisation in aggregateFeatures, which is a
 robust summarisation method.
 
 ```{r,warning=FALSE}
@@ -527,7 +527,7 @@ We will first extract the set to explore along the sample annotations
 getWithColData(qf, "proteins") |> 
   as("SingleCellExperiment") |> 
   runMDS(exprs_values = 1) |> 
-  plotMDS(colour_by = "condition", shape_by = "rep") 
+  plotMDS(colour_by = "condition", shape_by = "rep", point_size = 3)
 ```
 
 
@@ -557,7 +557,7 @@ corMat |>
 
 ## Sources of variation 
 
-For this experiment, we can model a single source of variation: spike-in 
+For this experiment, we can only model a single source of variation: spike-in 
 concentration. All remaining sources of variability, e.g. pipetting errors, 
 MS run to run variability, etc will be lumped in the residual variability 
 (error term).
@@ -573,7 +573,7 @@ boils down to the following linear model:
 $$ y_i = \mathbf{x}_i^T\boldsymbol{\beta} +\epsilon_i$$
 with the $\log_2$-normalised and summarised protein intensities in sample; 
 $\mathbf{x}_i$ a vector with the covariate pattern for the sample encoding the 
-intercept,spike-in condition, or other experimental factors;  
+intercept, spike-in condition, or other experimental factors;  
 $\boldsymbol{\beta}$ the vector of parameters that model the association between 
 the covariates and the outcome; and $\epsilon_i$ the residuals reflecting 
 variation that is not captured by the fixed effects. 
@@ -621,7 +621,7 @@ models[1:3]
 
 We can now convert the research question “do the spike-in conditions affect the protein intensities?” into a statistical hypothesis.
 
-In other words, we need to translate this question in a null and alternative hypothesis on a single model parameter or a linear combination of model parameters, which is also referred to with a contrast.
+In other words, we need to translate this question in a null and alternative hypothesis on a single model parameter or on a linear combination of model parameters, which is also referred to with a contrast.
 
 To aid defining contrasts, we will visualise the experimental design using the `ExploreModelMatrix` package.
 
@@ -636,11 +636,11 @@ vd$plotlist
 ```
 
 
-This plot shows that the average protein $\log_2$ intensity for conditionA is modelled by `(Intercept)`, for the `conditionB` group by `(Intercept) + condtionB` .
+This plot shows that the average protein $\log_2$ intensity for conditionA is modelled by `(Intercept)` and that for the `conditionB` group by `(Intercept) + conditionB` .
  
 Hence, to assess differential abundance of proteins between the two spike-in conditions, we will have to assess the following null hypothesis:  $\log_2 FC_{B-A} = (Intercept + conditionB) - Intercept = conditionB = 0$. 
 
-Based on these null hypothesis we now generate a contrast matrix. 
+Based on this null hypothesis we now generate a contrast matrix. 
 
 ```{r}
 (L <- makeContrast(
@@ -653,7 +653,7 @@ Based on these null hypothesis we now generate a contrast matrix.
 We can now test our null hypothesis using `hypothesisTest()` which
 takes the `QFeatures` object with the fitted model and the contrast we
 just built. `msqrob2` automatically applies the hypothesis
-testing to all proteins in the data.
+testing to all features in the assay.
 
 ```{r}
 qf <- hypothesisTest(qf, i = "proteins", contrast = L)
@@ -678,7 +678,7 @@ head(inferences)
 
 ### Results table for significant proteins
 
-We will return a table of proteins for which the contrasts are significant at the 5% FDR level. 
+We will return a table of proteins for which the contrast is significant at the 5% FDR level. 
 
 1. We set the significance level 
 3. We filter the significant results for the contrast from the table
@@ -688,7 +688,7 @@ We will return a table of proteins for which the contrasts are significant at th
 alpha <- 0.05 #1.
 sigList <- inferences |> 
     filter(adjPval < alpha) #3.
-kable(sigList, row.names = FALSE) |>
+kable(sigList) |>
       kable_styling(full_width = FALSE) |>
       scroll_box(height = "250px") #4.
 ```
@@ -719,6 +719,8 @@ inferences |>
 
 ### Heatmaps
 
+We construct heatmaps for the significant proteins for each contrast. 
+
 1. We get the names of the significant features.
 2. We extract the quant data for the significant features and scale it. 
 3. We extract annotation
@@ -736,6 +738,7 @@ quants <- assay(qf,"proteins")[sig,] |>
  
 colnames(quants) <- qf$sampleId #3.
 annotations <- columnAnnotation(condition = qf$condition) #3.
+
 set.seed(1234) ## annotation colours are randomly generated by default
 Heatmap(
   quants,
@@ -762,7 +765,7 @@ alpha <- 0.05
 
 ## Real Fold changes 
 
-As this is a spike-in study with known ground truth, we can also plot the log2 fold change distributions against the expected values, in this case 0 for the yeast proteins and the difference of the log concentration for the spiked-in UPS standards, i.e. $logFC = \log_2 (0.74 fmol/0.25 fmol) = \log_2 2.96 = 1.57. 
+As this is a spike-in study with known ground truth, we can also plot the log2 fold change distributions against the expected values, in this case 0 for the yeast proteins and the difference of the log concentration for the spiked-in UPS standards, i.e. $logFC = \log_2 (0.74 fmol/0.25 fmol) = \log_2 2.96 = 1.57$. 
 
 ```{r}
 realLogFC <- log2(0.74/0.25)
@@ -776,13 +779,13 @@ inferences <-
   mutate(species =  rowData(qf[["proteins"]])$species)
 ```
 
-We now evaluate of the estimated fold changes correspond to the real fold changes.
+We now evaluate if the estimated fold changes correspond to the real fold changes.
 
 1. We plot the log fold changes in function of the spikein condition and color according to spikein condition.
 2. We add a boxplot layer.
 3. We use custom colors. 
-4. We add a vertical line at 0, which corresponds to the known log2 fold change for yeast proteins
-5. We add a vertical lines for known log2 fold changes of the spiked UPS proteins. 
+4. We add a horizontal line at 0, which corresponds to the known log2 fold change for yeast proteins
+5. We add a horizontal lines for known log2 fold changes of the spiked UPS proteins. 
 
 ```{r}
 logFC <- inferences |> 
@@ -819,7 +822,7 @@ Note, that at the 5% FDR level 20 true positives (TP, UPS proteins) are returned
 
 ## TPR - FDP curves
 
-We generate the TPR-FDP curves to assess the performance of the different workflows to prioritise differentially abundant proteins. Again, these curves are built using the ground truth information about which proteins are differentially abundant (spiked in) and which proteins are constant across samples. We create two functions to compute the TPR and the FDP.
+We generate the TPR-FDP curves to assess the performance to prioritise differentially abundant proteins. Again, these curves are built using the ground truth information about which proteins are differentially abundant (spiked in) and which proteins are constant across samples. We create two functions to compute the TPR and the FDP.
 
 ```{r}
 computeFDP <- function(pval, tp) {
