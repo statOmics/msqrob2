@@ -107,12 +107,12 @@ We generate the object peptideFile with the path to the peptide.txt file.
 This can be a path to the data on the web or a path to data on your local 
 computer. 
 
-```{r import_data}
+```{r file_location}
 peptideFile <- "https://github.com/statOmics/msqrob2data/raw/refs/heads/main/dda/cptacAvsB_lab3/peptides.txt"
 ```
 
 
-```{r}
+```{r import_data}
 peptides <- data.table::fread(peptideFile)
 head(peptides)
 ```
@@ -126,7 +126,7 @@ quantitative values for each sample are contained in a separate column is
 depicted as the "wide format", as opposed to the "long format" 
 (e.g., the [PSM table]).
 
-```{r}
+```{r extract_quantCols}
 quantCols <- grep("Intensity ", names(peptides), value = TRUE)
 ```
 
@@ -139,7 +139,7 @@ abundant (DA, spiked in).
 Yeast proteins consist of the background proteome that is the same in all 
 samples and are thus non-DA.  
 
-```{r}
+```{r add_species_info}
 peptides <- peptides |> 
   mutate(species = grepl(pattern = "UPS",Proteins) |> 
            as.factor() |>
@@ -169,7 +169,7 @@ sampleId, which refers to the spikein condition.
 sampleId.
 
 
-```{r}
+```{r make_annotation}
 (annot <- data.frame(quantCols = quantCols) |> #1.
   mutate(sampleId = gsub("Intensity 6","", quantCols), #2. 
          condition = substr(sampleId,1,1), #3.
@@ -189,7 +189,7 @@ values. We also tell the function to use the `Sequence` column as peptide
 identifier, which will be used as rownames. See `?readQFeatures()` for more 
 details.
 
-```{r}
+```{r convert_to_QFeatures}
 (qf <- readQFeatures(assayData = peptides, 
                      colData = annot,
                      name = "peptides",
@@ -215,7 +215,7 @@ non-observed values should not be encoded with a zero because true zeros
 technical zeros (the feature was missed by the instrument or could not be 
 identified). We therefore replace any zero in the quantitative data with an `NA`.
 
-```{r}
+```{r convert0_to_NA}
 qf <- zeroIsNA(qf, "peptides") # convert 0 to NA
 ```
 
@@ -226,7 +226,7 @@ Note that `msqrob2` can handle missing data without having to rely on hard-to-ve
 We perform log2-transformation with `logTransform()` from the `QFeatures` 
 package.
 
-```{r}
+```{r log2_transformation}
 qf <- logTransform(qf, base = 2, i = "peptides", name = "peptides_log")
 ```
 
@@ -238,7 +238,7 @@ Filtering removes low-quality and unreliable peptides that would otherwise intro
 ### Remove failed protein inference
 We remove peptides that could not be mapped to a protein. We also remove peptides that cannot be uniquely mapped to a single proteins because its sequence is shared across multiple proteins. This often occurs for homologs or for proteins that share similar functional domains. Shared peptides are often mapped to protein groups, which are the set of proteins that share the given peptides. Protein groups are encoded by appending the constituting protein identifiers, separated by a `";"`.
 
-```{r}
+```{r failed_protein_inference_filtering}
 qf <- filterFeatures(
   qf, ~ Proteins != "" & ## Remove failed protein inference
     !grepl(";", Proteins)) ## Remove protein groups
@@ -254,7 +254,7 @@ Note, that depending on the version of MaxQuant the name of the contaminant vari
 Upon converting the `peptides` table into a `QFeatures` object spaces in the column names are replaced by a dot. 
 
 
-```{r}
+```{r filtering_decoys_contaminants}
 qf <- filterFeatures(qf, ~ Reverse != "+" & ## Remove decoys
                           Potential.contaminant != "+") ## Remove contaminants
 ```
@@ -267,7 +267,7 @@ computes the number and the proportion of missing values across
 peptides, samples or for the whole data set and return a list of three
 tables called `nNArows`, `nNAcols`, and `nNA`, respectively.
 
-```{r}
+```{r assess_NA_features}
 nNaRes <- nNA(qf, "peptides")
 range(nNaRes$nNAcols$pNA)
 ```
@@ -279,7 +279,7 @@ found accross all samples (`nNA` is 0) and other that could not be
 quantified in any sample (`nNA` is `r ncol(qf[[1]])`), as depicted
 by the histogram below.
 
-```{r}
+```{r plot_NA_features}
 data.frame(nNaRes$nNArows) |> 
   ggplot() +
   aes(x = nNA) +
@@ -298,7 +298,7 @@ condition.
 This is an arbitrary value that may need to be adjusted depending on 
 the experiment and the data set.
 
-```{r}
+```{r filter_features_with_many_NA}
 nObs <- 3
 n <- ncol(qf[["peptides_log"]])
 (qf <- filterNA(qf, i = "peptides_log", pNA = (n - nObs) / n))
@@ -323,7 +323,7 @@ colouring.
 3. We visualise the density of the quantitative values within each
 sample. We colour each sample based on its spike-in condition.
 
-```{r}
+```{r normalisation_needed}
 qf[, , "peptides_log"] |> #1.
   longForm(colvars = colnames(colData(qf))) |>  #2. 
   data.frame() |> 
@@ -356,7 +356,7 @@ Note that users can also use all normalisation functions that are provided in
 QFeatures, i.e. by replacing the sweep function by `QFeatures::normalize`.
 
 
-```{r}
+```{r normalize_peptides}
 qf <- sweep( #Subtract log2 norm factor column-by-column (MARGIN = 2)
   qf,
   MARGIN = 2,
@@ -380,7 +380,7 @@ with $y_{ip}$ the log2-transformed intensities and $\log_2(nf_i)$ the log2-trans
 norm factor. Upon normalisation, we can see that the distribution of the 
 $y_{ip}^{\text{norm}}$ nicely overlap (using the same code as above)
 
-```{r}
+```{r assess_normalisation}
 qf[, , "peptides_norm"] |>
   longForm(colvars = colnames(colData(qf))) |> 
   data.frame() |> 
@@ -404,7 +404,7 @@ approach through the `fun` argument.
 We use the standard summarisation in aggregateFeatures, which is a
 robust summarisation method.
 
-```{r,warning=FALSE}
+```{r summarize_peptides_to_proteins, warning=FALSE}
 qf <- aggregateFeatures(qf,
     i = "peptides_norm", 
     fcol = "Proteins", 
@@ -427,7 +427,7 @@ off-behaving samples.
 
 ## Marginal distribution at precursor and protein level 
 
-```{r}
+```{r qc_normalisation_peptides}
 qf[, , "peptides_norm"] |>
   longForm(colvars = colnames(colData(qf))) |> 
   data.frame() |> 
@@ -441,7 +441,7 @@ qf[, , "peptides_norm"] |>
    labs(subtitle = "Normalised log2 precursor intensities")
 ```
 
-```{r}
+```{r qc_normalisation_peptides_boxplot}
 qf[, , "peptides_norm"] |>
   longForm(colvars = colnames(colData(qf))) |> 
   data.frame() |> 
@@ -459,7 +459,7 @@ qf[, , "peptides_norm"] |>
 
 We do the same for the protein-level values. 
 
-```{r}
+```{r qc_normalisation_proteins}
 qf[, , "proteins"] |>
   longForm(colvars = colnames(colData(qf))) |> 
   data.frame() |> 
@@ -473,7 +473,7 @@ qf[, , "proteins"] |>
    labs(subtitle = "Normalised log2 protein intensities")
 ```
 
-```{r}
+```{r qc_normalisation_proteins_boxplot}
 qf[, , "proteins"] |>
   longForm(colvars = colnames(colData(qf))) |> 
   data.frame() |> 
@@ -491,7 +491,7 @@ qf[, , "proteins"] |>
 
 ## Identifications per sample 
 
-```{r}
+```{r qc_identifications}
 qf[,,"peptides_norm"] |> 
   longForm(colvars = colnames(colData(qf)), 
            rowvars= c("Sequence", 
@@ -523,7 +523,7 @@ perform dimension reduction, such as Multi Dimensional Scaling (MDS).
 We will first extract the set to explore along the sample annotations
 (used for plot colouring).
 
-```{r}
+```{r qc_mds_proteins}
 getWithColData(qf, "proteins") |> 
   as("SingleCellExperiment") |> 
   runMDS(exprs_values = 1) |> 
@@ -537,7 +537,7 @@ The also seem to line up according to `rep`.
 
 ## Correlation matrix
 
-```{r}
+```{r qc_correlation_proteins}
 corMat <- qf[["proteins"]] |> 
   assay() |>
   cor(method = "spearman", use = "pairwise.complete.obs") 
@@ -586,7 +586,7 @@ i.e. $\epsilon_i \sim N(0, \sigma^2_\epsilon)$, that can differ from protein to
 protein.
 
 In R, this model is encoded using the following simple formula:
-```{r}
+```{r define_model}
 model <- ~ condition
 ```
 
@@ -599,7 +599,7 @@ which are automatically retrieved from `colData(qf)`.
 Note, that `msqrob()` can also take a `SummarizedExperiment` of 
 precursor, peptide or protein intensities as its input. 
 
-```{r warning=FALSE}
+```{r fit_models, warning=FALSE}
   qf <- msqrob(
     qf,  
     i = "proteins",
@@ -612,7 +612,7 @@ We enable M-estimation (`robust = TRUE`) for improved robustness against outlier
 
 The fitting results are available in the `msqrobModels` column of the rowData. More specifically, the modelling output is stored in the `rowData` as a `statModel` object, one model per row (protein). We will see in a later section how to perform statistical inference on the estimated parameters.
 
-```{r}
+```{r print_models}
 models <- rowData(qf[["proteins"]])[["msqrobModels"]]
 models[1:3]
 ```
@@ -626,7 +626,7 @@ In other words, we need to translate this question in a null and alternative hyp
 To aid defining contrasts, we will visualise the experimental design using the `ExploreModelMatrix` package.
 
 
-```{r}  
+```{r explore_model_matrix}  
 vd <- ExploreModelMatrix::VisualizeDesign(
     sampleData =  colData(qf),
     designFormula = model,
@@ -642,7 +642,7 @@ Hence, to assess differential abundance of proteins between the two spike-in con
 
 Based on this null hypothesis we now generate a contrast matrix. 
 
-```{r}
+```{r make_contrasts}
 (L <- makeContrast(
   "conditionB = 0",
   parameterNames = colnames(vd$designmatrix)
@@ -655,7 +655,7 @@ takes the `QFeatures` object with the fitted model and the contrast we
 just built. `msqrob2` automatically applies the hypothesis
 testing to all features in the assay.
 
-```{r}
+```{r hypthesis_tests}
 qf <- hypothesisTest(qf, i = "proteins", contrast = L)
 ```
 
@@ -669,7 +669,7 @@ them by default in one  table. This table contains two additional columns:
 `contrast` with the name of the contrast and `feature` with the name of the 
 modelled `feature`, here protein. 
 
-```{r}
+```{r collect_results}
 inferences <- 
   msqrobCollect(qf[["proteins"]], L) 
 head(inferences)
@@ -684,7 +684,7 @@ We will return a table of proteins for which the contrast is significant at the 
 3. We filter the significant results for the contrast from the table
 4. We print the table 
 
-```{r, results='asis'}
+```{r significant_table, results='asis'}
 alpha <- 0.05 #1.
 sigList <- inferences |> 
     filter(adjPval < alpha) #3.
@@ -712,7 +712,7 @@ provide the plotVolcano function that generates volcanoplots based on `msqrob2`
 inference tables generated with the `hypothesisTest` function. 
 
 
-```{r}
+```{r volcanoplot}
 inferences |> 
   plotVolcano()
 ```
@@ -727,7 +727,7 @@ We construct heatmaps for the significant proteins for each contrast.
 4. We make the heatmap using the quants data. We do not cluster columns (samples) to keep them together according to the design.
 
 
-```{r}
+```{r heatmap}
 sig <- sigList |> pull(feature) #1.
 
 
@@ -759,7 +759,7 @@ Indeed, we are using a spike-in dataset so we know the ground truth: all human U
 
 We use a nominal FDR level of 0.05
 
-```{r}
+```{r define_alpha}
 alpha <- 0.05
 ```
 
@@ -767,13 +767,13 @@ alpha <- 0.05
 
 As this is a spike-in study with known ground truth, we can also plot the log2 fold change distributions against the expected values, in this case 0 for the yeast proteins and the difference of the log concentration for the spiked-in UPS standards, i.e. $logFC = \log_2 (0.74 fmol/0.25 fmol) = \log_2 2.96 = 1.57$. 
 
-```{r}
+```{r real_logFC}
 realLogFC <- log2(0.74/0.25)
 ```
 
 We collect the inference table again and now add the species information.  
 
-```{r}
+```{r collect_results_species}
 inferences <- 
   msqrobCollect(qf[["proteins"]], L)  |> 
   mutate(species =  rowData(qf[["proteins"]])$species)
@@ -787,7 +787,7 @@ We now evaluate if the estimated fold changes correspond to the real fold change
 4. We add a horizontal line at 0, which corresponds to the known log2 fold change for yeast proteins
 5. We add a horizontal lines for known log2 fold changes of the spiked UPS proteins. 
 
-```{r}
+```{r assess_logFC}
 logFC <- inferences |> 
   filter(!is.na(logFC)) |>
   ggplot(aes(x = species, y = logFC, color = species)) + #1.
@@ -810,7 +810,7 @@ Note, that the msqrob2 estimates are nicely distributed around the true fold cha
 
 All human UPS proteins are differentially abundant (DA) between the conditions and the yeast proteins are non-DA.
 
-```{r}
+```{r assess_TP_FP_FDP}
 inferences |>
     filter(adjPval < alpha) |>
     summarise("TP" = sum(species == "ups"),
@@ -824,7 +824,7 @@ Note, that at the 5% FDR level 20 true positives (TP, UPS proteins) are returned
 
 We generate the TPR-FDP curves to assess the performance to prioritise differentially abundant proteins. Again, these curves are built using the ground truth information about which proteins are differentially abundant (spiked in) and which proteins are constant across samples. We create two functions to compute the TPR and the FDP.
 
-```{r}
+```{r FDR_TPR_functions}
 computeFDP <- function(pval, tp) {
     ord <- order(pval)
     fdp <- cumsum(!tp[ord]) / 1:length(tp)
@@ -840,7 +840,7 @@ computeTPR <- function(pval, tp, nTP = NULL) {
 
 We apply these functions and compute the corresponding metric using the statistical inference results and the ground truth information.
 
-```{r}
+```{r calculate_performance}
 performance <- inferences |> group_by(contrast) |> 
     na.exclude() |>
     mutate(tpr = computeTPR(pval, species == "ups"),
@@ -850,14 +850,14 @@ performance <- inferences |> group_by(contrast) |>
 
 We also highlight the observed FDP at a $alpha = 5\%$ FDR threshold.
 
-```{r}
+```{r calculate_workpoints}
 workPoints <- performance |> 
   group_by(contrast) |>
     filter(adjPval < 0.05) |>
     slice_max(pval)
 ```
 
-```{r}
+```{r plot_tpr_fdp}
 ggplot(performance) +
     aes(
         y = fdp,
@@ -874,7 +874,7 @@ ggplot(performance) +
 
 Note, that more examples can be found in our [msqrob2 book](https://statomics.github.io/msqrob2book).
 
-```{r}
+```{r sessionInfo}
 sessionInfo()
 ```
 

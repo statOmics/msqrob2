@@ -77,7 +77,7 @@ library("scater")
 
 We load the output from Spectronaut parquet file.
 
-```{r import_data}
+```{r file_location}
 precursorFile <- "https://github.com/statOmics/msqrob2data/raw/refs/heads/main/dia/spikeinStaes/spikein248-staesetal2024-spectronaut.parquet" 
 ```
 
@@ -89,11 +89,12 @@ which we import using the `fread` function.
 Both `read_parquet` and `fread` can import data directly from the web as well as 
 data from local files on your computer. 
 
-```{r}
+```{r import_data}
 precursors <- arrow::read_parquet(precursorFile) # function from the arrow package
 ## For older versions of Spectronaut, where the results are stored as tsv files. 
 ## Note that the precursorFile then would point to "report.tsv" 
 ## precursors <- data.table::fread(precursorFile) 
+knitr::kable(head(precursors))
 ```
 
 Each row in the precursor data table is in "long format" and contains information 
@@ -102,18 +103,12 @@ The columns contains various descriptors about the precursor, such as its
 sequence, its charge, run, etc. 
 
 
-```{r, echo=FALSE}
-knitr::kable(head(precursors))
-```
-
-
-
-We filter the data to reduce the memory footprint (was already done to store 
+We select variables to reduce the memory footprint. (was already done to store 
 the output in a small parquet file). 
 We also provided the equivalent names of the variables in DIA-NN in comments. 
 
 
-```{r eval = FALSE}
+```{r select_variables, eval = FALSE}
 precursors <- precursors |> 
   select(
          R_FileName, #Run, 
@@ -146,7 +141,7 @@ abundant (DA, spiked in).
 Yeast proteins consist of the background proteome that is the same in all 
 samples and are thus non-DA.  
 
-```{r}
+```{r add_species_info}
 precursors <- precursors |> 
   mutate(species = grepl(pattern = "ups",PG_ProteinGroups) |> 
            as.factor() |>
@@ -156,16 +151,12 @@ precursors |>
   table()
 ```
 
-```{r}
-precursors
-```
-
 There is a problem with the encoding of some variables: 
 
 - `EG_Qvalue` is of type `character` while it should be a `numeric`. 
 - `PEP_IsProteotypic` is of type `character` and not a `logical`. 
 
-```{r}
+```{r show_encoding_issues}
 precursors$EG_Qvalue |> head()
 precursors$PEP_IsProteotypic |> head()
 ```
@@ -173,7 +164,7 @@ precursors$PEP_IsProteotypic |> head()
 We replace `,` in `.` in `EG_Qvalue` and cast it into a `double` and 
 we cast `PEP_IsProteotypic` to a `logical`. 
 
-```{r}
+```{r fix_encoding}
 precursors <- precursors |> 
   mutate(EG_Qvalue = sub(pattern = ",", 
                          replacement = ".", 
@@ -187,13 +178,13 @@ precursors$PEP_IsProteotypic |> head()
 
 Quick check on distribution of intensities.
 
-```{r}
+```{r check_intensity_distribution}
 precursors |> 
   ggplot(aes(x = log2(FG_MS2RawQuantity))) +
   geom_density()
 ```
 
-```{r}
+```{r show_imputation}
 precursors |> 
   ggplot(aes(x = log2(FG_MS2RawQuantity))) +
   geom_density() + 
@@ -300,7 +291,7 @@ Here, we will use the `FG_MS2RawQuantity` column as quantification input.
 Note, that we filter a number of variables to reduce the footprint of the 
 QFeatures object. 
 
-```{r}
+```{r convert_to_QFeatures}
 (qf <- readQFeatures(assayData = precursors,  
                               colData = annot,
                               quantCols = "FG_MS2RawQuantity",
@@ -320,7 +311,7 @@ data and have additional columns.
 We first replace any zero in the quantitative data
 with an `NA`. 
 
-```{r}
+```{r convert0_to_NA}
 qf <- zeroIsNA(qf, names(qf))
 ```
 
@@ -354,7 +345,7 @@ equals 0.
 5. Only keep non-imputed intensities: `EG_IsImputed` equals 0.
 
 
-```{r}
+```{r qvalue_filtering}
 qf <-  qf |>
   filterFeatures(~ EG_Qvalue <= 0.01 & #1.
                      PG_Qvalue <= 0.01 &  #1.
@@ -384,7 +375,7 @@ Sets are joined by stacking the columns (samples) in a matrix and rows
 (features) are matched according to a row identifier, here the `EG_PrecursorId`.
 We will store the result in the assay with name: `precursor`.
 
-```{r}
+```{r assay_joining}
 (qf <- joinAssays(
   x = qf,
   i = names(qf),
@@ -404,7 +395,7 @@ treatment condition.
 This is an arbitrary value that may need to be adjusted depending on the 
 experiment and the data set.
 
-```{r}
+```{r filter_features_with_many_NA}
 nObs <- 4
 n <- ncol(qf[["precursors"]])
 
@@ -426,7 +417,7 @@ this purpose.
 
 3. We filter precursors of one-hit wonder proteins.  
 
-```{r}
+```{r filter_one_hit_wonders}
 # Filter for peptides per protein
 pepsPerProtDf <- qf[["precursors"]] |> 
     rowData() |> 
@@ -450,7 +441,7 @@ We perform log2-transformation with `logTransform()` from the
 `QFeatures` package. We use `base = 2` and store the result in a new summarized 
 experiment named `precursors_log`
 
-```{r}
+```{r log_transformation}
 qf <- logTransform(qf, 
                             base = 2, 
                             i = "precursors", 
@@ -474,7 +465,7 @@ colouring.
 3. We visualise the density of the quantitative values within each
 sample. We colour each sample based on its spike-in condition.
 
-```{r}
+```{r normalisation_needed}
 qf[, , "precursors_log"] |> #1.
   longForm(colvars = c( "rep", "condition")) |>  #2. 
   data.frame() |> 
@@ -507,7 +498,7 @@ Note that users can also use all normalisation functions that are provided in
 QFeatures, i.e. by replacing the sweep function by `QFeatures::normalize`.
 
 
-```{r}
+```{r normalize_peptides}
 qf <- sweep( #4. Subtract log2 norm factor column-by-column (MARGIN = 2)
   qf,
   MARGIN = 2,
@@ -531,7 +522,7 @@ with $y_{ip}$ the log2-transformed intensities and $\log_2(nf_i)$ the log2-trans
 norm factor. Upon normalisation, we can see
 that the distribution of the $y_{ip}^{\text{norm}}$ nicely overlap (using the same code as above)
 
-```{r}
+```{r assess_normalisation}
 qf[, , "precursors_norm"] |>
   longForm(colvars = colnames(colData(qf))) |> 
   data.frame() |> 
@@ -574,7 +565,7 @@ by `MsCoreUtils::medianPolish, na.rm = TRUE`.
 Note that the optional argument na.rm = TRUE is needed when using medianPolish 
 because the data contains missing values as we did not adopt imputation. 
 
-```{r, warning=FALSE}
+```{r summarize_precursors_to_proteins, warning=FALSE}
 (qf <- aggregateFeatures(
   qf, i = "precursors_norm", 
   name = "proteins",
@@ -594,7 +585,7 @@ off-behaving samples.
 
 ## Marginal distribution at precursor and protein level 
 
-```{r}
+```{r qc_normalisation_peptides}
 qf[, , "precursors_norm"] |>
   longForm(colvars = colnames(colData(qf))) |> 
   data.frame() |> 
@@ -608,7 +599,7 @@ qf[, , "precursors_norm"] |>
    labs(subtitle = "Normalised log2 precursor intensities")
 ```
 
-```{r}
+```{r qc_normalisation_peptides_boxplot}
 qf[, , "precursors_norm"] |>
   longForm(colvars = colnames(colData(qf))) |> 
   data.frame() |> 
@@ -624,39 +615,40 @@ qf[, , "precursors_norm"] |>
    labs(subtitle = "Normalised log2 precursor intensities")
 ```
 
-```{r}
+
+```{r qc_normalisation_proteins}
 qf[, , "proteins"] |>
   longForm(colvars = colnames(colData(qf))) |> 
   data.frame() |> 
   filter(!is.na(value)) |>
   ggplot() + 
-  aes(x = sampleId,
-      y = value,
+  aes(x = value,
       colour = condition,
       group = colname) +
-  xlab("sample") +
-  geom_boxplot() +
+  geom_density() +
   theme_minimal() +
    labs(subtitle = "Normalised log2 protein intensities")
 ```
 
-```{r}
+```{r qc_normalisation_proteins_boxplot}
 qf[, , "proteins"] |>
   longForm(colvars = colnames(colData(qf))) |> 
   data.frame() |> 
   filter(!is.na(value)) |>
   ggplot() + 
-  aes(x = value,
+  aes(x = sampleId,
+      y = value,
       colour = condition,
       group = colname) +
-  geom_density() +
+  xlab("sample") +
+  geom_boxplot() +
   theme_minimal() +
    labs(subtitle = "Normalised log2 protein intensities")
 ```
 
 ## Charge state 
 
-```{r}
+```{r qc_charge_state}
 qf[, , "precursors_norm"] |>
   longForm(colvars = colnames(colData(qf)), rowvars = "FG_Charge") |>
   as.data.frame() |>
@@ -673,7 +665,7 @@ ggplot(aes(x = sampleId)) +
 
 ## Identifications per sample 
 
-```{r}
+```{r qc_identifications}
 qf[,,"precursors_norm"] |> 
   longForm(colvars = colnames(colData(qf)), 
            rowvars= c("EG_PrecursorId", 
@@ -708,7 +700,7 @@ perform dimension reduction, such as Multi Dimensional Scaling (MDS).
 We will first extract the set to explore along the sample annotations
 (used for plot colouring).
 
-```{r}
+```{r qc_mds_proteins}
 getWithColData(qf, "proteins") |> 
   as("SingleCellExperiment") |> 
   runMDS(exprs_values = 1) |> 
@@ -722,7 +714,7 @@ Interestingly, the conditions are sorted by the concentration.
 
 ## Correlation matrix
 
-```{r}
+```{r qc_correlation_proteins}
 corMat <- qf[["proteins"]] |> 
   assay() |>
   cor(method = "spearman", use = "pairwise.complete.obs") 
@@ -771,7 +763,7 @@ i.e. $\epsilon_i \sim N(0, \sigma^2_\epsilon)$, that can differ from protein to
 protein.
 
 In R, this model is encoded using the following simple formula:
-```{r}
+```{r define_model}
 model <- ~ condition
 ```
 
@@ -784,7 +776,7 @@ which are automatically retrieved from `colData(qf)`.
 Note, that `msqrob()` can also take a `SummarizedExperiment` of 
 precursor, peptide or protein intensities as its input. 
 
-```{r warning=FALSE}
+```{r fit_models, warning=FALSE}
   qf <- msqrob(
     qf,  
     i = "proteins",
@@ -797,7 +789,7 @@ We enable M-estimation (`robust = TRUE`) for improved robustness against outlier
 
 The fitting results are available in the `msqrobModels` column of the rowData. More specifically, the modelling output is stored in the `rowData` as a `statModel` object, one model per row (protein). We will see in a later section how to perform statistical inference on the estimated parameters.
 
-```{r}
+```{r print_models}
 models <- rowData(qf[["proteins"]])[["msqrobModels"]]
 models[1:3]
 ```
@@ -811,7 +803,7 @@ In other words, we need to translate this question in a null and alternative hyp
 To aid defining contrasts, we will visualise the experimental design using the `ExploreModelMatrix` package.
 
 
-```{r}  
+```{r explore_model_matrix}  
 vd <- ExploreModelMatrix::VisualizeDesign(
     sampleData =  colData(qf),
     designFormula = model,
@@ -828,7 +820,7 @@ Hence, to assess differential abundance of proteins between spike-in conditions,
 We can generate the null-hypothesess for all pairwise comparisons manually.
 However, here we will use the `createPairwiseContrasts` function in `msqrob2`.
 
-```{r}
+```{r define_H0}
 (allHypotheses <- createPairwiseContrasts(
   model, colData(qf), "condition"
   )
@@ -839,7 +831,7 @@ Based on these null hypothesis we now generate the contrast matrix with all
 three contrasts using the `makeContrast` function. Note, that experienced users
 can also define the contrast matrix, directly. 
 
-```{r}
+```{r make_contrasts}
 (L <- makeContrast(
   allHypotheses,
   parameterNames = colnames(vd$designmatrix)
@@ -850,14 +842,14 @@ takes the `QFeatures` object with the fitted model and the contrast we
 just built. `msqrob2` automatically applies the hypothesis
 testing to all features in the assay.
 
-```{r}
+```{r hypthesis_tests}
 qf <- hypothesisTest(qf, i = "proteins", contrast = L)
 ```
 
 The results tables for each contrast are stored in the row data of the 
 `proteins` assay in `qf` under the colomnames of the contrast matrix `L`. 
 
-```{r}
+```{r show_tables_qf}
 qf[["proteins"]] |> 
   rowData() |> 
   names()
@@ -870,7 +862,7 @@ table. This table contains two additional columns: `contrast` with the name of
 the contrast and `feature` with the nme of the modelled `feature`, here protein 
 group. 
 
-```{r}
+```{r collect_results}
 inferences <- 
   msqrobCollect(qf[["proteins"]], L) 
 head(inferences)
@@ -890,7 +882,7 @@ proteins that include protein $j$.
 Note, that for this design we exceptionally also know the ground truth.
 So we will also add this information to the inference table: 
 
-```{r}
+```{r add_species_info_results}
 inferences <- inferences |> 
     mutate(species =  rep(rowData(qf[["proteins"]])$species, ncol(L)))
 ```
@@ -904,7 +896,7 @@ We will return tables of proteins for which the contrasts are significant at the
 3. We filter the significant results for the contrast from the table
 4. We print the table 
 
-```{r, results='asis'}
+```{r significant_tables, results='asis'}
 alpha <- 0.05 #1.
 for (contrasti in colnames(L)) #2. 
 {
@@ -939,7 +931,7 @@ inference tables generated with the `hypothesisTest` function.
 Since the inference table contains multiple contrast we use the `facet_wrap` 
 function to make a separate volcano plot for each contrast. 
 
-```{r}
+```{r volcanoplots}
 volcanoplots <- inferences |> 
   plotVolcano() +
   facet_wrap(~contrast)
@@ -947,12 +939,6 @@ volcanoplots
 ```
 
 ### Heatmaps
-
-We use a nominal FDR level of 0.05
-
-```{r}
-alpha <- 0.05
-```
 
 We construct heatmaps for the significant proteins for each contrast. 
 
@@ -968,7 +954,7 @@ user-defined function that extracts
 
 
 
-```{r}
+```{r heatmaps}
 heatmaps <- lapply(
   colnames(L), #1.
   function(contrast, se, alpha)
@@ -1005,7 +991,7 @@ Indeed, we are using a spike-in dataset so we know the ground truth: all human U
 
 We use a nominal FDR level of 0.05
 
-```{r}
+```{r define_alpha}
 alpha <- 0.05
 ```
 
@@ -1020,7 +1006,7 @@ As this is a spike-in study with known ground truth, we can also plot the log2 f
 
 We use a similar operation to construct the name of the corresponding contrast.
 
-```{r}
+```{r real_logFC}
 (realLogFC <- data.frame(
     logFC = colData(qf)$condition |> 
         levels() |> # 1. 
@@ -1045,7 +1031,7 @@ We now evaluate if the estimated fold changes correspond to the real fold change
 4. We add a horizontal line at 0, which corresponds to the known log2 fold change for yeast proteins
 5. We add a horizontal lines for known log2 fold changes of the spiked UPS proteins. 
 
-```{r}
+```{r assess_logFC}
 logFC <- inferences |> 
   filter(!is.na(logFC)) |>
   ggplot(aes(x = species, y = logFC, color= species)) + #1.
@@ -1066,7 +1052,7 @@ logFC
 
 All human UPS proteins are differentially abundant (DA) between the conditions and the yeast proteins are non-DA.
 
-```{r}
+```{r assess_TP_FP_FDP}
 tpFpTable <- group_by(inferences, contrast) |>
     filter(adjPval < alpha) |>
     summarise("TP" = sum(species == "ups"),
@@ -1080,7 +1066,7 @@ tpFpTable
 
 We generate the TPR-FDP curves to assess the performance to prioritise differentially abundant proteins. Again, these curves are built using the ground truth information about which proteins are differentially abundant (spiked in) and which proteins are constant across samples. We create two functions to compute the TPR and the FDP.
 
-```{r}
+```{r FDR_TPR_functions}  
 computeFDP <- function(pval, tp) {
     ord <- order(pval)
     fdp <- cumsum(!tp[ord]) / 1:length(tp)
@@ -1096,7 +1082,7 @@ computeTPR <- function(pval, tp, nTP = NULL) {
 
 We apply these functions and compute the corresponding metric using the statistical inference results and the ground truth information.
 
-```{r}
+```{r calculate_performance}
 performance <- inferences |> group_by(contrast) |> 
     na.exclude() |>
     mutate(tpr = computeTPR(pval, species == "ups"),
@@ -1106,14 +1092,14 @@ performance <- inferences |> group_by(contrast) |>
 
 We also highlight the observed FDP at a $alpha = 5\%$ FDR threshold.
 
-```{r}
+```{r calculate_workpoints}
 workPoints <- performance |> 
   group_by(contrast) |>
     filter(adjPval < 0.05) |>
     slice_max(pval)
 ```
 
-```{r}
+```{r plot_tpr_fdp}
 ggplot(performance) +
     aes(
         y = fdp,
@@ -1133,7 +1119,7 @@ ggplot(performance) +
 
 We make a separate plot per contrast and indicate the ground truth in the plot.
 
-```{r}
+```{r volcanoplots_with_groundtruth}
   inferences |> 
   plotVolcano() + 
   facet_wrap(~contrast) +
@@ -1156,6 +1142,6 @@ We make a separate plot per contrast and indicate the ground truth in the plot.
 
 Note, that more examples can be found in our [msqrob2 book](https://statomics.github.io/msqrob2book).
 
-```{r}
+```{r sessionInfo}
 sessionInfo()
 ```
