@@ -11,6 +11,10 @@
 - Illustrate these new functionalities in the vignettes
 - New Vignettes for DIA (DIA-NN and Spectronaut)
 
+## msqrob2 1.19.2
+
+- Update cptac vignette (fread, check.names = TRUE)
+
 # msqrob 1.17
 
 ## msqrob 1.17.2
