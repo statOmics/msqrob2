@@ -34,4 +34,4 @@ Please use https://github.com/statOmics/msqrob2/issues to submit issues, bug rep
 
 ## Usage
 
-See vignettes on [msqrob2Examples](https://statomics.github.io/msqrob2Examples)
+See vignettes on [msqrob2book](https://statomics.github.io/msqrob2book)

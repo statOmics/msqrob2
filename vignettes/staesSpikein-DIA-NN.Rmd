@@ -86,7 +86,7 @@ data from local files on your computer.
 precursors <- arrow::read_parquet(precursorFile) # function from the arrow package
 ## For older versions of Spectronaut, where the results are stored as tsv files. 
 ## Note that the precursorFile then would point to "report.tsv" 
-## precursors <- data.table::fread(precursorFile) 
+## precursors <- data.table::fread(precursorFile, check.names = TRUE, integer64 = "double") 
 knitr::kable(head(precursors))
 ```
 

@@ -13,7 +13,13 @@
 
 ## msqrob2 1.19.2
 
-- Update cptac vignette (fread, check.names = TRUE)
+- Update cptac vignette (fread with argument check.names = TRUE)
+
+## msqrob2 1.19.3
+
+- Update vignettes (arguments fread check.names = TRUE and integer64 = "double") 
+to avoid issues with readQFeatures
+- Update README to point to msqrob2book
 
 # msqrob 1.17
 

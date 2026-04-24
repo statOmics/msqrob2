@@ -112,10 +112,16 @@ peptideFile <- "https://github.com/statOmics/msqrob2data/raw/refs/heads/main/dda
 ```
 
 
-We will import the data using the `fread` function of the data.table package. We set the `check.names` argument equal to  `TRUE` so that all column names are retrieved using the `$` operator.  
+We will import the data using the `fread` function of the data.table package. 
+We set the `check.names` argument equal to  `TRUE` so that all column names are 
+retrieved using the `$` operator.  
+We also use argument integer64 = "double" because `readQFeatures` from the 
+`QFeatures` package does not process 64-bit integers correctly. 
 
 ```{r import_data}
-peptides <- data.table::fread(peptideFile, check.names = TRUE)
+peptides <- data.table::fread(peptideFile, 
+                              check.names = TRUE, 
+                              integer64 = "double")
 head(peptides)
 ```
 
