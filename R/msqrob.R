@@ -67,18 +67,17 @@ msqrobLm <- function(y,
                 coefficients = NA, vcovUnscaled = NA,
                 sigma = NA, df.residual = NA, w = NA
             )
-
+            
+            # nb is the non-estimable basis calculated with the estimability 
+            # package used to catch and solve issues with changes of the 
+            # reference class due to missingness. 
             nb <- NULL
             if (sum(obs) > 0) {
-                X <- design[obs, , drop = FALSE]
-                nb <- estimability::nonest.basis(X)
-                if (!identical(nb, estimability::all.estble)) rownames(nb) <- colnames(design)
-                X <- X[, colMeans(X == 0) != 1, drop = FALSE]
-                qrX <- qr(X)
-                if (qrX$rank < ncol(X))
-                    X <- X[, qrX$pivot[seq_len(qrX$rank)], drop = FALSE]
+                td <- .trim_design(design[obs, , drop = FALSE])
+                X  <- td$X
+                nb <- td$nb
+                colnames_orig <- td$colnames_orig
                 y <- y[obs]
-                colnames_orig <- colnames(design)
 
                 if (robust) {
                     mod <- try(MASS::rlm(X, y, method = "M", maxit = maxitRob),
@@ -430,6 +429,41 @@ msqrobGlm <- function(y,
 }
 
 
+## Drop all-zero columns, compute nonest.basis, and rank-reduce the design matrix.
+## Returns X (trimmed), colnames_orig, nb, and rank_deficient (TRUE only when QR
+## reduction removed columns beyond the all-zero pass).
+.trim_design <- function(X) {
+    colnames_orig <- colnames(X)
+    nb <- estimability::nonest.basis(X)
+    if (!identical(nb, estimability::all.estble)) rownames(nb) <- colnames_orig
+    X <- X[, colMeans(X == 0) != 1, drop = FALSE]
+    qrX <- qr(X)
+    rank_deficient <- qrX$rank < ncol(X)
+    if (rank_deficient)
+        X <- X[, qrX$pivot[seq_len(qrX$rank)], drop = FALSE]
+    list(X = X, colnames_orig = colnames_orig, nb = nb,
+         rank_deficient = rank_deficient)
+}
+
+
+## Pad coefficients and vcovUnscaled back to the full colnames_orig space with NAs.
+.pad_to_orig_space <- function(params, colnames_orig) {
+    ran_names <- names(params$coefficients)[
+        !names(params$coefficients) %in% colnames_orig]
+    all_names <- c(colnames_orig, ran_names)
+    coef_full <- rep(NA_real_, length(all_names))
+    names(coef_full) <- all_names
+    coef_full[names(params$coefficients)] <- params$coefficients
+    vcov_full <- matrix(NA_real_, length(all_names), length(all_names))
+    rownames(vcov_full) <- colnames(vcov_full) <- all_names
+    vcov_full[names(params$coefficients), names(params$coefficients)] <-
+        params$vcovUnscaled
+    params$coefficients <- coef_full
+    params$vcovUnscaled <- vcov_full
+    params
+}
+
+
 ## Initialise weights, run optional robust IRWLS, and extract model components.
 .extract_lmer_fit <- function(model, robust, maxitRob, tol) {
     model@frame$`(weights)` <- rep(1, nrow(model@frame))
@@ -453,18 +487,14 @@ msqrobGlm <- function(y,
 
     data <- .create_data(y, rowdata, coldata)
 
-    fixed <- model.matrix(nobars(formula), data = data)
-    data$fixed <- fixed
+    fixed  <- model.matrix(nobars(formula), data = data)
     data$y <- as.matrix(y)
-    data <- data[!is.na(data$y), , drop = FALSE]
-    colnames_orig <- colnames(data$fixed)
-    nb <- estimability::nonest.basis(data$fixed)
-    if (!identical(nb, estimability::all.estble)) rownames(nb) <- colnames_orig
-    data$fixed <- data$fixed[, colMeans(data$fixed == 0) != 1, drop = FALSE]
-
-    qrX <- qr(data$fixed)
-    if (qrX$rank < ncol(data$fixed))
-        data$fixed <- data$fixed[, qrX$pivot[seq_len(qrX$rank)], drop = FALSE]
+    obs    <- as.vector(!is.na(data$y))
+    data   <- data[obs, , drop = FALSE]
+    td     <- .trim_design(fixed[obs, , drop = FALSE])
+    colnames_orig <- td$colnames_orig
+    nb            <- td$nb
+    data$fixed    <- td$X
 
     has_intercept <- colnames(data$fixed)[1] == "(Intercept)"
 
@@ -477,14 +507,14 @@ msqrobGlm <- function(y,
         )
     }
 
-    ## Build the encoding matrix for the Scheipl ridge random effect
+    ## Build the Z matrix for the Scheipl ridge random effect
     if (doQR) {
         qrFixed <- qr(data$fixed)
-        enc     <- qr.Q(qrFixed)
-        colnames(enc) <- colnames(data$fixed)
-        if (has_intercept) enc <- enc[, -1, drop = FALSE]
+        Zridge  <- qr.Q(qrFixed)
+        colnames(Zridge) <- colnames(data$fixed)
+        if (has_intercept) Zridge <- Zridge[, -1, drop = FALSE]
     } else {
-        enc <- if (has_intercept) data$fixed[, -1, drop = FALSE] else data$fixed
+        Zridge <- if (has_intercept) data$fixed[, -1, drop = FALSE] else data$fixed
     }
 
     if (is.null(findbars(formula))) {
@@ -502,13 +532,13 @@ msqrobGlm <- function(y,
 
     model <- NULL
     try({
-        data$ridge <- factor(rep(colnames(enc), length = nrow(data)), levels = colnames(enc))
+        data$ridge <- factor(rep(colnames(Zridge), length = nrow(data)), levels = colnames(Zridge))
 
         parsedFormulaC <- lFormula(formula, data = as.list(data))
         parsedFormulaC$reTrms$cnms$ridge <- ""
         ridgeId <- grep(names(parsedFormulaC$reTrms$Ztlist), pattern = "ridge")
         parsedFormulaC$reTrms$Ztlist[[ridgeId]] <-
-            as(Matrix(t(enc)), class(parsedFormulaC$reTrms$Ztlist[[ridgeId]]))
+            as(Matrix(t(Zridge)), class(parsedFormulaC$reTrms$Ztlist[[ridgeId]]))
         parsedFormulaC$reTrms$Zt <- do.call(rbind, parsedFormulaC$reTrms$Ztlist)
 
         devianceFunctionC <- do.call(mkLmerDevfun, parsedFormulaC)
@@ -547,25 +577,15 @@ msqrobGlm <- function(y,
             ## original design-matrix parameter names so getContrast can find them.
             ridge_ids <- grep("ridge", names(betas))
             if (length(ridge_ids) > 0L) {
-                orig_ridge_names <- if (has_intercept) colnames(data$fixed)[-1L] else colnames(data$fixed)
-                names(betas)[ridge_ids]           <- orig_ridge_names
-                rownames(vcovUnscaled)[ridge_ids] <- orig_ridge_names
-                colnames(vcovUnscaled)[ridge_ids] <- orig_ridge_names
+                names(betas)[ridge_ids]           <- colnames(Zridge)
+                rownames(vcovUnscaled)[ridge_ids] <- colnames(Zridge)
+                colnames(vcovUnscaled)[ridge_ids] <- colnames(Zridge)
             }
 
             params <- .create_model(betas, vcovUnscaled, fit$sigma, fit$df.residual, fit$model)
             if (!is.na(params$df.residual)) {
-                type      <- "lmer"
-                ran_names <- names(params$coefficients)[!names(params$coefficients) %in% colnames_orig]
-                all_names <- c(colnames_orig, ran_names)
-                coef_full <- rep(NA_real_, length(all_names))
-                names(coef_full) <- all_names
-                coef_full[names(params$coefficients)] <- params$coefficients
-                vcov_full <- matrix(NA_real_, length(all_names), length(all_names))
-                rownames(vcov_full) <- colnames(vcov_full) <- all_names
-                vcov_full[names(params$coefficients), names(params$coefficients)] <- params$vcovUnscaled
-                params$coefficients <- coef_full
-                params$vcovUnscaled <- vcov_full
+                type   <- "lmer"
+                params <- .pad_to_orig_space(params, colnames_orig)
             }
         }, silent = TRUE)
     }
@@ -587,20 +607,18 @@ msqrobGlm <- function(y,
 
     data <- .create_data(y, rowdata, coldata)
 
-    data_model_matrix <- model.matrix(nobars(formula), data = data)
+    mm <- model.matrix(nobars(formula), data = data)
     formula <- update.formula(formula, y ~ .)
 
     data$y <- as.matrix(y)
-    data_model_matrix <- data_model_matrix[!is.na(data$y), , drop = FALSE]
-    data <- data[!is.na(data$y), , drop = FALSE]
-    colnames_orig <- colnames(data_model_matrix)
-    nb <- estimability::nonest.basis(data_model_matrix)
-    if (!identical(nb, estimability::all.estble)) rownames(nb) <- colnames_orig
-    data_model_matrix <- data_model_matrix[, colMeans(data_model_matrix == 0) != 1, drop = FALSE]
+    obs    <- as.vector(!is.na(data$y))
+    data   <- data[obs, , drop = FALSE]
+    td     <- .trim_design(mm[obs, , drop = FALSE])
+    colnames_orig     <- td$colnames_orig
+    nb                <- td$nb
+    data_model_matrix <- td$X
 
-    qrX <- qr(data_model_matrix)
-    if (qrX$rank < ncol(data_model_matrix)) {
-        data_model_matrix <- data_model_matrix[, qrX$pivot[seq_len(qrX$rank)], drop = FALSE]
+    if (td$rank_deficient) {
         for (nm in colnames(data_model_matrix))
             data[[paste0(".x.", nm)]] <- data_model_matrix[, nm]
         fix     <- paste(paste0("`.x.", colnames(data_model_matrix), "`"), collapse = " + ")
@@ -626,17 +644,8 @@ msqrobGlm <- function(y,
             fit    <- .extract_lmer_fit(model, robust, maxitRob, tol)
             params <- .create_model(fit$betas, fit$vcovUnscaled, fit$sigma, fit$df.residual, fit$model)
             if (!is.na(params$df.residual)) {
-                type      <- "lmer"
-                ran_names <- names(params$coefficients)[!names(params$coefficients) %in% colnames_orig]
-                all_names <- c(colnames_orig, ran_names)
-                coef_full <- rep(NA_real_, length(all_names))
-                names(coef_full) <- all_names
-                coef_full[names(params$coefficients)] <- params$coefficients
-                vcov_full <- matrix(NA_real_, length(all_names), length(all_names))
-                rownames(vcov_full) <- colnames(vcov_full) <- all_names
-                vcov_full[names(params$coefficients), names(params$coefficients)] <- params$vcovUnscaled
-                params$coefficients <- coef_full
-                params$vcovUnscaled <- vcov_full
+                type   <- "lmer"
+                params <- .pad_to_orig_space(params, colnames_orig)
             }
         }, silent = TRUE)
     }
