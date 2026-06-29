@@ -1,6 +1,8 @@
 #' Method to fit msqrob models with robust regression and/or ridge regression and/or random effects
 #' It models multiple features simultaneously, e.g. multiple peptides from the same protein.
 #'
+#' @name msqrobAggregate
+#'
 #' @description Parameter estimation of msqrob models for `QFeatures`instance.
 #'              The method aggregates features within the model e.g. from peptides to proteins.
 #'              It provides fold change estimates and their associated uncertainty at the aggregated
@@ -87,9 +89,15 @@
 #’        ‘lmerControl’ documentation of the lme4 package for more details.
 #’        Default is `list(control = lmerControl(calc.derivs = FALSE))`
 #’
+#’ @param trend `character(1)` or `FALSE` controlling the empirical Bayes
+#’        variance trend. `FALSE` (default) or `"none"` uses a global prior
+#’        variance. `"mean"` conditions the prior on mean log-intensity. `"count"`
+#’        conditions it on log2 peptide count (inferred from \code{fcol}).
+#’        `"combined"` uses a linear projection of `log(s^2)` on both.
+#’
 #’ @return A ‘QFeatures’ object with an additional assay.
-#'
-#' @rdname msqrobAggregate
+#’
+#’ @rdname msqrobAggregate
 #'
 #' @aliases msqrobAggregate msqrobAggregate,QFeatures-method
 #' @import SummarizedExperiment
@@ -111,6 +119,7 @@ setMethod(
              maxitRob = 1,
              tol = 1e-6,
              doQR = TRUE,
+             trend = FALSE,
              lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
         if (!fcol %in% colnames(rowData(object)))
             stop("The rowData does not contain variable '", fcol, "'.")
@@ -139,6 +148,7 @@ setMethod(
             maxitRob = maxitRob,
             tol = tol,
             doQR = doQR,
+            trend = trend,
             lmerArgs = lmerArgs,
             featureGroups = rowData(object)[[fcol]]
         )
@@ -170,6 +180,7 @@ setMethod(
              maxitRob = 1,
              tol = 1e-6,
              doQR = TRUE,
+             trend = FALSE,
              lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
         if (is.null(object[[i]])) stop("QFeatures object does not contain assay ", i)
         x <- getWithColData(object, i)
@@ -184,6 +195,7 @@ setMethod(
             maxitRob = maxitRob,
             tol = tol,
             doQR = doQR,
+            trend = trend,
             lmerArgs = lmerArgs
         )
         object <- addAssay(object, x, name)

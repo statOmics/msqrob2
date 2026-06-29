@@ -16,6 +16,7 @@
   maxitRob = 1,
   tol = 1e-06,
   doQR = TRUE,
+  trend = FALSE,
   lmerArgs = list(control = lmerControl(calc.derivs = FALSE))
 )
 
@@ -30,6 +31,7 @@
   maxitRob = 1,
   tol = 1e-06,
   doQR = TRUE,
+  trend = FALSE,
   lmerArgs = list(control = lmerControl(calc.derivs = FALSE))
 )
 }

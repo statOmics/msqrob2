@@ -4,7 +4,15 @@
 \alias{msqrobLm}
 \title{Function to fit msqrob models using lm and rlm}
 \usage{
-msqrobLm(y, formula, data, robust = TRUE, maxitRob = 5)
+msqrobLm(
+  y,
+  formula,
+  data,
+  robust = TRUE,
+  maxitRob = 5,
+  trend = FALSE,
+  counts = NULL
+)
 }
 \arguments{
 \item{y}{A \code{matrix} with the quantified feature intensities. The
@@ -24,6 +32,18 @@ performed to account for outliers. Default is \code{TRUE}. If
 \item{maxitRob}{\code{numeric(1)} indicating the maximum iterations in
 the IRWLS algorithm used in the M-estimation step of the robust
 regression.}
+
+\item{trend}{\code{character(1)} or \code{FALSE} controlling the empirical Bayes
+variance trend. \code{FALSE} (default) or \code{"none"} uses a global prior
+variance. \code{"mean"} conditions the prior on mean log-intensity (like
+\code{limma::eBayes(trend = TRUE)}). \code{"count"} conditions it on
+log2 precursor count (like DEqMS). \code{"combined"} uses a linear
+projection of \code{log(s^2)} on both mean and log2 count as a 1-D
+covariate for \code{squeezeVar}.}
+
+\item{counts}{An optional numeric vector of length \code{nrow(y)} with the
+number of precursors (PSMs or peptides) per feature. Only used when
+\code{trend = "count"} or \code{trend = "combined"}.}
 }
 \value{
 A list of objects of the \code{StatModel} class.

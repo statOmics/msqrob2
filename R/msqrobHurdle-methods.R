@@ -1,59 +1,67 @@
 
 #' Function to fit msqrob hurdle models
 #'
+#' @noMd
+#'
 #' @description Fitting a hurdle msqrob model with an intensity component for
 #'              assessing differential abundance and an count component that is
 #'              modeling peptide counts using quasibinomial glm for differential
 #'              detection of the number of features that were not missing and used
 #'              for aggregation
 #'
-#' @param object `SummarizedExperiment` or `QFeatures` instance with an assay that is generated with the `aggreateFeatures` function from the `QFeatures` package
+#' @param object \code{SummarizedExperiment} or \code{QFeatures} instance with an assay that is generated with the \code{aggreateFeatures} function from the \code{QFeatures} package
 #'
 #' @param formula Model formula. Both model components are built based on the
 #'        covariates in the data object.
 #'
-#' @param modelColumnName `character` to indicate the variable name that is used
+#' @param modelColumnName \code{character} to indicate the variable name that is used
 #'        to store the msqrob models in the rowData of the SummarizedExperiment
 #'        instance or of the assay of the QFeatures instance. Default is "msqrobHurdle".
 #'
-#' @param overwrite `boolean(1)` to indicate if the column in the rowData has to
+#' @param overwrite \code{boolean(1)} to indicate if the column in the rowData has to
 #'        be overwritten if the modelColumnName already exists. Default is FALSE.
 #'
-#' @param robust `boolean(1)` to indicate if robust regression is
+#' @param robust \code{boolean(1)} to indicate if robust regression is
 #'     performed to account for outliers when fitting the intensity component of
-#'     the hurdle model. Default is `TRUE`. If `FALSE` an OLS fit is performed.
+#'     the hurdle model. Default is \code{TRUE}. If \code{FALSE} an OLS fit is performed.
 #'
-#' @param ridge `boolean(1)` to indicate if ridge regression is
-#'        performed. Default is `FALSE`. If `TRUE` the fixed effects of the
+#' @param ridge \code{boolean(1)} to indicate if ridge regression is
+#'        performed. Default is \code{FALSE}. If \code{TRUE} the fixed effects of the
 #'        intensity component of the hurdle model are
 #'        estimated via penalized regression and shrunken to zero.
 #'
-#' @param maxitRob `numeric(1)` indicating the maximum iterations in
+#' @param maxitRob \code{numeric(1)} indicating the maximum iterations in
 #'        the IRWLS algorithm used in the M-estimation step of the robust
 #'        regression for fitting the intensity component of the hurdle model.
 #'
-#' @param tol `numeric(1)` indicating the tolerance for declaring convergence
+#' @param tol \code{numeric(1)} indicating the tolerance for declaring convergence
 #'        of the M-estimation loop of the intensity component of the hurdle model.
 #'
-#' @param doQR `boolean(1)` to indicate if a QR decomposition is applied to the
-#'     fixed-effect design matrix before the Scheipl ridge encoding. Default is `TRUE`.
-#'     When `TRUE` the predictor columns are orthogonalised so that shrinkage is
-#'     invariant to predictor ordering and collinearity. When `FALSE` the raw design
+#' @param doQR \code{boolean(1)} to indicate if a QR decomposition is applied to the
+#'     fixed-effect design matrix before the Scheipl ridge encoding. Default is \code{TRUE}.
+#'     When \code{TRUE} the predictor columns are orthogonalised so that shrinkage is
+#'     invariant to predictor ordering and collinearity. When \code{FALSE} the raw design
 #'     matrix columns are used directly (standard L2 penalty on original parameters).
 #'
 #' @param lmerArgs a list (of correct class, resulting from ‘lmerControl()’
 #'        containing control parameters, including the nonlinear optimizer to be used
 #'        and parameters to be passed through to the nonlinear optimizer, see the
 #'        ‘lmerControl’ documentation of the lme4 package for more details.
-#'        Default is `list(control = lmerControl(calc.derivs = FALSE))`
+#'        Default is \code{list(control = lmerControl(calc.derivs = FALSE))}
+#'
+#' @param trend Character or FALSE. Controls the empirical Bayes variance trend
+#'        for the intensity component. FALSE (default) or "none" uses a global
+#'        prior variance. "mean" conditions on mean log-intensity. "count"
+#'        conditions on log2 precursor count (from the .n column of rowData).
+#'        "combined" uses a linear projection on both mean and log2 count.
 #'
 #' @param priorCount A 'numeric(1)', which is a prior count to be added to the observations to shrink
 #'          the estimated odds ratios of the count component towards zero. Default is 0.1.
 #'
-#' @param binomialBound logical, if ‘TRUE’ then the quasibinomial variance estimator will
-#'                be never smaller than 1 (no underdispersion). Default is TRUE.
-#'
-#' @examples
+#’ @param binomialBound logical, if ‘TRUE’ then the quasibinomial variance estimator will
+#’                be never smaller than 1 (no underdispersion). Default is TRUE.
+#’
+#’ @examples
 #'
 #' # Load example data
 #' # The data are a Feature object with containing
@@ -103,6 +111,7 @@ setMethod(
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
+    trend = FALSE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
     priorCount = .1,
     binomialBound = TRUE) {
@@ -121,7 +130,9 @@ setMethod(
                 formula = formula,
                 data = colData(object),
                 robust = robust,
-                maxitRob = maxitRob
+                maxitRob = maxitRob,
+                trend = trend,
+                counts = rowData(object)[[".n"]]
             )
         } else {
             rowData(object)[[paste0(modelColumnName, "Intensity")]] <- msqrobLmer(
@@ -133,6 +144,8 @@ setMethod(
                 maxitRob = maxitRob,
                 tol = tol,
                 doQR = doQR,
+                trend = trend,
+                counts = rowData(object)[[".n"]],
                 lmerArgs = lmerArgs
             )
         }
@@ -164,6 +177,7 @@ setMethod(
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
+    trend = FALSE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
     priorCount = .1,
     binomialBound = TRUE) {
@@ -184,7 +198,9 @@ setMethod(
                 formula = formula,
                 data = colData(object),
                 robust = robust,
-                maxitRob = maxitRob
+                maxitRob = maxitRob,
+                trend = trend,
+                counts = rowData(object[[i]])[[".n"]]
             )
         } else {
             rowData(object[[i]])[[paste0(modelColumnName, "Intensity")]] <- msqrobLmer(
@@ -196,6 +212,8 @@ setMethod(
                 maxitRob = maxitRob,
                 tol = tol,
                 doQR = doQR,
+                trend = trend,
+                counts = rowData(object[[i]])[[".n"]],
                 lmerArgs = lmerArgs
             )
         }

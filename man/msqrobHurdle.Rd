@@ -16,8 +16,7 @@
   maxitRob = 1,
   tol = 1e-06,
   doQR = TRUE,
-  decomp = NULL,
-  standardize = FALSE,
+  trend = FALSE,
   lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
   priorCount = 0.1,
   binomialBound = TRUE
@@ -34,8 +33,7 @@
   maxitRob = 1,
   tol = 1e-06,
   doQR = TRUE,
-  decomp = NULL,
-  standardize = FALSE,
+  trend = FALSE,
   lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
   priorCount = 0.1,
   binomialBound = TRUE
@@ -70,15 +68,17 @@ regression for fitting the intensity component of the hurdle model.}
 \item{tol}{\code{numeric(1)} indicating the tolerance for declaring convergence
 of the M-estimation loop of the intensity component of the hurdle model.}
 
-\item{doQR}{Deprecated. Use \code{decomp} instead. \code{TRUE} maps to \code{decomp = "QR"},
-\code{FALSE} maps to \code{decomp = "none"}. Kept for backward compatibility.}
+\item{doQR}{\code{boolean(1)} to indicate if a QR decomposition is applied to the
+fixed-effect design matrix before the Scheipl ridge encoding. Default is \code{TRUE}.
+When \code{TRUE} the predictor columns are orthogonalised so that shrinkage is
+invariant to predictor ordering and collinearity. When \code{FALSE} the raw design
+matrix columns are used directly (standard L2 penalty on original parameters).}
 
-\item{decomp}{\code{character(1)} specifying the decomposition applied to the
-fixed-effect design matrix before the Scheipl ridge encoding. One of
-\code{"QR"} (default, backward-compatible), \code{"SVD"}, or \code{"none"}.}
-
-\item{standardize}{\code{logical(1)} whether to centre and scale the non-intercept
-columns of the design matrix before the ridge decomposition. Default \code{FALSE}.}
+\item{trend}{Character or FALSE. Controls the empirical Bayes variance trend
+for the intensity component. FALSE (default) or "none" uses a global
+prior variance. "mean" conditions on mean log-intensity. "count"
+conditions on log2 precursor count (from the .n column of rowData).
+"combined" uses a linear projection on both mean and log2 count.}
 
 \item{lmerArgs}{a list (of correct class, resulting from ‘lmerControl()’
 containing control parameters, including the nonlinear optimizer to be used
@@ -87,25 +87,8 @@ and parameters to be passed through to the nonlinear optimizer, see the
 Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
 
 \item{priorCount}{A 'numeric(1)', which is a prior count to be added to the observations to shrink
-the estimated odds ratios of the count component towards zero. Default is 0.1.}
+         the estimated odds ratios of the count component towards zero. Default is 0.1.
 
-\item{binomialBound}{logical, if ‘TRUE’ then the quasibinomial variance estimator will
-be never smaller than 1 (no underdispersion). Default is TRUE.}
-
-\item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
-contains the log expression intensities that will be modelled.}
-}
-\value{
-SummarizedExperiment or QFeatures instance
-}
-\description{
-Fitting a hurdle msqrob model with an intensity component for
-assessing differential abundance and an count component that is
-modeling peptide counts using quasibinomial glm for differential
-detection of the number of features that were not missing and used
-for aggregation
-}
-\examples{
 
 # Load example data
 # The data are a Feature object with containing
@@ -130,7 +113,20 @@ getCoef(rowData(se)$msqrobHurdleCount[[1]])
 # For features object
 pe <- msqrobHurdle(pe, i = "protein", formula = ~condition)
 getCoef(rowData(pe[["protein"]])$msqrobHurdleIntensity[[1]])
-getCoef(rowData(pe[["protein"]])$msqrobHurdleCount[[1]])
+getCoef(rowData(pe[["protein"]])$msqrobHurdleCount[[1]])}
+
+\item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
+contains the log expression intensities that will be modelled.}
+}
+\value{
+SummarizedExperiment or QFeatures instance
+}
+\description{
+Fitting a hurdle msqrob model with an intensity component for
+             assessing differential abundance and an count component that is
+             modeling peptide counts using quasibinomial glm for differential
+             detection of the number of features that were not missing and used
+             for aggregation
 }
 \author{
 Lieven Clement

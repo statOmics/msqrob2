@@ -22,6 +22,18 @@
 #'        the IRWLS algorithm used in the M-estimation step of the robust
 #'        regression.
 #'
+#' @param trend `character(1)` or `FALSE` controlling the empirical Bayes
+#'        variance trend. `FALSE` (default) or `"none"` uses a global prior
+#'        variance. `"mean"` conditions the prior on mean log-intensity (like
+#'        \code{limma::eBayes(trend = TRUE)}). `"count"` conditions it on
+#'        log2 precursor count (like DEqMS). `"combined"` uses a linear
+#'        projection of `log(s^2)` on both mean and log2 count as a 1-D
+#'        covariate for \code{squeezeVar}.
+#'
+#' @param counts An optional numeric vector of length \code{nrow(y)} with the
+#'        number of precursors (PSMs or peptides) per feature. Only used when
+#'        \code{trend = "count"} or \code{trend = "combined"}.
+#'
 #' @examples
 #'
 #' # Load example data
@@ -57,7 +69,11 @@ msqrobLm <- function(y,
     formula,
     data,
     robust = TRUE,
-    maxitRob = 5) {
+    maxitRob = 5,
+    trend = FALSE,
+    counts = NULL) {
+    if (isFALSE(trend)) trend <- "none"
+    trend <- match.arg(trend, c("none", "mean", "count", "combined"))
     myDesign <- model.matrix(formula, data)
     models <- BiocParallel::bplapply(asplit(y, 1),
         function(y, design) {
@@ -135,7 +151,28 @@ msqrobLm <- function(y,
         design = myDesign
     )
 
-    .squeezeAndUpdatePosteriors(models)
+    covariate <- NULL
+    if (trend != "none") {
+        vars      <- vapply(models, getVar, numeric(1))
+        mean_expr <- rowMeans(y, na.rm = TRUE)
+        covariate <- switch(trend,
+            mean     = .make_trend_covariate(vars, mean_expr = mean_expr),
+            count    = if (!is.null(counts)) {
+                .make_trend_covariate(vars, counts = counts)
+            } else {
+                warning("trend='count' requires counts; no trend applied.")
+                NULL
+            },
+            combined = if (!is.null(counts)) {
+                .make_trend_covariate(vars, mean_expr = mean_expr, counts = counts)
+            } else {
+                warning("trend='combined' without counts; falling back to 'mean'.")
+                .make_trend_covariate(vars, mean_expr = mean_expr)
+            }
+        )
+    }
+
+    .squeezeAndUpdatePosteriors(models, covariate = covariate)
 }
 
 
@@ -191,6 +228,20 @@ msqrobLm <- function(y,
 #' @param featureGroups vector of type `character` or vector of type `factor` indicating how to aggregate
 #'        the features. Is only used when multiple features are used to build the model, e.g. when starting
 #'        from peptide data and modelling the fold change at the protein level. The default is `NULL`
+#'
+#' @param trend `character(1)` or `FALSE` controlling the empirical Bayes
+#'        variance trend. `FALSE` (default) or `"none"` uses a global prior
+#'        variance. `"mean"` conditions the prior on mean log-intensity. `"count"`
+#'        conditions it on log2 precursor count. `"combined"` uses a linear
+#'        projection of `log(s^2)` on both as a 1-D covariate for
+#'        \code{squeezeVar}. When \code{featureGroups} groups multiple features
+#'        per protein, precursor counts are inferred automatically; for
+#'        protein-level data supply them via \code{counts}.
+#'
+#' @param counts An optional numeric vector (length = number of unique feature
+#'        groups) giving the number of precursors per protein. Used when
+#'        \code{trend = "count"} or \code{trend = "combined"} and each feature
+#'        group contains a single row (i.e. the data are already at protein level).
 #'
 #' @param lmerArgs a list (of correct class, resulting from 'lmerControl()'
 #'        containing control parameters, including the nonlinear optimizer to be used
@@ -254,7 +305,12 @@ msqrobLmer <- function(y,
     maxitRob = 1,
     doQR = TRUE,
     featureGroups = NULL,
+    trend = FALSE,
+    counts = NULL,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
+
+    if (isFALSE(trend)) trend <- "none"
+    trend <- match.arg(trend, c("none", "mean", "count", "combined"))
 
     if (is.null(featureGroups)) featureGroups <- rownames(y)
 
@@ -265,6 +321,33 @@ msqrobLmer <- function(y,
 
     data <- data[, colnames(data) %in% all.vars(formula), drop = FALSE]
     y <- split.data.frame(y, featureGroups)
+
+    ## Resolve the count vector for trend covariates that need it.
+    ## Priority: user-supplied counts > inferred from featureGroups > none.
+    if (trend %in% c("count", "combined")) {
+        if (!is.null(counts)) {
+            if (!is.null(names(counts))) counts <- counts[names(y)]
+        } else {
+            pep_counts <- sapply(y, nrow)
+            if (all(pep_counts == 1L)) {
+                warning(
+                    "trend='", trend, "' requires precursor counts but all ",
+                    "feature groups contain a single feature. ",
+                    "Supply counts= for protein-level data. ",
+                    if (trend == "combined") "Falling back to 'mean'."
+                    else "No trend applied."
+                )
+                counts <- NULL
+                trend  <- if (trend == "combined") "mean" else "none"
+            } else {
+                counts <- pep_counts
+            }
+        }
+    }
+
+    mean_expr <- if (trend %in% c("mean", "combined")) {
+        sapply(y, function(yi) mean(as.matrix(yi), na.rm = TRUE))
+    } else NULL
 
     FUN <- if (ridge) .ridge_msqrobLmer else .noridge_msqrobLmer
     extraArgs <- if (ridge) {
@@ -278,7 +361,17 @@ msqrobLmer <- function(y,
     }
     models <- .lmer_apply(y, rowdata, FUN, extraArgs)
 
-    .squeezeAndUpdatePosteriors(models)
+    covariate <- if (trend != "none") {
+        vars <- vapply(models, getVar, numeric(1))
+        switch(trend,
+            mean     = .make_trend_covariate(vars, mean_expr = mean_expr),
+            count    = .make_trend_covariate(vars, counts = counts),
+            combined = .make_trend_covariate(vars, mean_expr = mean_expr,
+                                             counts = counts)
+        )
+    } else NULL
+
+    .squeezeAndUpdatePosteriors(models, covariate = covariate)
 }
 
 
@@ -398,12 +491,39 @@ msqrobGlm <- function(y,
 }
 
 
+## Build a 1-D trend covariate for squeezeVar.
+## mean_expr and/or counts control which predictors are included:
+##   one predictor  → pass it directly (squeezeVar's loess handles the rest)
+##   both           → linear projection of log(s²) ~ mean + log2(count) onto a
+##                    1-D axis on the same scale squeezeVar uses internally.
+## The QR rank-reduction handles constant count vectors (e.g. all features have
+## one precursor) by silently dropping the redundant column.
+.make_trend_covariate <- function(vars, mean_expr = NULL, counts = NULL) {
+    if (is.null(mean_expr) && is.null(counts)) return(NULL)
+    if (is.null(counts))    return(mean_expr)
+    if (is.null(mean_expr)) return(log2(pmax(counts, 0.5)))
+    log_s2 <- ifelse(is.finite(vars) & vars > 0, log(vars), NA_real_)
+    ok <- is.finite(log_s2) & is.finite(mean_expr) & is.finite(log2(pmax(counts, 0.5)))
+    if (sum(ok) < 3L) return(mean_expr)
+    xmat <- cbind(1, mean_expr[ok], log2(pmax(counts[ok], 0.5)))
+    qrX  <- qr(xmat, tol = 1e-10)
+    if (qrX$rank < ncol(xmat))
+        xmat <- xmat[, qrX$pivot[seq_len(qrX$rank)], drop = FALSE]
+    fit           <- lm.fit(xmat, log_s2[ok])
+    covariate     <- rep(NA_real_, length(vars))
+    covariate[ok] <- fit$fitted.values
+    covariate
+}
+
+
 ## Squeeze sample variances together via empirical Bayes posterior means and
 ## update varPosterior / dfPosterior slots in-place.
-.squeezeAndUpdatePosteriors <- function(models, binomialBound = FALSE) {
+.squeezeAndUpdatePosteriors <- function(models, binomialBound = FALSE,
+                                        covariate = NULL) {
     hlp <- limma::squeezeVar(
-        var = vapply(models, getVar, numeric(1)),
-        df  = vapply(models, getDF,  numeric(1))
+        var       = vapply(models, getVar, numeric(1)),
+        df        = vapply(models, getDF,  numeric(1)),
+        covariate = covariate
     )
     for (i in seq_along(models)) {
         vp <- as.numeric(hlp$var.post[i])

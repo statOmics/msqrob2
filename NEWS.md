@@ -4,6 +4,7 @@
 - Modular implementation of msqrob.R 
 - Add estimability functionality to catch and solve issues with changing reference class 
 - Adding unit tests for all functions in msqrob.R
+- Trended squeezevar using mean (limma trend), using feature counts used for aggregation (DEqMS) and combining both limma trend and DEqMS (experimental). 
 
 # msqrob 1.20 
 

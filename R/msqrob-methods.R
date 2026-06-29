@@ -82,10 +82,19 @@
 #’        and parameters to be passed through to the nonlinear optimizer, see the
 #’        ‘lmerControl’ documentation of the lme4 package for more details.
 #’        Default is `list(control = lmerControl(calc.derivs = FALSE))`
+#’
+#’ @param trend `character(1)` or `FALSE` controlling the empirical Bayes
+#’        variance trend. `FALSE` (default) or `"none"` uses a global prior
+#’        variance. `"mean"` conditions the prior on mean log-intensity (like
+#’        \code{limma::eBayes(trend = TRUE)}). `"count"` conditions it on log2
+#’        precursor count (like DEqMS). `"combined"` uses a linear projection
+#’        of `log(s^2)` on both as a 1-D covariate for \code{squeezeVar}.
+#’        Precursor counts are taken from the `.n` column of `rowData(object)`
+#’        when available.
 #’ @rdname msqrob
-#'
-#' @import SummarizedExperiment
-#' @export
+#’
+#’ @import SummarizedExperiment
+#’ @export
 setMethod(
     "msqrob", "SummarizedExperiment",
     function(object,
@@ -97,6 +106,7 @@ setMethod(
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
+    trend = FALSE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
         if (ncol(colData(object)) == 0) stop("colData is empty")
         if ((modelColumnName %in% colnames(rowData(object))) & !overwrite) {
@@ -115,14 +125,22 @@ setMethod(
       .check_formula_vars(formula, colData(object))
 
       if (!ridge & is.null(findbars(formula))) {
+            counts <- if (!isFALSE(trend) && trend != "none" &&
+                         ".n" %in% colnames(rowData(object)))
+                rowData(object)[[".n"]] else NULL
             rowData(object)[[modelColumnName]] <- msqrobLm(
                 y = assay(object),
                 formula = formula,
                 data = droplevels(colData(object)),
                 robust = robust,
-                maxitRob = maxitRob
+                maxitRob = maxitRob,
+                trend = trend,
+                counts = counts
             )
         } else {
+            counts <- if (!isFALSE(trend) && trend != "none" &&
+                         ".n" %in% colnames(rowData(object)))
+                rowData(object)[[".n"]] else NULL
             rowData(object)[[modelColumnName]] <- msqrobLmer(
                 y = assay(object),
                 formula = formula,
@@ -133,6 +151,8 @@ setMethod(
                 tol = tol,
                 doQR = doQR,
                 ridge = ridge,
+                trend = trend,
+                counts = counts,
                 lmerArgs = lmerArgs
             )
         }
@@ -160,6 +180,7 @@ setMethod(
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
+    trend = FALSE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
         if (is.null(object[[i]])) stop("QFeatures object does not contain an assay with the name ", i)
         if ((modelColumnName %in% colnames(rowData(object[[i]]))) & !overwrite) {
@@ -180,14 +201,22 @@ setMethod(
       .check_formula_vars(formula, colData(object))
 
       if (!ridge & is.null(findbars(formula))) {
+            counts <- if (!isFALSE(trend) && trend != "none" &&
+                         ".n" %in% colnames(rowData(object[[i]])))
+                rowData(object[[i]])[[".n"]] else NULL
             rowData(object[[i]])[[modelColumnName]] <- msqrobLm(
                 y = assay(object[[i]]),
                 formula = formula,
                 data = droplevels(colData(getWithColData(object, i = i))),
                 robust = robust,
-                maxitRob = maxitRob
+                maxitRob = maxitRob,
+                trend = trend,
+                counts = counts
             )
         } else {
+            counts <- if (!isFALSE(trend) && trend != "none" &&
+                         ".n" %in% colnames(rowData(object[[i]])))
+                rowData(object[[i]])[[".n"]] else NULL
             rowData(object[[i]])[[modelColumnName]] <- msqrobLmer(
                 y = assay(object[[i]]),
                 formula = formula,
@@ -198,6 +227,8 @@ setMethod(
                 maxitRob = maxitRob,
                 tol = tol,
                 doQR = doQR,
+                trend = trend,
+                counts = counts,
                 lmerArgs = lmerArgs
             )
         }
