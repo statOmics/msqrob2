@@ -670,7 +670,21 @@ makeContrast <- function(contrasts, parameterNames) {
 }
 
 
-## functions to generate parameter names based on a formula, 
+## Strip the response (LHS) from a two-sided formula.
+.strip_lhs <- function(formula) if (length(formula) == 3L) formula[-2L] else formula
+
+## Check all fixed-effect variables in formula exist in coldata (and optionally rowdata).
+.check_formula_vars <- function(formula, coldata, rowdata = NULL) {
+    available  <- c(colnames(coldata), colnames(rowdata))
+    missing_v  <- all.vars(formula)[!all.vars(formula) %in% available]
+    if (length(missing_v) == 0L) return(invisible(NULL))
+    if (length(missing_v) > 1L)
+        stop(sprintf("Variables %s are not found in coldata or rowdata",
+                     paste0(missing_v, collapse = ", ")))
+    stop(sprintf("Variable %s is not found in coldata or rowdata", missing_v))
+}
+
+## functions to generate parameter names based on a formula,
 ## column data, variable name in the formula and logical indicating
 ## if msqrob models are fitted with or without ridge regression.
 .getParamNames <- function(formula, coldata, var, ridge) {

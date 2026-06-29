@@ -35,15 +35,11 @@
 #' @param tol `numeric(1)` indicating the tolerance for declaring convergence
 #'        of the M-estimation loop of the intensity component of the hurdle model.
 #'
-#' @param doQR Deprecated. Use `decomp` instead. `TRUE` maps to `decomp = "QR"`,
-#'     `FALSE` maps to `decomp = "none"`. Kept for backward compatibility.
-#'
-#' @param decomp `character(1)` specifying the decomposition applied to the
-#'     fixed-effect design matrix before the Scheipl ridge encoding. One of
-#'     `"QR"` (default, backward-compatible), `"SVD"`, or `"none"`.
-#'
-#' @param standardize `logical(1)` whether to centre and scale the non-intercept
-#'     columns of the design matrix before the ridge decomposition. Default `FALSE`.
+#' @param doQR `boolean(1)` to indicate if a QR decomposition is applied to the
+#'     fixed-effect design matrix before the Scheipl ridge encoding. Default is `TRUE`.
+#'     When `TRUE` the predictor columns are orthogonalised so that shrinkage is
+#'     invariant to predictor ordering and collinearity. When `FALSE` the raw design
+#'     matrix columns are used directly (standard L2 penalty on original parameters).
 #'
 #' @param lmerArgs a list (of correct class, resulting from ‘lmerControl()’
 #'        containing control parameters, including the nonlinear optimizer to be used
@@ -107,8 +103,6 @@ setMethod(
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
-    decomp = NULL,
-    standardize = FALSE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
     priorCount = .1,
     binomialBound = TRUE) {
@@ -139,8 +133,6 @@ setMethod(
                 maxitRob = maxitRob,
                 tol = tol,
                 doQR = doQR,
-                decomp = decomp,
-                standardize = standardize,
                 lmerArgs = lmerArgs
             )
         }
@@ -172,8 +164,6 @@ setMethod(
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
-    decomp = NULL,
-    standardize = FALSE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
     priorCount = .1,
     binomialBound = TRUE) {
@@ -206,8 +196,6 @@ setMethod(
                 maxitRob = maxitRob,
                 tol = tol,
                 doQR = doQR,
-                decomp = decomp,
-                standardize = standardize,
                 lmerArgs = lmerArgs
             )
         }

@@ -107,30 +107,12 @@ setMethod(
             )
         }
 
-      if (length(formula) == 3) {
-        formula <- formula[-2]
-      }
+      formula <- .strip_lhs(formula)
 
-      if (any(all.vars(formula) %in% colnames(rowData(object)))){
-        stop(
-          "Use the msqrobAggregate function to use rowData variables"
-        )
-      }
+      if (any(all.vars(formula) %in% colnames(rowData(object))))
+        stop("Use the msqrobAggregate function to use rowData variables")
 
-
-
-      #Get the variables from the formula and check if they are in the coldata or rowdata
-      check_vars <- all.vars(formula) %in% colnames(colData(object))
-      if (!all(check_vars)){
-        if(sum(!check_vars) >1) {
-          vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
-          stop(sprintf("Variables %s is not found in coldata or rowdata", vars_not_found))
-        } else{
-          vars_not_found <- all.vars(formula)[!check_vars]
-          stop(sprintf("Variable %s is not found in coldata or rowdata", vars_not_found))
-        }
-      }
-
+      .check_formula_vars(formula, colData(object))
 
       if (!ridge & is.null(findbars(formula))) {
             rowData(object)[[modelColumnName]] <- msqrobLm(
@@ -190,27 +172,12 @@ setMethod(
             )
         }
 
-      if (length(formula) == 3) {
-        formula <- formula[-2]
-      }
+      formula <- .strip_lhs(formula)
 
-      if (any(all.vars(formula) %in% colnames(rowData(object[[i]])))){
-        stop(
-          "Use the msqrobAggregate function to use rowData variables"
-        )
-      }
+      if (any(all.vars(formula) %in% colnames(rowData(object[[i]]))))
+        stop("Use the msqrobAggregate function to use rowData variables")
 
-      #Get the variables from the formula and check if they are in the coldata or rowdata
-      check_vars <- all.vars(formula) %in% colnames(colData(object))
-      if (!all(check_vars)){
-        if(sum(!check_vars) >1) {
-          vars_not_found <- paste0(all.vars(formula)[!check_vars], collapse=", ")
-          stop(sprintf("Variables %s are not found in coldata or rowdata", vars_not_found))
-        } else{
-          vars_not_found <- all.vars(formula)[!check_vars]
-          stop(sprintf("Variable %s is not found in coldata or rowdata", vars_not_found))
-        }
-      }
+      .check_formula_vars(formula, colData(object))
 
       if (!ridge & is.null(findbars(formula))) {
             rowData(object[[i]])[[modelColumnName]] <- msqrobLm(
