@@ -30,6 +30,7 @@
 #' @return A matrix with the calculated contrasts or variance-covariance matrix of contrasts
 #' @aliases statModelMethods StatModel-method getContrast varContrast
 #' @importFrom methods is
+#' @importFrom estimability is.estble
 
 setMethod(
     "getContrast", "StatModel",
@@ -38,8 +39,18 @@ setMethod(
         coefs <- getCoef(object)
         out <- matrix(rep(NA, ncol(L)))
         rownames(out) <- colnames(L)
-        hlp <- try(t(L) %*% coefs[rownames(L)], silent = TRUE)
+        coefsSub <- coefs[rownames(L)]
+        coefsSub[is.na(coefsSub)] <- 0
+        hlp <- try(t(L) %*% coefsSub, silent = TRUE)
         if (!is(hlp, "try-error")) out[] <- hlp
+        nb <- object@params$nonest.basis
+        if (!is.null(nb) && ncol(nb) > 0L) {
+            L_full <- matrix(0, nrow = nrow(nb), ncol = ncol(L),
+                             dimnames = list(rownames(nb), colnames(L)))
+            shared <- intersect(rownames(L), rownames(nb))
+            L_full[shared, ] <- L[shared, , drop = FALSE]
+            out[!apply(L_full, 2, estimability::is.estble, nb = nb), ] <- NA_real_
+        }
         return(out)
     }
 )
@@ -54,8 +65,22 @@ setMethod(
         out <- matrix(NA, ncol(L), ncol(L))
         rownames(out) <- colnames(out) <- colnames(L)
         vcovTmp <- getVcovUnscaled(object) * object@varPosterior
-        hlp <- try(t(L) %*% vcovTmp[rownames(L), rownames(L)] %*% L, silent = TRUE)
+        hlp <- try({
+            vcovSub <- vcovTmp[rownames(L), rownames(L)]
+            vcovSub[is.na(vcovSub)] <- 0
+            t(L) %*% vcovSub %*% L
+        }, silent = TRUE)
         if (!is(hlp, "try-error")) out[] <- hlp
+        nb <- object@params$nonest.basis
+        if (!is.null(nb) && ncol(nb) > 0L) {
+            L_full <- matrix(0, nrow = nrow(nb), ncol = ncol(L),
+                             dimnames = list(rownames(nb), colnames(L)))
+            shared <- intersect(rownames(L), rownames(nb))
+            L_full[shared, ] <- L[shared, , drop = FALSE]
+            non_estble <- !apply(L_full, 2, estimability::is.estble, nb = nb)
+            out[non_estble, ] <- NA_real_
+            out[, non_estble] <- NA_real_
+        }
         return(out)
     }
 )

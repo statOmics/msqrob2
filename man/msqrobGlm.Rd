@@ -24,7 +24,7 @@ the same number of rows as the number of columns (samples) of
 \item{priorCount}{A 'numeric(1)', which is a prior count to be added to the observations to shrink
 the estimated log-fold-changes towards zero.}
 
-\item{binomialBound}{logical, if ‘TRUE’ then the quasibinomial variance estimator will
+\item{binomialBound}{logical, if 'TRUE' then the quasibinomial variance estimator will
 be never smaller than 1 (no underdispersion).}
 }
 \value{

@@ -69,25 +69,12 @@ regression.}
 \item{tol}{\code{numeric(1)} indicating the tolerance for declaring convergence
 of the M-estimation loop.}
 
-\item{doQR}{\code{boolean(1)} to indicate if QR decomposition is used when adopting
-ridge regression. Default is \code{TRUE}. If \code{FALSE} the predictors of the fixed
-effects are not transformed, and the degree of shrinkage can depend on the encoding.}
-
-\item{lmerArgs}{a list (of correct class, resulting from ‘lmerControl()’
-containing control parameters, including the nonlinear optimizer to be used
-and parameters to be passed through to the nonlinear optimizer, see the
-‘lmerControl’ documentation of the lme4 package for more details.
-Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
-
 \item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
 contains the log expression intensities that will be modelled.}
 
 \item{name}{A ‘character(1)’ naming the new assay. Default is ‘newAssay’.
 Note that the function will fail if there's already an assay
 with ‘name’.}
-}
-\value{
-A ‘QFeatures’ object with an additional assay.
 }
 \description{
 Parameter estimation of msqrob models for \code{QFeatures}instance.

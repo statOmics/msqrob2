@@ -35,9 +35,15 @@
 #' @param tol `numeric(1)` indicating the tolerance for declaring convergence
 #'        of the M-estimation loop of the intensity component of the hurdle model.
 #'
-#' @param doQR `boolean(1)` to indicate if QR decomposition is used when adopting
-#'     ridge regression for the intensity component of the model. Default is `TRUE`. If `FALSE` the predictors of the fixed
-#'     effects are not transformed, and the degree of shrinkage can depend on the encoding.
+#' @param doQR Deprecated. Use `decomp` instead. `TRUE` maps to `decomp = "QR"`,
+#'     `FALSE` maps to `decomp = "none"`. Kept for backward compatibility.
+#'
+#' @param decomp `character(1)` specifying the decomposition applied to the
+#'     fixed-effect design matrix before the Scheipl ridge encoding. One of
+#'     `"QR"` (default, backward-compatible), `"SVD"`, or `"none"`.
+#'
+#' @param standardize `logical(1)` whether to centre and scale the non-intercept
+#'     columns of the design matrix before the ridge decomposition. Default `FALSE`.
 #'
 #' @param lmerArgs a list (of correct class, resulting from ‘lmerControl()’
 #'        containing control parameters, including the nonlinear optimizer to be used
@@ -101,6 +107,8 @@ setMethod(
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
+    decomp = NULL,
+    standardize = FALSE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
     priorCount = .1,
     binomialBound = TRUE) {
@@ -127,9 +135,12 @@ setMethod(
                 formula = formula,
                 data = colData(object),
                 robust = robust,
+                ridge = ridge,
                 maxitRob = maxitRob,
                 tol = tol,
                 doQR = doQR,
+                decomp = decomp,
+                standardize = standardize,
                 lmerArgs = lmerArgs
             )
         }
@@ -161,6 +172,8 @@ setMethod(
     maxitRob = 1,
     tol = 1e-6,
     doQR = TRUE,
+    decomp = NULL,
+    standardize = FALSE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
     priorCount = .1,
     binomialBound = TRUE) {
@@ -189,9 +202,12 @@ setMethod(
                 formula = formula,
                 data = colData(object),
                 robust = robust,
+                ridge = ridge,
                 maxitRob = maxitRob,
                 tol = tol,
                 doQR = doQR,
+                decomp = decomp,
+                standardize = standardize,
                 lmerArgs = lmerArgs
             )
         }

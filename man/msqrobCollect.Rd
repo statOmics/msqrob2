@@ -21,11 +21,13 @@ prefix used when running \code{hypothesisTest()}.}
 \item{combine}{A \code{logical(1)} indicating whether the result tables
 should be combined in a single table (default) or return as a
 list of tables. When combined, two new variables are created:
-1. \code{contrast}tells from which contrast (column of the \code{contrast}
+\enumerate{
+\item \code{contrast}tells from which contrast (column of the \code{contrast}
 matrix) the results where obtained; 2. \code{feature} provides the
 name of the modelled feature (this information is taken from
 the rownames of the tables, but this are made unique upon
-combining).}
+combining).
+}}
 }
 \value{
 Result tables for contrasts combined in a single table or list

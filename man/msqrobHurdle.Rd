@@ -16,6 +16,8 @@
   maxitRob = 1,
   tol = 1e-06,
   doQR = TRUE,
+  decomp = NULL,
+  standardize = FALSE,
   lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
   priorCount = 0.1,
   binomialBound = TRUE
@@ -32,6 +34,8 @@
   maxitRob = 1,
   tol = 1e-06,
   doQR = TRUE,
+  decomp = NULL,
+  standardize = FALSE,
   lmerArgs = list(control = lmerControl(calc.derivs = FALSE)),
   priorCount = 0.1,
   binomialBound = TRUE
@@ -66,9 +70,15 @@ regression for fitting the intensity component of the hurdle model.}
 \item{tol}{\code{numeric(1)} indicating the tolerance for declaring convergence
 of the M-estimation loop of the intensity component of the hurdle model.}
 
-\item{doQR}{\code{boolean(1)} to indicate if QR decomposition is used when adopting
-ridge regression for the intensity component of the model. Default is \code{TRUE}. If \code{FALSE} the predictors of the fixed
-effects are not transformed, and the degree of shrinkage can depend on the encoding.}
+\item{doQR}{Deprecated. Use \code{decomp} instead. \code{TRUE} maps to \code{decomp = "QR"},
+\code{FALSE} maps to \code{decomp = "none"}. Kept for backward compatibility.}
+
+\item{decomp}{\code{character(1)} specifying the decomposition applied to the
+fixed-effect design matrix before the Scheipl ridge encoding. One of
+\code{"QR"} (default, backward-compatible), \code{"SVD"}, or \code{"none"}.}
+
+\item{standardize}{\code{logical(1)} whether to centre and scale the non-intercept
+columns of the design matrix before the ridge decomposition. Default \code{FALSE}.}
 
 \item{lmerArgs}{a list (of correct class, resulting from ‘lmerControl()’
 containing control parameters, including the nonlinear optimizer to be used

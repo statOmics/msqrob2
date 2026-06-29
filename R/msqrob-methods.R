@@ -3,6 +3,7 @@
 #' @description Parameter estimation of msqrob models for `QFeatures`
 #'              and `SummarizedExperiment` instance.
 #'
+#' @name msqrob
 #' @aliases msqrob msqrob,SummarizedExperiment-method msqrob,QFeatures-method
 #'
 #' @author Lieven Clement
@@ -70,16 +71,18 @@
 #' @param tol `numeric(1)` indicating the tolerance for declaring convergence
 #'        of the M-estimation loop.
 #'
-#' @param doQR `boolean(1)` to indicate if QR decomposition is used when adopting
-#'     ridge regression. Default is `TRUE`. If `FALSE` the predictors of the fixed
-#'     effects are not transformed, and the degree of shrinkage can depend on the encoding.
-#'
-#' @param lmerArgs a list (of correct class, resulting from ‘lmerControl()’
-#'        containing control parameters, including the nonlinear optimizer to be used
-#'        and parameters to be passed through to the nonlinear optimizer, see the
-#'        ‘lmerControl’ documentation of the lme4 package for more details.
-#'        Default is `list(control = lmerControl(calc.derivs = FALSE))`
-#' @rdname msqrob
+#’ @param doQR `boolean(1)` to indicate if a QR decomposition is applied to the
+#’     fixed-effect design matrix before the Scheipl ridge encoding. Default is `TRUE`.
+#’     When `TRUE` the predictor columns are orthogonalised so that shrinkage is
+#’     invariant to predictor ordering and collinearity. When `FALSE` the raw design
+#’     matrix columns are used directly (standard L2 penalty on original parameters).
+#’
+#’ @param lmerArgs a list (of correct class, resulting from ‘lmerControl()’
+#’        containing control parameters, including the nonlinear optimizer to be used
+#’        and parameters to be passed through to the nonlinear optimizer, see the
+#’        ‘lmerControl’ documentation of the lme4 package for more details.
+#’        Default is `list(control = lmerControl(calc.derivs = FALSE))`
+#’ @rdname msqrob
 #'
 #' @import SummarizedExperiment
 #' @export

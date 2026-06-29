@@ -1,6 +1,6 @@
 Package: msqrob2
 Title: Robust statistical inference for quantitative LC-MS proteomics
-Version: 1.21.0
+Version: 1.22.0
 Authors@R: c(
       person(given = "Lieven",
            family = "Clement",
@@ -64,7 +64,8 @@ Imports:
     dplyr,
     grDevices,
     utils,
-    rlang
+    rlang,
+    estimability
 Suggests:
     stringr, 
     ExploreModelMatrix,
@@ -98,7 +99,6 @@ Collate: 'msqrob-framework.R' 'allGenerics.R' 'calculateNormFactors.R'
 Encoding: UTF-8
 VignetteBuilder: knitr
 Roxygen: list(markdown=TRUE)
-RoxygenNote: 7.3.3
 biocViews:
     Proteomics,
     Metabolomics,
@@ -114,3 +114,4 @@ biocViews:
     Preprocessing
 URL: https://github.com/statOmics/msqrob2
 BugReports: https://github.com/statOmics/msqrob2/issues
+Config/roxygen2/version: 8.0.0

@@ -48,18 +48,21 @@ estimated via penalized regression and shrunken to zero.}
 the IRWLS algorithm used in the M-estimation step of the robust
 regression.}
 
-\item{doQR}{\code{boolean(1)} to indicate if QR decomposition is used when adopting
-ridge regression. Default is \code{TRUE}. If \code{FALSE} the predictors of the fixed
-effects are not transformed, and the degree of shrinkage can depend on the encoding.}
+\item{doQR}{\code{boolean(1)} to indicate if a QR decomposition is applied to the
+fixed-effect design matrix before the Scheipl ridge encoding. Default is \code{TRUE}.
+When \code{TRUE} the predictor columns are orthogonalised so that shrinkage is
+invariant to predictor ordering and collinearity, and fixed effects are shrunken
+toward zero in the space of treatment contrasts. When \code{FALSE} the raw design
+matrix columns are used directly (standard L2 penalty on original parameters).}
 
 \item{featureGroups}{vector of type \code{character} or vector of type \code{factor} indicating how to aggregate
 the features. Is only used when multiple features are used to build the model, e.g. when starting
 from peptide data and modelling the fold change at the protein level. The default is \code{NULL}}
 
-\item{lmerArgs}{a list (of correct class, resulting from ‘lmerControl()’
+\item{lmerArgs}{a list (of correct class, resulting from 'lmerControl()'
 containing control parameters, including the nonlinear optimizer to be used
 and parameters to be passed through to the nonlinear optimizer, see the
-‘lmerControl’ documentation of the lme4 package for more details.
+'lmerControl' documentation of the lme4 package for more details.
 Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
 }
 \value{

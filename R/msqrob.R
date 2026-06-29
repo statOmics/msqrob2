@@ -49,6 +49,8 @@
 #' @importFrom stats model.matrix lm.fit
 #' @importFrom limma squeezeVar
 #' @importFrom methods is
+#' @importFrom BiocParallel bplapply
+#' @importFrom estimability nonest.basis all.estble
 #'
 #' @export
 msqrobLm <- function(y,
@@ -57,9 +59,8 @@ msqrobLm <- function(y,
     robust = TRUE,
     maxitRob = 5) {
     myDesign <- model.matrix(formula, data)
-    models <- apply(y, 1,
+    models <- BiocParallel::bplapply(asplit(y, 1),
         function(y, design) {
-            ## computatability check
             obs <- is.finite(y)
             type <- "fitError"
             model <- list(
@@ -67,42 +68,39 @@ msqrobLm <- function(y,
                 sigma = NA, df.residual = NA, w = NA
             )
 
+            nb <- NULL
             if (sum(obs) > 0) {
-                ## subset to finite observations, attention with R column switching
                 X <- design[obs, , drop = FALSE]
-                X <- X[,colMeans(X == 0) != 1 , drop = FALSE]
+                nb <- estimability::nonest.basis(X)
+                if (!identical(nb, estimability::all.estble)) rownames(nb) <- colnames(design)
+                X <- X[, colMeans(X == 0) != 1, drop = FALSE]
+                qrX <- qr(X)
+                if (qrX$rank < ncol(X))
+                    X <- X[, qrX$pivot[seq_len(qrX$rank)], drop = FALSE]
                 y <- y[obs]
                 colnames_orig <- colnames(design)
 
                 if (robust) {
-                    ## use robust regression from MASS package, "M" estimation is used
-                    mod <- try(MASS::rlm(X, y,
-                        method = "M",
-                        maxit = maxitRob
-                    ),
-                    silent = TRUE
+                    mod <- try(MASS::rlm(X, y, method = "M", maxit = maxitRob),
+                        silent = TRUE
                     )
-                    if (!is(mod, "try-error")) {
-                        type <- "rlm"
-                    }
+                    if (!is(mod, "try-error")) type <- "rlm"
                 } else {
-                    ## if robust regression is not performed use standard linear fit
                     mod <- try(lm.fit(X, y))
-                    if ((!is(mod, "try-error")) & mod$rank == ncol(X)) {
-                        type <- "lm"
-                    }
+                    if (!is(mod, "try-error") && mod$rank == ncol(X)) type <- "lm"
                 }
 
                 if (type == "rlm") {
                     w <- mod$w
-                    sigma <- sqrt(sum(mod$w * mod$resid^2) / (sum(mod$w) - mod$rank))
-                    df.residual <- sum(mod$w) - mod$rank
+                    sw <- sum(w)
+                    df.residual <- sw - mod$rank
+                    sigma <- sqrt(sum(w * mod$resid^2) / df.residual)
                     if (df.residual < 2L) type <- "fitError"
                 }
 
                 if (type == "lm") {
                     w <- NULL
-                    sigma <- sqrt(sum(mod$residuals^2 / mod$df.residual))
+                    sigma <- sqrt(sum(mod$residuals^2) / mod$df.residual)
                     df.residual <- mod$df.residual
                     if (df.residual < 2L) type <- "fitError"
                 }
@@ -111,48 +109,36 @@ msqrobLm <- function(y,
                     coef <- rep(NA, length(colnames_orig))
                     names(coef) <- colnames_orig
                     coef[names(mod$coef)] <- mod$coef
-                    vcovUnscaled <- matrix(NA, nrow =length(colnames_orig), ncol = length(colnames_orig))
-                    rownames(vcovUnscaled) <- colnames(vcovUnscaled) <-  colnames_orig
+
+                    vcovUnscaled <- matrix(NA,
+                        nrow = length(colnames_orig),
+                        ncol = length(colnames_orig)
+                    )
+                    rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- colnames_orig
                     vcovUnscaled[names(mod$coef), names(mod$coef)] <- .vcovUnscaled(mod)
 
                     model <- list(
                         coefficients = coef,
                         vcovUnscaled = vcovUnscaled,
-                        #vcovUnscaled = .vcovUnscaled(mod),
                         sigma = sigma,
                         df.residual = df.residual,
                         w = w
                     )
                 }
             }
-            ## return object of class Statmodel (from apply)
-            .StatModel(
+            StatModel(
                 type = type,
-                params = model,
+                params = c(model, list(robust = robust, nonest.basis = nb)),
                 varPosterior = as.numeric(NA),
                 dfPosterior = as.numeric(NA)
             )
         },
         design = myDesign
-    ) ## end of apply here
-
-    ## Squeeze a set of sample variances together by computing
-    ## empirical Bayes posterior means
-    hlp <- limma::squeezeVar(
-        var = vapply(models, getVar, numeric(1)),
-        df = vapply(models, getDF, numeric(1))
     )
 
-    ## Put variance and degrees of freedom in appropriate slots
-    for (i in seq_len(length(models))) {
-        mydf <- hlp$df.prior + getDF(models[[i]])
-        models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
-        models[[i]]@dfPosterior <- as.numeric(mydf)
-    }
-
-    ## Return object of class StatModel
-    return(models)
+    .squeezeAndUpdatePosteriors(models)
 }
+
 
 
 #' Function to fit msqrob models with ridge regression and/or random effects using lme4
@@ -196,18 +182,21 @@ msqrobLm <- function(y,
 #'        of the M-estimation loop.
 #'
 #'
-#' @param doQR `boolean(1)` to indicate if QR decomposition is used when adopting
-#'        ridge regression. Default is `TRUE`. If `FALSE` the predictors of the fixed
-#'        effects are not transformed, and the degree of shrinkage can depend on the encoding.
+#' @param doQR `boolean(1)` to indicate if a QR decomposition is applied to the
+#'        fixed-effect design matrix before the Scheipl ridge encoding. Default is `TRUE`.
+#'        When `TRUE` the predictor columns are orthogonalised so that shrinkage is
+#'        invariant to predictor ordering and collinearity, and fixed effects are shrunken
+#'        toward zero in the space of treatment contrasts. When `FALSE` the raw design
+#'        matrix columns are used directly (standard L2 penalty on original parameters).
 #'
 #' @param featureGroups vector of type `character` or vector of type `factor` indicating how to aggregate
 #'        the features. Is only used when multiple features are used to build the model, e.g. when starting
 #'        from peptide data and modelling the fold change at the protein level. The default is `NULL`
 #'
-#' @param lmerArgs a list (of correct class, resulting from ‘lmerControl()’
+#' @param lmerArgs a list (of correct class, resulting from 'lmerControl()'
 #'        containing control parameters, including the nonlinear optimizer to be used
 #'        and parameters to be passed through to the nonlinear optimizer, see the
-#'        ‘lmerControl’ documentation of the lme4 package for more details.
+#'        'lmerControl' documentation of the lme4 package for more details.
 #'        Default is `list(control = lmerControl(calc.derivs = FALSE))`
 #'
 #' @examples
@@ -257,395 +246,42 @@ msqrobLm <- function(y,
 #' @export
 
 msqrobLmer <- function(y,
-                       formula,
-                       data,
-                       rowdata = NULL,
-                       tol  =1e-6,
-                       robust = TRUE,
-                       ridge = FALSE,
-                       maxitRob = 1,
-                       doQR = TRUE,
-                       featureGroups=NULL,
-                       lmerArgs = list(control = lmerControl(calc.derivs = FALSE))){
+    formula,
+    data,
+    rowdata = NULL,
+    tol = 1e-6,
+    robust = TRUE,
+    ridge = FALSE,
+    maxitRob = 1,
+    doQR = TRUE,
+    featureGroups = NULL,
+    lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
 
-  #Get the featureGroups variable
-  if (is.null(featureGroups)){
-    featureGroups <- rownames(y)
-  }
+    if (is.null(featureGroups)) featureGroups <- rownames(y)
 
-  if (!is.null(rowdata)){
-    #select only the relevant columns
-    rowdata <- rowdata[colnames(rowdata) %in% all.vars(formula)]
-    rowdata <- split.data.frame(rowdata, featureGroups)
-  }
-
-  #Select only the relevant columns
-  data <- data[,colnames(data) %in% all.vars(formula), drop = FALSE]
-
-  y <- split.data.frame(y, featureGroups)
-
-  if (ridge == TRUE){
-    if(is.null(rowdata)){
-      models <- bplapply(y,
-                         FUN = .ridge_msqrobLmer,
-                         "formula" = formula,
-                         "coldata" = data,
-                         "doQR" = doQR,
-                         "robust"=robust,
-                         "maxitRob" = maxitRob,
-                         "tol"  =tol)
-    } else{
-      models <- bpmapply(FUN = .ridge_msqrobLmer,
-                         y, rowdata,
-                         MoreArgs = list("formula" = formula,
-                                         "coldata" = data,
-                                         "doQR" = doQR,
-                                         "robust"=robust,
-                                         "maxitRob" = maxitRob,
-                                         "tol"  =tol))
+    if (!is.null(rowdata)) {
+        rowdata <- rowdata[colnames(rowdata) %in% all.vars(formula)]
+        rowdata <- split.data.frame(rowdata, featureGroups)
     }
 
-  }else{
+    data <- data[, colnames(data) %in% all.vars(formula), drop = FALSE]
+    y <- split.data.frame(y, featureGroups)
 
-    if(is.null(rowdata)){
-      models <- bplapply(y,
-                         FUN = .noridge_msqrobLmer,
-                         "formula" = formula,
-                         "coldata" = data,
-                          "robust"=robust,
-                         "maxitRob" = maxitRob,
-                         "tol"  =tol)
-    } else{
-      models <- bpmapply(FUN = .noridge_msqrobLmer,
-                         y, rowdata,
-                         MoreArgs = list("formula" = formula,
-                                         "coldata" = data,
-                                         "robust"=robust,
-                                         "maxitRob" = maxitRob,
-                                         "tol"  =tol))
-    }
-  }
-
-
-
-  hlp <- limma::squeezeVar(
-    var = vapply(models, getVar, numeric(1)),
-    df = vapply(models, getDF, numeric(1))
-  )
-
-  for (i in seq_len(length(models))) {
-    models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
-    models[[i]]@dfPosterior <- as.numeric(hlp$df.prior + getDF(models[[i]]))
-  }
-  return(models)
-}
-
-## Fit the mixed models with ridge regression
-.ridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, doQR, robust,maxitRob=1,tol = 1e-06){
-
-  #Create the matrix containing the variable information
-  data <- .create_data(y, rowdata, coldata)
-
-  #all necessary variables are now in data,  now we can create the fixed object if we use ridge regression
-  fixed <- model.matrix(nobars(formula), data = data)
-  data$fixed <- fixed
-  data$y <- as.matrix(y)
-  data <- data[!is.na(data$y), , drop = FALSE]
-
-  #Checking reference class changes
-  #nonestimable_paramaters <- limma::nonEstimable(data$fixed)
-  data$fixed <- data$fixed[,colMeans(data$fixed == 0) != 1 , drop = FALSE]
-
-  if (sum(!grepl("(Intercept)", colnames(fixed))) < 2 & nobars(formula)[[2]] != 1) {
-    stop("The mean model must have more than two parameters for ridge regression.
-              if you really want to adopt ridge regression when your factor has only two levels
-              rerun the function with a formula where you drop the intercept. e.g. ~-1+condition
-            ")
-  }
-
-  if(is.null(findbars(formula))) {
-    formula <- formula(y ~ (1|ridge))
-  } else {
-    if (nobars(formula)[[2]] != ~1){
-      #udpate formula to remove any fixed effect variables and replace with ridge
-      formula <- formula(
-        paste0("y ~ (1|ridge) + ", paste0("(",paste(findbars(formula), collapse=")+("),")")))
+    FUN <- if (ridge) .ridge_msqrobLmer else .noridge_msqrobLmer
+    extraArgs <- if (ridge) {
+        list(formula = formula, coldata = data, doQR = doQR,
+             robust = robust, maxitRob = maxitRob, tol = tol,
+             lmerArgs = lmerArgs)
     } else {
-      formula <- update.formula(formula, y~.)
+        list(formula = formula, coldata = data,
+             robust = robust, maxitRob = maxitRob, tol = tol,
+             lmerArgs = lmerArgs)
     }
-  }
+    models <- .lmer_apply(y, rowdata, FUN, extraArgs)
 
-  qrFixed <- qr(data$fixed)
-
-  if (doQR) {
-    Q <- qr.Q(qrFixed)
-  } else {
-    Q <- data$fixed
-  }
-
-  model <- NULL
-  ##Fooling lmer to adopt ridge regression using Fabian Scheipl's trick
-  if (qrFixed$rank == ncol(data$fixed)){
-    try({
-      colnames(Q) <- colnames(data$fixed)
-      if (colnames(data$fixed)[1] == "(Intercept)") {
-        Q <- Q[, -1]
-      }
-
-      data$ridge <- factor(rep(colnames(Q), length = nrow(data)), levels = colnames(Q))
-
-      #Parse the data and formula
-      parsedFormulaC <- lFormula(formula,data = as.list(data))
-      parsedFormulaC$reTrms$cnms$ridge <- ""
-      ridgeId <- grep(names(parsedFormulaC$reTrms$Ztlist), pattern = "ridge")
-      parsedFormulaC$reTrms$Ztlist[[ridgeId]] <- as(Matrix(t(Q)), class(parsedFormulaC$reTrms$Ztlist[[ridgeId]]))
-      parsedFormulaC$reTrms$Zt <- do.call(rbind,parsedFormulaC$reTrms$Ztlist)
-
-      #Create deviance function to be optimized
-      devianceFunctionC <- do.call(mkLmerDevfun, parsedFormulaC)
-      #optimize deviance function
-      optimizerOutputC <- optimizeLmer(devianceFunctionC)
-      #Package up the results
-      model <- mkMerMod(rho = environment(devianceFunctionC),
-                        opt = optimizerOutputC,
-                        reTrms = parsedFormulaC$reTrms,
-                        fr = parsedFormulaC$fr)
-    }, silent=TRUE)
-  }
-
-  if (is.null(model)) {
-    type <- "fitError"
-    model <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA)
-  } else {
-    df.residual <- 0
-    try({
-      type <- "lmer"
-      #extract deviance composition
-      #pwrss=penalied weighted residual sum of squares
-      model@frame$`(weights)` <- rep(1, dim(model@frame)[1])
-      sseOld <- model@devcomp$cmp['pwrss']
-      if (robust == TRUE){
-        model <- .robust_fitting(model, maxitRob, sseOld, tol)
-      }
-
-      sigma <- sigma(model)
-      betas <- .getBetaB(model)
-      vcovUnscaled <- as.matrix(.getVcovBetaBUnscaled(model))
-      if (nobars(formula)[[2]] != 1) {
-        if (doQR) {
-          if (colnames(data$fixed)[1] == "(Intercept)") {
-
-            ids <- c(1, grep("ridge", names(betas)))
-          } else {
-
-            ids <- grep("ridge", names(betas))
-          }
-
-          Rinv <- diag(length(betas))
-          coefNames <- names(betas)
-          Rinv[ids, ids] <- solve(qr.R(qrFixed))
-          Rinv[1, 1] <- 1
-          betas <- c(Rinv %*% betas)
-          names(betas) <- coefNames
-
-          vcovUnscaled <- Rinv %*% vcovUnscaled %*% t(Rinv)
-          rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- names(betas)
-        }
-      }
-
-      df.residual <- .getDfLmer(model)
-      if(is.na(df.residual)){
-        df.residual <- 0
-      }
-    }, silent = TRUE)
-
-    #model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model) # w in model! 
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, model)
-  }
-
-  return(StatModel(type = type,
-                   params = model,
-                   varPosterior = as.numeric(NA),
-                   dfPosterior = as.numeric(NA)))
+    .squeezeAndUpdatePosteriors(models)
 }
 
-## Fit the mixed models without ridge regression
-.noridge_msqrobLmer <- function(y,rowdata=NULL,formula,coldata, robust,maxitRob=0, tol = 1e-06  ){
-  #Create the matrix containing the variable information
-  data <- .create_data(y,rowdata,coldata)
-
-  data_model_matrix <- model.matrix(nobars(formula), data = data)
-  formula <- update.formula(formula, y~.)
-
-  data$y <- as.matrix(y)
-  data_model_matrix <- data_model_matrix[!is.na(data$y), , drop = FALSE]
-  data <- data[!is.na(data$y), , drop = FALSE]
-  #Checking for reference class changes
-  #nonestimable_parameters <- limma::nonEstimable(data_model_matrix)
-  data_model_matrix <- data_model_matrix[,colMeans(data_model_matrix == 0) != 1 , drop = FALSE]
-  model <- NULL
-
-  if(qr(data_model_matrix)$rank == ncol(data_model_matrix)){
-    try({
-      model <- lmer(formula,  as.data.frame(data))
-    }, silent=TRUE)
-  }
-
-  if (is.null(model)) {
-    type <- "fitError"
-    model <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA)
-  } else {
-    df.residual <- 0
-    try({
-      type <- "lmer"
-      #extract deviance composition
-      #pwrss=penalied weighted residual sum of squares
-      model@frame$`(weights)` <- rep(1, dim(model@frame)[1])
-      sseOld <- model@devcomp$cmp['pwrss']
-
-      if (robust == TRUE){
-        model <- .robust_fitting(model, maxitRob, sseOld, tol)
-      }
-
-      sigma <- sigma(model)
-      betas <- .getBetaB(model)
-      vcovUnscaled <- .getVcovBetaBUnscaled(model)
-      df.residual <- .getDfLmer(model)
-      if(is.na(df.residual)){
-        df.residual <- 0
-      }
-    }, silent = TRUE)
-
-    # model <- .create_model(betas, vcovUnscaled, sigma, df.residual, w, model) # w in model
-    model <- .create_model(betas, vcovUnscaled, sigma, df.residual, model)
-  }
-
-  return(StatModel(type = type,
-                   params = model,
-                   varPosterior = as.numeric(NA),
-                   dfPosterior = as.numeric(NA)))
-}
-
-
-## Calculate unscaled covariance matrix for lm or rlm fit
-.vcovUnscaled <- function(model) {
-    p1 <- 1L:model$rank
-    p <- length(model$coefficients)
-
-    out <- matrix(NA, p, p)
-    out[!is.na(model$coefficients), !is.na(model$coefficients)] <- chol2inv(model$qr$qr[p1, p1, drop = FALSE])
-    colnames(out) <- rownames(out) <- names(model$coefficients)
-
-    return(out)
-}
-
-#' @import lme4
-#' @import Matrix
-#' @importFrom methods cbind2
-
-
-.getVcovBetaBUnscaled <- function(model) {
-    X <- lme4::getME(model, "X")
-    Z <- lme4::getME(model, "Z")
-    XZ <- cbind2(X,Z)
-
-    if (is.null(model@frame$`(weights)`)){
-      model@frame$`(weights)` <- 1
-    }
-
-    vcovInv <- Matrix::crossprod(model@frame$`(weights)`^.5 * XZ)
-    Ginv <- Matrix::solve(
-        Matrix::tcrossprod(getME(model, "Lambda")) +
-            Matrix::Diagonal(ncol(Z), 1e-18)
-    )
-
-    i <- -seq_len(ncol(X))
-    vcovInv[i, i] <- vcovInv[i, i] + Ginv
-    vcovInv <- Matrix::solve(vcovInv)
-    ranefLevels <- imap(model@flist, ~ {
-        paste0(.y, levels(.x))
-    })
-    zNames <- unlist(lapply(seq_len(length(model@cnms)),
-        function(x, cnms, levels) {
-            c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0))
-        },
-        cnms = model@cnms,
-        levels = ranefLevels
-    ))
-
-    rownames(vcovInv) <- colnames(vcovInv) <- c(colnames(X), zNames)
-    return(vcovInv)
-}
-
-#' @import purrr
-#' @import lme4
-.getBetaB <- function(model) {
-    betaB <- c(as.vector(lme4::getME(model, "beta")), as.vector(lme4::getME(model, "b")))
-    ranefLevels <- purrr::imap(model@flist, ~ {
-        paste0(.y, levels(.x))
-    })
-    zNames <- unlist(lapply(seq_len(length(model@cnms)), function(x, cnms, levels) {
-        c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0))
-    },
-    cnms = model@cnms, levels = ranefLevels
-    ))
-    names(betaB) <- c(colnames(model@pp$X), zNames)
-    betaB
-}
-
-#' @importFrom stats resid
-.getDfLmer <- function(object) {
-    w <- object@frame$"(weights)"
-    if (is.null(w)) w <- 1
-    sigma <- sigma(object)
-    sum((resid(object) * sqrt(w))^2) / sigma^2
-}
-
-.robust_fitting <- function(model, maxitRob, sseOld, tol){
-  while (maxitRob > 0) {
-    maxitRob <- maxitRob - 1
-    res <- resid(model)
-    model@frame$`(weights)` <- MASS::psi.huber(res / (mad(res, 0)))
-    model <- refit(model)
-    sse <- model@devcomp$cmp["pwrss"]
-    if (abs(sseOld - sse) / sseOld <= tol) break
-    sseOld <- sse
-  }
-  return(model)
-}
-
-# .create_model <- function(betas, vcovUnscaled, sigma, df.residual, w, model){ # w in model
-.create_model <- function(betas, vcovUnscaled, sigma, df.residual, model){
-  if (df.residual<2L){
-    model <- list(coefficients = NA,
-                  vcovUnscaled = NA,
-                  sigma = NA,
-                  df.residual = NA,
-                  w = NA)
-  } else {
-    model <- list(coefficients = betas,
-                  vcovUnscaled = vcovUnscaled,
-                  sigma = sigma,
-                  df.residual = df.residual,
-                  w = model@frame$`(weights)`)
-  }
-  return(model)
-}
-
-
-.create_data <- function(y,rowdata,coldata){
-  if (is.null(rowdata)){
-    data <- coldata[rep(seq_len(nrow(coldata)), each = nrow(y)), , drop = FALSE]
-  } else {
-    data <- cbind(
-      coldata[rep(seq_len(nrow(coldata)), each = nrow(y)), ],
-      rowdata[rep(seq_len(nrow(rowdata)), ncol(y)),]
-    )
-    data <- DataFrame(data)
-    colnames(data) <- c(colnames(coldata),colnames(rowdata))
-  }
-  return(data)
-}
 
 #' Function to fit msqrob models to peptide counts using glm
 #'
@@ -669,7 +305,7 @@ msqrobLmer <- function(y,
 #' @param priorCount A 'numeric(1)', which is a prior count to be added to the observations to shrink
 #'          the estimated log-fold-changes towards zero.
 #'
-#' @param binomialBound logical, if ‘TRUE’ then the quasibinomial variance estimator will
+#' @param binomialBound logical, if 'TRUE' then the quasibinomial variance estimator will
 #'        be never smaller than 1 (no underdispersion).
 #'
 #' @examples
@@ -703,6 +339,7 @@ msqrobLmer <- function(y,
 #' @importFrom limma squeezeVar
 #' @importFrom stats model.matrix glm.fit binomial
 #' @importFrom methods is
+#' @importFrom BiocParallel bplapply
 #'
 #' @export
 
@@ -713,25 +350,30 @@ msqrobGlm <- function(y,
     priorCount = .1,
     binomialBound = TRUE) {
     myDesign <- model.matrix(formula, data)
-    models <- lapply(seq_len(nrow(y)),
+    models <- BiocParallel::bplapply(seq_len(nrow(y)),
         function(i, y, npep, myDesign) {
             type <- "fitError"
             model <- list(
                 coefficients = NA, vcovUnscaled = NA,
                 sigma = NA, df.residual = NA, w = NULL
             )
+            mod <- NULL
             if (npep[i] >= max(y[i, ])) {
                 mod <- try(glm.fit(
                     y = cbind(y[i, ], npep[i] - y[i, ]) + priorCount,
                     x = myDesign,
                     family = binomial()
                 ))
-                if ((!is(mod, "try-error")) & mod$rank == ncol(myDesign)) {
+                if (!is(mod, "try-error") && mod$rank == ncol(myDesign)) {
                     type <- "quasibinomial"
                 }
             }
-            if (!is(mod, "try-error")) {
-                if (mod$deviance < 0) mod$deviance <- sum(pmax(mod$family$dev.resids(mod$y, mod$fitted.values, mod$prior.weights), 0))
+            if (!is.null(mod) && !is(mod, "try-error")) {
+                if (mod$deviance < 0) {
+                    mod$deviance <- sum(pmax(
+                        mod$family$dev.resids(mod$y, mod$fitted.values, mod$prior.weights), 0
+                    ))
+                }
                 if (mod$df.residual < 2L) type <- "fitError"
             }
             if (type != "fitError") {
@@ -743,9 +385,7 @@ msqrobGlm <- function(y,
                     w = mod$w
                 )
             }
-
-            ## return object of class Statmodel (from apply)
-            .StatModel(
+            StatModel(
                 type = type,
                 params = model,
                 varPosterior = as.numeric(NA),
@@ -754,22 +394,364 @@ msqrobGlm <- function(y,
         },
         y = y, npep = npep, myDesign = myDesign
     )
+
+    .squeezeAndUpdatePosteriors(models, binomialBound = binomialBound)
+}
+
+
+## Squeeze sample variances together via empirical Bayes posterior means and
+## update varPosterior / dfPosterior slots in-place.
+.squeezeAndUpdatePosteriors <- function(models, binomialBound = FALSE) {
     hlp <- limma::squeezeVar(
         var = vapply(models, getVar, numeric(1)),
-        df = vapply(models, getDF, numeric(1))
+        df  = vapply(models, getDF,  numeric(1))
     )
+    for (i in seq_along(models)) {
+        vp <- as.numeric(hlp$var.post[i])
+        df <- as.numeric(hlp$df.prior + getDF(models[[i]]))
+        if (binomialBound && !is.na(vp) && vp < 1) {
+            vp <- 1
+            df <- Inf
+        }
+        models[[i]]@varPosterior <- vp
+        models[[i]]@dfPosterior  <- df
+    }
+    models
+}
 
-    for (i in seq_len(length(models))) {
-        models[[i]]@varPosterior <- as.numeric(hlp$var.post[i])
-        models[[i]]@dfPosterior <- as.numeric(hlp$df.prior + getDF(models[[i]]))
 
-        if (!is.na(models[[i]]@varPosterior) & binomialBound) {
-            if (models[[i]]@varPosterior < 1) {
-                models[[i]]@varPosterior <- 1
-                models[[i]]@dfPosterior <- Inf
-            }
+## Dispatch bplapply or bpmapply depending on whether rowdata is provided.
+.lmer_apply <- function(y, rowdata, FUN, args) {
+    if (is.null(rowdata)) {
+        do.call(BiocParallel::bplapply, c(list(X = y, FUN = FUN), args))
+    } else {
+        do.call(BiocParallel::bpmapply, c(list(FUN = FUN, y, rowdata), list(MoreArgs = args)))
+    }
+}
+
+
+## Initialise weights, run optional robust IRWLS, and extract model components.
+.extract_lmer_fit <- function(model, robust, maxitRob, tol) {
+    model@frame$`(weights)` <- rep(1, nrow(model@frame))
+    sseOld <- model@devcomp$cmp["pwrss"]
+    if (robust) model <- .robust_fitting(model, maxitRob, sseOld, tol)
+    df <- .getDfLmer(model)
+    list(
+        model        = model,
+        sigma        = sigma(model),
+        betas        = .getBetaB(model),
+        vcovUnscaled = as.matrix(.getVcovBetaBUnscaled(model)),
+        df.residual  = if (is.na(df)) 0 else df
+    )
+}
+
+
+## Fit the mixed models with ridge regression
+.ridge_msqrobLmer <- function(y, rowdata = NULL, formula, coldata,
+    doQR = TRUE, robust, maxitRob = 1, tol = 1e-06,
+    lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
+
+    data <- .create_data(y, rowdata, coldata)
+
+    fixed <- model.matrix(nobars(formula), data = data)
+    data$fixed <- fixed
+    data$y <- as.matrix(y)
+    data <- data[!is.na(data$y), , drop = FALSE]
+    colnames_orig <- colnames(data$fixed)
+    nb <- estimability::nonest.basis(data$fixed)
+    if (!identical(nb, estimability::all.estble)) rownames(nb) <- colnames_orig
+    data$fixed <- data$fixed[, colMeans(data$fixed == 0) != 1, drop = FALSE]
+
+    qrX <- qr(data$fixed)
+    if (qrX$rank < ncol(data$fixed))
+        data$fixed <- data$fixed[, qrX$pivot[seq_len(qrX$rank)], drop = FALSE]
+
+    has_intercept <- colnames(data$fixed)[1] == "(Intercept)"
+
+    if (sum(!grepl("(Intercept)", colnames(fixed))) < 2 &&
+            !identical(nobars(formula)[[2]], 1)) {
+        stop(
+            "The mean model must have more than two parameters for ridge regression.\n",
+            "If you really want to adopt ridge regression when your factor has only two levels\n",
+            "rerun the function with a formula where you drop the intercept. e.g. ~-1+condition"
+        )
+    }
+
+    ## Build the encoding matrix for the Scheipl ridge random effect
+    if (doQR) {
+        qrFixed <- qr(data$fixed)
+        enc     <- qr.Q(qrFixed)
+        colnames(enc) <- colnames(data$fixed)
+        if (has_intercept) enc <- enc[, -1, drop = FALSE]
+    } else {
+        enc <- if (has_intercept) data$fixed[, -1, drop = FALSE] else data$fixed
+    }
+
+    if (is.null(findbars(formula))) {
+        formula <- formula(y ~ (1 | ridge))
+    } else {
+        if (!identical(nobars(formula)[[2]], 1)) {
+            formula <- formula(paste0(
+                "y ~ (1|ridge) + ",
+                paste0("(", paste(findbars(formula), collapse = ")+("), ")")
+            ))
+        } else {
+            formula <- update.formula(formula, y ~ .)
         }
     }
 
-    return(models)
+    model <- NULL
+    try({
+        data$ridge <- factor(rep(colnames(enc), length = nrow(data)), levels = colnames(enc))
+
+        parsedFormulaC <- lFormula(formula, data = as.list(data))
+        parsedFormulaC$reTrms$cnms$ridge <- ""
+        ridgeId <- grep(names(parsedFormulaC$reTrms$Ztlist), pattern = "ridge")
+        parsedFormulaC$reTrms$Ztlist[[ridgeId]] <-
+            as(Matrix(t(enc)), class(parsedFormulaC$reTrms$Ztlist[[ridgeId]]))
+        parsedFormulaC$reTrms$Zt <- do.call(rbind, parsedFormulaC$reTrms$Ztlist)
+
+        devianceFunctionC <- do.call(mkLmerDevfun, parsedFormulaC)
+        optimizerOutputC  <- optimizeLmer(devianceFunctionC)
+        model <- mkMerMod(
+            rho    = environment(devianceFunctionC),
+            opt    = optimizerOutputC,
+            reTrms = parsedFormulaC$reTrms,
+            fr     = parsedFormulaC$fr
+        )
+    }, silent = TRUE)
+
+    type   <- "fitError"
+    params <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA, w = NA)
+
+    if (!is.null(model)) {
+        try({
+            fit          <- .extract_lmer_fit(model, robust, maxitRob, tol)
+            betas        <- fit$betas
+            vcovUnscaled <- fit$vcovUnscaled
+            coefNames    <- names(betas)
+
+            ## Back-transform from QR space to original parameter space
+            if (doQR && any(grepl("ridge", names(betas)))) {
+                ids <- if (has_intercept) c(1L, grep("ridge", names(betas))) else grep("ridge", names(betas))
+                Rinv <- diag(length(betas))
+                Rinv[ids, ids] <- solve(qr.R(qrFixed))
+                if (has_intercept) Rinv[1L, 1L] <- 1
+                betas        <- c(Rinv %*% betas)
+                names(betas) <- coefNames
+                vcovUnscaled <- Rinv %*% vcovUnscaled %*% t(Rinv)
+                rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- names(betas)
+            }
+
+            ## Rename ridge BLUPs from internal "ridgeconditionX" names to the
+            ## original design-matrix parameter names so getContrast can find them.
+            ridge_ids <- grep("ridge", names(betas))
+            if (length(ridge_ids) > 0L) {
+                orig_ridge_names <- if (has_intercept) colnames(data$fixed)[-1L] else colnames(data$fixed)
+                names(betas)[ridge_ids]           <- orig_ridge_names
+                rownames(vcovUnscaled)[ridge_ids] <- orig_ridge_names
+                colnames(vcovUnscaled)[ridge_ids] <- orig_ridge_names
+            }
+
+            params <- .create_model(betas, vcovUnscaled, fit$sigma, fit$df.residual, fit$model)
+            if (!is.na(params$df.residual)) {
+                type      <- "lmer"
+                ran_names <- names(params$coefficients)[!names(params$coefficients) %in% colnames_orig]
+                all_names <- c(colnames_orig, ran_names)
+                coef_full <- rep(NA_real_, length(all_names))
+                names(coef_full) <- all_names
+                coef_full[names(params$coefficients)] <- params$coefficients
+                vcov_full <- matrix(NA_real_, length(all_names), length(all_names))
+                rownames(vcov_full) <- colnames(vcov_full) <- all_names
+                vcov_full[names(params$coefficients), names(params$coefficients)] <- params$vcovUnscaled
+                params$coefficients <- coef_full
+                params$vcovUnscaled <- vcov_full
+            }
+        }, silent = TRUE)
+    }
+
+    StatModel(
+        type         = type,
+        params       = c(params, list(robust = robust, ridge = TRUE, doQR = doQR,
+                                      lmerArgs = lmerArgs, nonest.basis = nb)),
+        varPosterior = as.numeric(NA),
+        dfPosterior  = as.numeric(NA)
+    )
+}
+
+
+## Fit the mixed models without ridge regression
+.noridge_msqrobLmer <- function(y, rowdata = NULL, formula, coldata,
+    robust, maxitRob = 0, tol = 1e-06,
+    lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
+
+    data <- .create_data(y, rowdata, coldata)
+
+    data_model_matrix <- model.matrix(nobars(formula), data = data)
+    formula <- update.formula(formula, y ~ .)
+
+    data$y <- as.matrix(y)
+    data_model_matrix <- data_model_matrix[!is.na(data$y), , drop = FALSE]
+    data <- data[!is.na(data$y), , drop = FALSE]
+    colnames_orig <- colnames(data_model_matrix)
+    nb <- estimability::nonest.basis(data_model_matrix)
+    if (!identical(nb, estimability::all.estble)) rownames(nb) <- colnames_orig
+    data_model_matrix <- data_model_matrix[, colMeans(data_model_matrix == 0) != 1, drop = FALSE]
+
+    qrX <- qr(data_model_matrix)
+    if (qrX$rank < ncol(data_model_matrix)) {
+        data_model_matrix <- data_model_matrix[, qrX$pivot[seq_len(qrX$rank)], drop = FALSE]
+        for (nm in colnames(data_model_matrix))
+            data[[paste0(".x.", nm)]] <- data_model_matrix[, nm]
+        fix     <- paste(paste0("`.x.", colnames(data_model_matrix), "`"), collapse = " + ")
+        bars    <- findbars(formula)
+        formula <- if (is.null(bars)) {
+            as.formula(paste("y ~", fix))
+        } else {
+            as.formula(paste("y ~", fix, "+",
+                             paste0("(", paste(bars, collapse = ")+("), ")")))
+        }
+    }
+
+    model <- NULL
+    try({
+        model <- lmer(formula, as.data.frame(data))
+    }, silent = TRUE)
+
+    type   <- "fitError"
+    params <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA, w = NA)
+
+    if (!is.null(model)) {
+        try({
+            fit    <- .extract_lmer_fit(model, robust, maxitRob, tol)
+            params <- .create_model(fit$betas, fit$vcovUnscaled, fit$sigma, fit$df.residual, fit$model)
+            if (!is.na(params$df.residual)) {
+                type      <- "lmer"
+                ran_names <- names(params$coefficients)[!names(params$coefficients) %in% colnames_orig]
+                all_names <- c(colnames_orig, ran_names)
+                coef_full <- rep(NA_real_, length(all_names))
+                names(coef_full) <- all_names
+                coef_full[names(params$coefficients)] <- params$coefficients
+                vcov_full <- matrix(NA_real_, length(all_names), length(all_names))
+                rownames(vcov_full) <- colnames(vcov_full) <- all_names
+                vcov_full[names(params$coefficients), names(params$coefficients)] <- params$vcovUnscaled
+                params$coefficients <- coef_full
+                params$vcovUnscaled <- vcov_full
+            }
+        }, silent = TRUE)
+    }
+
+    StatModel(
+        type         = type,
+        params       = c(params, list(robust = robust, ridge = FALSE, lmerArgs = lmerArgs,
+                                      nonest.basis = nb)),
+        varPosterior = as.numeric(NA),
+        dfPosterior  = as.numeric(NA)
+    )
+}
+
+
+## Calculate unscaled covariance matrix for lm or rlm fit
+.vcovUnscaled <- function(model) {
+    p1  <- seq_len(model$rank)
+    p   <- length(model$coefficients)
+    out <- matrix(NA, p, p)
+    out[!is.na(model$coefficients), !is.na(model$coefficients)] <-
+        chol2inv(model$qr$qr[p1, p1, drop = FALSE])
+    colnames(out) <- rownames(out) <- names(model$coefficients)
+    out
+}
+
+#' @import purrr
+.zNames <- function(model) {
+    ranefLevels <- purrr::imap(model@flist, ~ paste0(.y, levels(.x)))
+    unlist(lapply(seq_along(model@cnms),
+        function(x, cnms, levels) c(outer(cnms[[x]], levels[[names(cnms)[x]]], paste0)),
+        cnms = model@cnms, levels = ranefLevels
+    ))
+}
+
+#' @import lme4
+#' @import Matrix
+#' @importFrom methods cbind2
+
+.getVcovBetaBUnscaled <- function(model) {
+    X  <- lme4::getME(model, "X")
+    Z  <- lme4::getME(model, "Z")
+    XZ <- cbind2(X, Z)
+
+    if (is.null(model@frame$`(weights)`)) model@frame$`(weights)` <- 1
+
+    vcovInv <- Matrix::crossprod(model@frame$`(weights)`^.5 * XZ)
+    Ginv <- Matrix::solve(
+        Matrix::tcrossprod(getME(model, "Lambda")) +
+            Matrix::Diagonal(ncol(Z), 1e-18)
+    )
+
+    i <- -seq_len(ncol(X))
+    vcovInv[i, i] <- vcovInv[i, i] + Ginv
+    vcovInv <- Matrix::solve(vcovInv)
+
+    rownames(vcovInv) <- colnames(vcovInv) <- c(colnames(X), .zNames(model))
+    vcovInv
+}
+
+#' @import lme4
+.getBetaB <- function(model) {
+    betaB <- c(
+        as.vector(lme4::getME(model, "beta")),
+        as.vector(lme4::getME(model, "b"))
+    )
+    names(betaB) <- c(colnames(model@pp$X), .zNames(model))
+    betaB
+}
+
+#' @importFrom stats resid
+.getDfLmer <- function(object) {
+    w <- object@frame$"(weights)"
+    if (is.null(w)) w <- 1
+    sigma <- sigma(object)
+    sum((resid(object) * sqrt(w))^2) / sigma^2
+}
+
+.robust_fitting <- function(model, maxitRob, sseOld, tol) {
+    while (maxitRob > 0) {
+        maxitRob <- maxitRob - 1
+        res <- resid(model)
+        model@frame$`(weights)` <- MASS::psi.huber(res / mad(res, 0))
+        model <- refit(model)
+        sse <- model@devcomp$cmp["pwrss"]
+        if (abs(sseOld - sse) / sseOld <= tol) break
+        sseOld <- sse
+    }
+    model
+}
+
+.create_model <- function(betas, vcovUnscaled, sigma, df.residual, model) {
+    if (df.residual < 2L) {
+        list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA, w = NA)
+    } else {
+        list(
+            coefficients = betas,
+            vcovUnscaled = vcovUnscaled,
+            sigma        = sigma,
+            df.residual  = df.residual,
+            w            = model@frame$`(weights)`
+        )
+    }
+}
+
+.create_data <- function(y, rowdata, coldata) {
+    nr <- nrow(coldata)
+    if (is.null(rowdata)) {
+        coldata[rep(seq_len(nr), each = nrow(y)), , drop = FALSE]
+    } else {
+        data <- cbind(
+            coldata[rep(seq_len(nr), each = nrow(y)), ],
+            rowdata[rep(seq_len(nrow(rowdata)), ncol(y)), ]
+        )
+        data <- DataFrame(data)
+        colnames(data) <- c(colnames(coldata), colnames(rowdata))
+        data
+    }
 }
