@@ -1,3 +1,14 @@
+# msqrob 1.21 
+## msqrob 1.21.1 
+
+- Modular implementation of msqrob.R 
+- Add estimability functionality to catch and solve issues with changing reference class 
+- Adding unit tests for all functions in msqrob.R
+
+# msqrob 1.20 
+
+- Version bump 
+
 # msqrob 1.19
 
 ## msqrob 1.19.1
