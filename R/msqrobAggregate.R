@@ -49,11 +49,11 @@
 #' @param i `character` or `integer` to specify the element of the `QFeatures` that
 #'        contains the log expression intensities that will be modelled.
 #'
-#' @param fcol The feature variable of assay ‘i’ defining how to summarise
+#' @param fcol The feature variable of assay 'i' defining how to summarise
 #'        the features.
-#' @param name A ‘character(1)’ naming the new assay. Default is ‘newAssay’.
+#' @param name A 'character(1)' naming the new assay. Default is 'newAssay'.
 #'       Note that the function will fail if there's already an assay
-#'       with ‘name’.
+#'       with 'name'.
 #' @param aggregateFun A function used for quantitative feature aggregation.
 #'        Details can be found in the documentation of the `aggregateFeatures`
 #'        of the `QFeatures` package.
@@ -77,27 +77,27 @@
 #' @param tol `numeric(1)` indicating the tolerance for declaring convergence
 #'        of the M-estimation loop.
 #'
-#’ @param doQR `boolean(1)` to indicate if a QR decomposition is applied to the
-#’     fixed-effect design matrix before the Scheipl ridge encoding. Default is `TRUE`.
-#’     When `TRUE` the predictor columns are orthogonalised so that shrinkage is
-#’     invariant to predictor ordering and collinearity. When `FALSE` the raw design
-#’     matrix columns are used directly (standard L2 penalty on original parameters).
-#’
-#’ @param lmerArgs a list (of correct class, resulting from ‘lmerControl()’
-#’        containing control parameters, including the nonlinear optimizer to be used
-#’        and parameters to be passed through to the nonlinear optimizer, see the
-#’        ‘lmerControl’ documentation of the lme4 package for more details.
-#’        Default is `list(control = lmerControl(calc.derivs = FALSE))`
-#’
-#’ @param trend `character(1)` or `FALSE` controlling the empirical Bayes
-#’        variance trend. `FALSE` (default) or `"none"` uses a global prior
-#’        variance. `"mean"` conditions the prior on mean log-intensity. `"count"`
-#’        conditions it on log2 peptide count (inferred from \code{fcol}).
-#’        `"combined"` uses a linear projection of `log(s^2)` on both.
-#’
-#’ @return A ‘QFeatures’ object with an additional assay.
-#’
-#’ @rdname msqrobAggregate
+#' @param doQR `boolean(1)` to indicate if a QR decomposition is applied to the
+#'     fixed-effect design matrix before the Scheipl ridge encoding. Default is `TRUE`.
+#'     When `TRUE` the predictor columns are orthogonalised so that shrinkage is
+#'     invariant to predictor ordering and collinearity. When `FALSE` the raw design
+#'     matrix columns are used directly (standard L2 penalty on original parameters).
+#'
+#' @param lmerArgs a list (of correct class, resulting from 'lmerControl()'
+#'        containing control parameters, including the nonlinear optimizer to be used
+#'        and parameters to be passed through to the nonlinear optimizer, see the
+#'        'lmerControl' documentation of the lme4 package for more details.
+#'        Default is `list(control = lmerControl(calc.derivs = FALSE))`
+#'
+#' @param trend `character(1)` or `FALSE` controlling the empirical Bayes
+#'        variance trend. `FALSE` (default) or `"none"` uses a global prior
+#'        variance. `"mean"` conditions the prior on mean log-intensity. `"count"`
+#'        conditions it on log2 peptide count (inferred from \code{fcol}).
+#'        `"combined"` uses a linear projection of `log(s^2)` on both.
+#'
+#' @return A 'QFeatures' object with an additional assay.
+#'
+#' @rdname msqrobAggregate
 #'
 #' @aliases msqrobAggregate msqrobAggregate,QFeatures-method
 #' @import SummarizedExperiment

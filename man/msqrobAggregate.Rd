@@ -44,7 +44,7 @@ It models multiple features simultaneously, e.g. multiple peptides from the same
 \item{formula}{Model formula. The model is built based on the
 covariates in the data object.}
 
-\item{fcol}{The feature variable of assay ‘i’ defining how to summarise
+\item{fcol}{The feature variable of assay 'i' defining how to summarise
 the features.}
 
 \item{aggregateFun}{A function used for quantitative feature aggregation.
@@ -70,12 +70,33 @@ regression.}
 \item{tol}{\code{numeric(1)} indicating the tolerance for declaring convergence
 of the M-estimation loop.}
 
+\item{doQR}{\code{boolean(1)} to indicate if a QR decomposition is applied to the
+fixed-effect design matrix before the Scheipl ridge encoding. Default is \code{TRUE}.
+When \code{TRUE} the predictor columns are orthogonalised so that shrinkage is
+invariant to predictor ordering and collinearity. When \code{FALSE} the raw design
+matrix columns are used directly (standard L2 penalty on original parameters).}
+
+\item{trend}{\code{character(1)} or \code{FALSE} controlling the empirical Bayes
+variance trend. \code{FALSE} (default) or \code{"none"} uses a global prior
+variance. \code{"mean"} conditions the prior on mean log-intensity. \code{"count"}
+conditions it on log2 peptide count (inferred from \code{fcol}).
+\code{"combined"} uses a linear projection of \code{log(s^2)} on both.}
+
+\item{lmerArgs}{a list (of correct class, resulting from 'lmerControl()'
+containing control parameters, including the nonlinear optimizer to be used
+and parameters to be passed through to the nonlinear optimizer, see the
+'lmerControl' documentation of the lme4 package for more details.
+Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
+
 \item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
 contains the log expression intensities that will be modelled.}
 
-\item{name}{A ‘character(1)’ naming the new assay. Default is ‘newAssay’.
+\item{name}{A 'character(1)' naming the new assay. Default is 'newAssay'.
 Note that the function will fail if there's already an assay
-with ‘name’.}
+with 'name'.}
+}
+\value{
+A 'QFeatures' object with an additional assay.
 }
 \description{
 Parameter estimation of msqrob models for \code{QFeatures}instance.

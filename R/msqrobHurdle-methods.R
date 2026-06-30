@@ -43,10 +43,10 @@
 #'     invariant to predictor ordering and collinearity. When \code{FALSE} the raw design
 #'     matrix columns are used directly (standard L2 penalty on original parameters).
 #'
-#' @param lmerArgs a list (of correct class, resulting from ‘lmerControl()’
+#' @param lmerArgs a list (of correct class, resulting from 'lmerControl()'
 #'        containing control parameters, including the nonlinear optimizer to be used
 #'        and parameters to be passed through to the nonlinear optimizer, see the
-#'        ‘lmerControl’ documentation of the lme4 package for more details.
+#'        'lmerControl' documentation of the lme4 package for more details.
 #'        Default is \code{list(control = lmerControl(calc.derivs = FALSE))}
 #'
 #' @param trend Character or FALSE. Controls the empirical Bayes variance trend
@@ -58,10 +58,10 @@
 #' @param priorCount A 'numeric(1)', which is a prior count to be added to the observations to shrink
 #'          the estimated odds ratios of the count component towards zero. Default is 0.1.
 #'
-#’ @param binomialBound logical, if ‘TRUE’ then the quasibinomial variance estimator will
-#’                be never smaller than 1 (no underdispersion). Default is TRUE.
-#’
-#’ @examples
+#' @param binomialBound logical, if 'TRUE' then the quasibinomial variance estimator will
+#'                be never smaller than 1 (no underdispersion). Default is TRUE.
+#'
+#' @examples
 #'
 #' # Load example data
 #' # The data are a Feature object with containing

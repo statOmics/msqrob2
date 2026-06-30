@@ -80,15 +80,32 @@ prior variance. "mean" conditions on mean log-intensity. "count"
 conditions on log2 precursor count (from the .n column of rowData).
 "combined" uses a linear projection on both mean and log2 count.}
 
-\item{lmerArgs}{a list (of correct class, resulting from ‘lmerControl()’
+\item{lmerArgs}{a list (of correct class, resulting from 'lmerControl()'
 containing control parameters, including the nonlinear optimizer to be used
 and parameters to be passed through to the nonlinear optimizer, see the
-‘lmerControl’ documentation of the lme4 package for more details.
+'lmerControl' documentation of the lme4 package for more details.
 Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
 
 \item{priorCount}{A 'numeric(1)', which is a prior count to be added to the observations to shrink
-         the estimated odds ratios of the count component towards zero. Default is 0.1.
+the estimated odds ratios of the count component towards zero. Default is 0.1.}
 
+\item{binomialBound}{logical, if 'TRUE' then the quasibinomial variance estimator will
+be never smaller than 1 (no underdispersion). Default is TRUE.}
+
+\item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
+contains the log expression intensities that will be modelled.}
+}
+\value{
+SummarizedExperiment or QFeatures instance
+}
+\description{
+Fitting a hurdle msqrob model with an intensity component for
+             assessing differential abundance and an count component that is
+             modeling peptide counts using quasibinomial glm for differential
+             detection of the number of features that were not missing and used
+             for aggregation
+}
+\examples{
 
 # Load example data
 # The data are a Feature object with containing
@@ -113,20 +130,7 @@ getCoef(rowData(se)$msqrobHurdleCount[[1]])
 # For features object
 pe <- msqrobHurdle(pe, i = "protein", formula = ~condition)
 getCoef(rowData(pe[["protein"]])$msqrobHurdleIntensity[[1]])
-getCoef(rowData(pe[["protein"]])$msqrobHurdleCount[[1]])}
-
-\item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
-contains the log expression intensities that will be modelled.}
-}
-\value{
-SummarizedExperiment or QFeatures instance
-}
-\description{
-Fitting a hurdle msqrob model with an intensity component for
-             assessing differential abundance and an count component that is
-             modeling peptide counts using quasibinomial glm for differential
-             detection of the number of features that were not missing and used
-             for aggregation
+getCoef(rowData(pe[["protein"]])$msqrobHurdleCount[[1]])
 }
 \author{
 Lieven Clement

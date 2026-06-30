@@ -63,6 +63,27 @@ regression.}
 \item{tol}{\code{numeric(1)} indicating the tolerance for declaring convergence
 of the M-estimation loop.}
 
+\item{doQR}{\code{boolean(1)} to indicate if a QR decomposition is applied to the
+fixed-effect design matrix before the Scheipl ridge encoding. Default is \code{TRUE}.
+When \code{TRUE} the predictor columns are orthogonalised so that shrinkage is
+invariant to predictor ordering and collinearity. When \code{FALSE} the raw design
+matrix columns are used directly (standard L2 penalty on original parameters).}
+
+\item{trend}{\code{character(1)} or \code{FALSE} controlling the empirical Bayes
+variance trend. \code{FALSE} (default) or \code{"none"} uses a global prior
+variance. \code{"mean"} conditions the prior on mean log-intensity (like
+\code{limma::eBayes(trend = TRUE)}). \code{"count"} conditions it on log2
+precursor count (like DEqMS). \code{"combined"} uses a linear projection
+of \code{log(s^2)} on both as a 1-D covariate for \code{squeezeVar}.
+Precursor counts are taken from the \code{.n} column of \code{rowData(object)}
+when available.}
+
+\item{lmerArgs}{a list (of correct class, resulting from 'lmerControl()'
+containing control parameters, including the nonlinear optimizer to be used
+and parameters to be passed through to the nonlinear optimizer, see the
+'lmerControl' documentation of the lme4 package for more details.
+Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
+
 \item{i}{\code{character} or \code{integer} to specify the element of the \code{QFeatures} that
 contains the log expression intensities that will be modelled.}
 }

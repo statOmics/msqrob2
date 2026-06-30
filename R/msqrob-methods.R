@@ -71,30 +71,30 @@
 #' @param tol `numeric(1)` indicating the tolerance for declaring convergence
 #'        of the M-estimation loop.
 #'
-#’ @param doQR `boolean(1)` to indicate if a QR decomposition is applied to the
-#’     fixed-effect design matrix before the Scheipl ridge encoding. Default is `TRUE`.
-#’     When `TRUE` the predictor columns are orthogonalised so that shrinkage is
-#’     invariant to predictor ordering and collinearity. When `FALSE` the raw design
-#’     matrix columns are used directly (standard L2 penalty on original parameters).
-#’
-#’ @param lmerArgs a list (of correct class, resulting from ‘lmerControl()’
-#’        containing control parameters, including the nonlinear optimizer to be used
-#’        and parameters to be passed through to the nonlinear optimizer, see the
-#’        ‘lmerControl’ documentation of the lme4 package for more details.
-#’        Default is `list(control = lmerControl(calc.derivs = FALSE))`
-#’
-#’ @param trend `character(1)` or `FALSE` controlling the empirical Bayes
-#’        variance trend. `FALSE` (default) or `"none"` uses a global prior
-#’        variance. `"mean"` conditions the prior on mean log-intensity (like
-#’        \code{limma::eBayes(trend = TRUE)}). `"count"` conditions it on log2
-#’        precursor count (like DEqMS). `"combined"` uses a linear projection
-#’        of `log(s^2)` on both as a 1-D covariate for \code{squeezeVar}.
-#’        Precursor counts are taken from the `.n` column of `rowData(object)`
-#’        when available.
-#’ @rdname msqrob
-#’
-#’ @import SummarizedExperiment
-#’ @export
+#' @param doQR `boolean(1)` to indicate if a QR decomposition is applied to the
+#'     fixed-effect design matrix before the Scheipl ridge encoding. Default is `TRUE`.
+#'     When `TRUE` the predictor columns are orthogonalised so that shrinkage is
+#'     invariant to predictor ordering and collinearity. When `FALSE` the raw design
+#'     matrix columns are used directly (standard L2 penalty on original parameters).
+#'
+#' @param lmerArgs a list (of correct class, resulting from 'lmerControl()'
+#'        containing control parameters, including the nonlinear optimizer to be used
+#'        and parameters to be passed through to the nonlinear optimizer, see the
+#'        'lmerControl' documentation of the lme4 package for more details.
+#'        Default is `list(control = lmerControl(calc.derivs = FALSE))`
+#'
+#' @param trend `character(1)` or `FALSE` controlling the empirical Bayes
+#'        variance trend. `FALSE` (default) or `"none"` uses a global prior
+#'        variance. `"mean"` conditions the prior on mean log-intensity (like
+#'        \code{limma::eBayes(trend = TRUE)}). `"count"` conditions it on log2
+#'        precursor count (like DEqMS). `"combined"` uses a linear projection
+#'        of `log(s^2)` on both as a 1-D covariate for \code{squeezeVar}.
+#'        Precursor counts are taken from the `.n` column of `rowData(object)`
+#'        when available.
+#' @rdname msqrob
+#'
+#' @import SummarizedExperiment
+#' @export
 setMethod(
     "msqrob", "SummarizedExperiment",
     function(object,
