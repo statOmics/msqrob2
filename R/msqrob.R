@@ -503,16 +503,18 @@ msqrobGlm <- function(y,
     if (is.null(counts))    return(mean_expr)
     if (is.null(mean_expr)) return(log2(pmax(counts, 0.5)))
     log_s2 <- ifelse(is.finite(vars) & vars > 0, log(vars), NA_real_)
-    ok <- is.finite(log_s2) & is.finite(mean_expr) & is.finite(log2(pmax(counts, 0.5)))
+    ok <- is.finite(log_s2) #& is.finite(mean_expr) & is.finite(log2(pmax(counts, 0.5)))
+    # If we have less than 3 variances that are finite we cannot fit a model with
+    # an intercept and two slope parameters
     if (sum(ok) < 3L) return(mean_expr)
-    xmat <- cbind(1, mean_expr[ok], log2(pmax(counts[ok], 0.5)))
-    qrX  <- qr(xmat, tol = 1e-10)
-    if (qrX$rank < ncol(xmat))
-        xmat <- xmat[, qrX$pivot[seq_len(qrX$rank)], drop = FALSE]
-    fit           <- lm.fit(xmat, log_s2[ok])
-    covariate     <- rep(NA_real_, length(vars))
-    covariate[ok] <- fit$fitted.values
-    covariate
+    xmat <- cbind(1, mean_expr, log2(pmax(counts, 0.5)))
+    #qrX  <- qr(xmat, tol = 1e-10)
+    #if (qrX$rank < ncol(xmat))
+    #    xmat <- xmat[, qrX$pivot[seq_len(qrX$rank)], drop = FALSE]
+    fit           <- lm.fit(xmat[ok,], log_s2[ok])
+    #covariate     <- rep(NA_real_, length(vars))
+    covariate <- xmat %*% fit$coef
+    return(covariate)
 }
 
 
