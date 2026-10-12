@@ -37,13 +37,11 @@ regression.}
 variance trend. \code{FALSE} (default) or \code{"none"} uses a global prior
 variance. \code{"mean"} conditions the prior on mean log-intensity (like
 \code{limma::eBayes(trend = TRUE)}). \code{"count"} conditions it on
-log2 precursor count (like DEqMS). \code{"combined"} uses a linear
-projection of \code{log(s^2)} on both mean and log2 count as a 1-D
-covariate for \code{squeezeVar}.}
+log2 precursor count (like DEqMS).}
 
 \item{counts}{An optional numeric vector of length \code{nrow(y)} with the
 number of precursors (PSMs or peptides) per feature. Only used when
-\code{trend = "count"} or \code{trend = "combined"}.}
+\code{trend = "count"}.}
 }
 \value{
 A list of objects of the \code{StatModel} class.

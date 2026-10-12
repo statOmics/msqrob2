@@ -53,7 +53,6 @@
 #'        for the intensity component. FALSE (default) or "none" uses a global
 #'        prior variance. "mean" conditions on mean log-intensity. "count"
 #'        conditions on log2 precursor count (from the .n column of rowData).
-#'        "combined" uses a linear projection on both mean and log2 count.
 #'
 #' @param priorCount A 'numeric(1)', which is a prior count to be added to the observations to shrink
 #'          the estimated odds ratios of the count component towards zero. Default is 0.1.

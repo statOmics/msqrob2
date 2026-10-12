@@ -93,7 +93,6 @@
 #'        variance trend. `FALSE` (default) or `"none"` uses a global prior
 #'        variance. `"mean"` conditions the prior on mean log-intensity. `"count"`
 #'        conditions it on log2 peptide count (inferred from \code{fcol}).
-#'        `"combined"` uses a linear projection of `log(s^2)` on both.
 #'
 #' @return A 'QFeatures' object with an additional assay.
 #'

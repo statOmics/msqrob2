@@ -77,8 +77,7 @@ matrix columns are used directly (standard L2 penalty on original parameters).}
 \item{trend}{Character or FALSE. Controls the empirical Bayes variance trend
 for the intensity component. FALSE (default) or "none" uses a global
 prior variance. "mean" conditions on mean log-intensity. "count"
-conditions on log2 precursor count (from the .n column of rowData).
-"combined" uses a linear projection on both mean and log2 count.}
+conditions on log2 precursor count (from the .n column of rowData).}
 
 \item{lmerArgs}{a list (of correct class, resulting from 'lmerControl()'
 containing control parameters, including the nonlinear optimizer to be used

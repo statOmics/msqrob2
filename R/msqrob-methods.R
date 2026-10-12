@@ -87,8 +87,7 @@
 #'        variance trend. `FALSE` (default) or `"none"` uses a global prior
 #'        variance. `"mean"` conditions the prior on mean log-intensity (like
 #'        \code{limma::eBayes(trend = TRUE)}). `"count"` conditions it on log2
-#'        precursor count (like DEqMS). `"combined"` uses a linear projection
-#'        of `log(s^2)` on both as a 1-D covariate for \code{squeezeVar}.
+#'        precursor count (like DEqMS).
 #'        Precursor counts are taken from the `.n` column of `rowData(object)`
 #'        when available.
 #' @rdname msqrob

@@ -73,8 +73,7 @@ matrix columns are used directly (standard L2 penalty on original parameters).}
 variance trend. \code{FALSE} (default) or \code{"none"} uses a global prior
 variance. \code{"mean"} conditions the prior on mean log-intensity (like
 \code{limma::eBayes(trend = TRUE)}). \code{"count"} conditions it on log2
-precursor count (like DEqMS). \code{"combined"} uses a linear projection
-of \code{log(s^2)} on both as a 1-D covariate for \code{squeezeVar}.
+precursor count (like DEqMS).
 Precursor counts are taken from the \code{.n} column of \code{rowData(object)}
 when available.}
 

@@ -64,15 +64,14 @@ from peptide data and modelling the fold change at the protein level. The defaul
 \item{trend}{\code{character(1)} or \code{FALSE} controlling the empirical Bayes
 variance trend. \code{FALSE} (default) or \code{"none"} uses a global prior
 variance. \code{"mean"} conditions the prior on mean log-intensity. \code{"count"}
-conditions it on log2 precursor count. \code{"combined"} uses a linear
-projection of \code{log(s^2)} on both as a 1-D covariate for
-\code{squeezeVar}. When \code{featureGroups} groups multiple features
-per protein, precursor counts are inferred automatically; for
-protein-level data supply them via \code{counts}.}
+conditions it on log2 precursor count. When \code{featureGroups}
+groups multiple features per protein, precursor counts are
+inferred automatically; for protein-level data supply them via
+\code{counts}.}
 
 \item{counts}{An optional numeric vector (length = number of unique feature
 groups) giving the number of precursors per protein. Used when
-\code{trend = "count"} or \code{trend = "combined"} and each feature
+\code{trend = "count"} and each feature
 group contains a single row (i.e. the data are already at protein level).}
 
 \item{lmerArgs}{a list (of correct class, resulting from 'lmerControl()'
