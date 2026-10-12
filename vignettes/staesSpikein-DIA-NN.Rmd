@@ -155,7 +155,7 @@ precursors |>
 
 ## Sample annotation table
 
-The [sample annotation table](#sec-annotation_table)) is not available
+The sample annotation table is not available
 and can be generated from the run labels, as the researchers included information on the design in the filenames.
 
 We will make a new data frame with the annotation. 
