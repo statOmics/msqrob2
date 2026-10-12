@@ -330,6 +330,168 @@ test_that("msqrobLmer featureGroups aggregates multiple peptides per protein", {
 
 
 # ===========================================================================
+# Empirical Bayes variance trend (trend = "mean" / "count")
+# ===========================================================================
+
+## Many features whose residual SD decreases with mean intensity and with
+## precursor count, so a trended prior differs from a global one.
+.make_trend_data <- function(n_feat = 60, n_rep = 4, seed = 11) {
+    set.seed(seed)
+    n_samples <- 2L * n_rep
+    cond <- factor(rep(c("A", "B"), each = n_rep))
+    coldata <- DataFrame(condition = cond,
+                         row.names = paste0("s", seq_len(n_samples)))
+    mu     <- runif(n_feat, 8, 14)
+    counts <- sample(1:20, n_feat, replace = TRUE)
+    sds    <- 2 / sqrt(mu - 6) / sqrt(log2(counts) + 1)
+    y <- matrix(rnorm(n_feat * n_samples, mean = mu, sd = sds),
+                nrow = n_feat, ncol = n_samples,
+                dimnames = list(paste0("feat", seq_len(n_feat)),
+                                rownames(coldata)))
+    list(y = y, coldata = coldata, counts = counts)
+}
+
+## Expected posteriors: squeezeVar applied directly to the per-model fits.
+.expected_posteriors <- function(models, covariate = NULL) {
+    limma::squeezeVar(
+        var       = vapply(models, getVar, numeric(1)),
+        df        = vapply(models, getDF,  numeric(1)),
+        covariate = covariate
+    )
+}
+
+.expect_posteriors <- function(models, expected) {
+    expect_equal(unname(vapply(models, getVarPosterior, numeric(1))),
+                 unname(as.numeric(expected$var.post)))
+    expect_equal(unname(vapply(models, getDfPosterior, numeric(1))),
+                 unname(as.numeric(expected$df.prior +
+                                   vapply(models, getDF, numeric(1)))))
+}
+
+test_that("msqrobLm trend = FALSE and 'none' use a global prior", {
+    d <- .make_trend_data()
+    m_false <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE)
+    m_none  <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE,
+                        trend = "none")
+    expect_identical(m_false, m_none)
+    .expect_posteriors(m_none, .expected_posteriors(m_none))
+})
+
+test_that("msqrobLm trend = 'mean' uses mean log-intensity as covariate", {
+    d <- .make_trend_data()
+    m <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE, trend = "mean")
+    .expect_posteriors(m, .expected_posteriors(
+        m, covariate = rowMeans(d$y, na.rm = TRUE)))
+    m_none <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE)
+    expect_false(isTRUE(all.equal(
+        vapply(m, getVarPosterior, numeric(1)),
+        vapply(m_none, getVarPosterior, numeric(1)))))
+})
+
+test_that("msqrobLm trend = 'count' uses log2 counts as covariate", {
+    d <- .make_trend_data()
+    m <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE,
+                  trend = "count", counts = d$counts)
+    .expect_posteriors(m, .expected_posteriors(
+        m, covariate = log2(d$counts)))
+})
+
+test_that("msqrobLm trend = 'count' without counts warns and applies no trend", {
+    d <- .make_trend_data()
+    expect_warning(
+        m <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE,
+                      trend = "count"),
+        "requires counts"
+    )
+    expect_identical(m, msqrobLm(d$y, ~condition, d$coldata, robust = FALSE))
+})
+
+test_that("trend rejects unknown options such as 'combined'", {
+    d <- .make_trend_data(n_feat = 5)
+    expect_error(msqrobLm(d$y, ~condition, d$coldata, trend = "combined"),
+                 "should be one of")
+    expect_error(msqrobLmer(d$y, ~condition, d$coldata, ridge = TRUE,
+                            trend = "combined"),
+                 "should be one of")
+})
+
+## Peptide-level data: n_prot proteins with varying numbers of peptides.
+.make_trend_pep_data <- function(n_prot = 30, n_subj = 4, seed = 5) {
+    set.seed(seed)
+    n_pep  <- sample(1:6, n_prot, replace = TRUE)
+    groups <- rep(paste0("prot", seq_len(n_prot)), times = n_pep)
+    d <- .make_lmer_data(n_feat = length(groups), n_subj = n_subj,
+                         seed = seed)
+    list(y = d$y, coldata = d$coldata, groups = groups,
+         n_pep = setNames(n_pep, paste0("prot", seq_len(n_prot))))
+}
+
+test_that("msqrobLmer trend = 'count' infers peptide counts per protein", {
+    d <- .make_trend_pep_data()
+    m <- msqrobLmer(d$y, ~condition + (1 | subject), data = d$coldata,
+                    featureGroups = d$groups, robust = FALSE,
+                    trend = "count")
+    .expect_posteriors(m, .expected_posteriors(
+        m, covariate = log2(d$n_pep[names(m)])))
+})
+
+test_that("msqrobLmer trend = 'mean' uses mean intensity per protein", {
+    d <- .make_trend_pep_data()
+    m <- msqrobLmer(d$y, ~condition + (1 | subject), data = d$coldata,
+                    featureGroups = d$groups, robust = FALSE,
+                    trend = "mean")
+    mean_expr <- vapply(split.data.frame(d$y, d$groups),
+                        function(yi) mean(yi, na.rm = TRUE), numeric(1))
+    .expect_posteriors(m, .expected_posteriors(
+        m, covariate = mean_expr[names(m)]))
+})
+
+test_that("msqrobLmer trend = 'count' matches named counts by protein", {
+    d <- .make_trend_pep_data()
+    ## Protein-level data: one row per protein, counts supplied by the user
+    y_prot <- t(vapply(split.data.frame(d$y, d$groups), colMeans,
+                       numeric(ncol(d$y))))
+    shuffled <- rev(d$n_pep)
+    m_named <- msqrobLmer(y_prot, ~condition + (1 | subject),
+                          data = d$coldata, robust = FALSE,
+                          trend = "count", counts = shuffled)
+    m_ordered <- msqrobLmer(y_prot, ~condition + (1 | subject),
+                            data = d$coldata, robust = FALSE,
+                            trend = "count",
+                            counts = unname(d$n_pep[rownames(y_prot)]))
+    expect_identical(m_named, m_ordered)
+    .expect_posteriors(m_named, .expected_posteriors(
+        m_named, covariate = log2(d$n_pep[names(m_named)])))
+})
+
+test_that("msqrobLmer trend = 'count' warns when every group has one feature", {
+    d <- .make_lmer_data(n_feat = 6, n_subj = 4)
+    expect_warning(
+        m <- msqrobLmer(d$y, ~condition + (1 | subject), data = d$coldata,
+                        robust = FALSE, trend = "count"),
+        "all feature groups contain a single feature"
+    )
+    expect_identical(m, msqrobLmer(d$y, ~condition + (1 | subject),
+                                   data = d$coldata, robust = FALSE))
+})
+
+test_that("msqrob uses the .n column of rowData as counts for trend = 'count'", {
+    d <- .make_trend_data()
+    se <- SummarizedExperiment::SummarizedExperiment(
+        assays  = list(intensity = d$y),
+        rowData = DataFrame(.n = d$counts, row.names = rownames(d$y)),
+        colData = d$coldata
+    )
+    se <- msqrob(se, ~condition, robust = FALSE, trend = "count")
+    expect_identical(
+        SummarizedExperiment::rowData(se)$msqrobModels,
+        msqrobLm(d$y, ~condition, d$coldata, robust = FALSE,
+                 trend = "count", counts = d$counts)
+    )
+})
+
+
+# ===========================================================================
 # Internal helpers (accessed via :::)
 # ===========================================================================
 
