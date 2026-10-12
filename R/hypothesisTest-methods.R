@@ -1,3 +1,31 @@
+## Normalise contrast matrix names: apply a fallback prefix when columns are
+## unnamed and fill in sequential integers for multi-contrast unnamed matrices.
+.prepare_contrast_names <- function(contrast, prefix, default_prefix, fallback_name) {
+    if (is.null(colnames(contrast)) && prefix == default_prefix) prefix <- fallback_name
+    if (is.null(colnames(contrast)) && ncol(contrast) > 1L)
+        colnames(contrast) <- seq_len(ncol(contrast))
+    list(contrast = contrast, prefix = prefix)
+}
+
+## Combine intensity and count Hurdle components into one data frame with
+## Fisher combined p-values.
+.hurdle_combine_pvalues <- function(intensityComponent, countComponent, adjust.method) {
+    sam <- cbind(intensityComponent[, seq_len(5)], countComponent[, seq_len(5)])
+    colnames(sam)[seq(2, 5)]  <- paste0("logFC", colnames(sam)[seq(2, 5)])
+    colnames(sam)[6]           <- "logOR"
+    colnames(sam)[seq(7, 10)] <- paste0("logOR", colnames(sam)[seq(7, 10)])
+    sam$fisher              <- -2 * (log(sam[, 5]) + log(sam[, 10]))
+    sam$fisherDf            <- 4
+    sam$fisherDf[is.na(sam$fisher)] <- 2
+    id1 <- is.na(sam$fisher) & !is.na(sam[, 5])
+    id2 <- is.na(sam$fisher) & !is.na(sam[, 10])
+    sam$fisher[id1]         <- -2 * log(sam[id1, 5])
+    sam$fisher[id2]         <- -2 * log(sam[id2, 10])
+    sam$fisherPval          <- pchisq(sam$fisher, sam$fisherDf, lower.tail = FALSE)
+    sam$fisherAdjPval       <- p.adjust(sam$fisherPval, adjust.method)
+    sam
+}
+
 #' Parameter estimates, standard errors and statistical inference on differential
 #' expression analysis
 #'
@@ -111,34 +139,6 @@
 #' @param overwrite `boolean(1)` to indicate if the column in the rowData has to
 #'        be overwritten if the modelColumnName already exists. Default is FALSE.
 #'
-## Normalise contrast matrix names: apply a fallback prefix when columns are
-## unnamed and fill in sequential integers for multi-contrast unnamed matrices.
-.prepare_contrast_names <- function(contrast, prefix, default_prefix, fallback_name) {
-    if (is.null(colnames(contrast)) && prefix == default_prefix) prefix <- fallback_name
-    if (is.null(colnames(contrast)) && ncol(contrast) > 1L)
-        colnames(contrast) <- seq_len(ncol(contrast))
-    list(contrast = contrast, prefix = prefix)
-}
-
-## Combine intensity and count Hurdle components into one data frame with
-## Fisher combined p-values.
-.hurdle_combine_pvalues <- function(intensityComponent, countComponent, adjust.method) {
-    sam <- cbind(intensityComponent[, seq_len(5)], countComponent[, seq_len(5)])
-    colnames(sam)[seq(2, 5)]  <- paste0("logFC", colnames(sam)[seq(2, 5)])
-    colnames(sam)[6]           <- "logOR"
-    colnames(sam)[seq(7, 10)] <- paste0("logOR", colnames(sam)[seq(7, 10)])
-    sam$fisher              <- -2 * (log(sam[, 5]) + log(sam[, 10]))
-    sam$fisherDf            <- 4
-    sam$fisherDf[is.na(sam$fisher)] <- 2
-    id1 <- is.na(sam$fisher) & !is.na(sam[, 5])
-    id2 <- is.na(sam$fisher) & !is.na(sam[, 10])
-    sam$fisher[id1]         <- -2 * log(sam[id1, 5])
-    sam$fisher[id2]         <- -2 * log(sam[id2, 10])
-    sam$fisherPval          <- pchisq(sam$fisher, sam$fisherDf, lower.tail = FALSE)
-    sam$fisherAdjPval       <- p.adjust(sam$fisherPval, adjust.method)
-    sam
-}
-
 #' @import SummarizedExperiment
 #' @importFrom stats pchisq p.adjust
 #' @export

@@ -99,7 +99,7 @@
 #'
 #' @rdname msqrobAggregate
 #'
-#' @aliases msqrobAggregate msqrobAggregate,QFeatures-method
+#' @aliases msqrobAggregate msqrobAggregate,SummarizedExperiment-method msqrobAggregate,QFeatures-method
 #' @import SummarizedExperiment
 #' @importFrom QFeatures addAssay addAssayLink
 #' @importFrom MultiAssayExperiment getWithColData

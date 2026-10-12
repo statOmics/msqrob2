@@ -328,7 +328,7 @@ msqrobLmer <- function(y,
         if (!is.null(counts)) {
             if (!is.null(names(counts))) counts <- counts[names(y)]
         } else {
-            pep_counts <- sapply(y, nrow)
+            pep_counts <- vapply(y, nrow, integer(1))
             if (all(pep_counts == 1L)) {
                 warning(
                     "trend='", trend, "' requires precursor counts but all ",
@@ -346,7 +346,8 @@ msqrobLmer <- function(y,
     }
 
     mean_expr <- if (trend %in% c("mean", "combined")) {
-        sapply(y, function(yi) mean(as.matrix(yi), na.rm = TRUE))
+        vapply(y, function(yi) mean(as.matrix(yi), na.rm = TRUE),
+               numeric(1))
     } else NULL
 
     FUN <- if (ridge) .ridge_msqrobLmer else .noridge_msqrobLmer
@@ -723,6 +724,7 @@ msqrobGlm <- function(y,
 
 
 ## Fit the mixed models without ridge regression
+#' @importFrom stats as.formula
 .noridge_msqrobLmer <- function(y, rowdata = NULL, formula, coldata,
     robust, maxitRob = 0, tol = 1e-06,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
@@ -837,7 +839,7 @@ msqrobGlm <- function(y,
     betaB
 }
 
-#' @importFrom stats resid
+#' @importFrom stats resid sigma
 .getDfLmer <- function(object) {
     w <- object@frame$"(weights)"
     if (is.null(w)) w <- 1
