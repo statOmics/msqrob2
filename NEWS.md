@@ -1,10 +1,16 @@
 # msqrob 1.21 
+## msqrob 1.21.0 
+
+- Version bump
+
 ## msqrob 1.21.1 
 
 - Modular implementation of msqrob.R 
-- Add estimability functionality to catch and solve issues with changing reference class 
+- Add estimability functionality to catch and solve issues with changing 
+  reference class 
 - Adding unit tests for all functions in msqrob.R
-- Trended squeezevar using mean (limma trend), using feature counts used for aggregation (DEqMS) and combining both limma trend and DEqMS (experimental). 
+- Trended squeezevar using mean (limma trend), using feature counts used for 
+  aggregation (DEqMS). 
 
 # msqrob 1.20 
 
