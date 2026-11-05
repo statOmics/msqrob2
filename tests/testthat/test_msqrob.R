@@ -268,6 +268,35 @@ test_that("msqrobLmer ridge=TRUE doQR=TRUE runs without error", {
     )
 })
 
+test_that("msqrobLmer stores theta as estimated by lmer", {
+    d <- .make_lmer_data()
+    models <- msqrobLmer(d$y, ~condition + (1 | subject),
+                         data = d$coldata, robust = FALSE)
+    for (i in seq_len(nrow(d$y))) {
+        ref <- lmer(y ~ condition + (1 | subject),
+                    data = cbind(as.data.frame(d$coldata), y = d$y[i, ]))
+        expect_equal(models[[i]]@params$theta, getME(ref, "theta"))
+    }
+    expect_identical(names(models[[1]]@params$theta), "subject.(Intercept)")
+})
+
+test_that("msqrobLmer ridge=TRUE stores theta including the ridge term", {
+    d <- .make_ridge_data()
+    models <- msqrobLmer(d$y, ~condition, data = d$coldata, ridge = TRUE)
+    th <- models[[1]]@params$theta
+    expect_identical(names(th), "ridge")
+    expect_true(th >= 0)
+})
+
+test_that("msqrobLmer stores theta = NA for fitErrors", {
+    d <- .make_lmer_data()
+    d$y[1, -(1:2)] <- NA
+    models <- suppressWarnings(
+        msqrobLmer(d$y, ~condition + (1 | subject), data = d$coldata))
+    expect_identical(getFitMethod(models[[1]]), "fitError")
+    expect_true(is.na(models[[1]]@params$theta))
+})
+
 test_that("msqrobLmer ridge=TRUE doQR=FALSE runs without error", {
     d <- .make_ridge_data()
     expect_no_error(

@@ -81,7 +81,10 @@ and parameters to be passed through to the nonlinear optimizer, see the
 Default is \code{list(control = lmerControl(calc.derivs = FALSE))}}
 }
 \value{
-A list of objects of the \code{StatModel} class.
+A list of objects of the \code{StatModel} class. For fitted models,
+\code{getModel(model)$theta} holds the estimated variance component
+ratios in lme4's parameterisation (named as in
+\code{lme4::getME(, "theta")}).
 }
 \description{
 Low-level function for parameter estimation with msqrob

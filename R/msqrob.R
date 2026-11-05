@@ -269,7 +269,10 @@ msqrobLm <- function(y,
 #'     rowdata = rowData(pe[["peptide"]]), featureGroups = rowData(pe[["peptide"]])$Proteins,
 #'     ridge = TRUE)
 #' getCoef(modelsPepBased[[1]])
-#' @return A list of objects of the `StatModel` class.
+#' @return A list of objects of the `StatModel` class. For fitted models,
+#'         `getModel(model)$theta` holds the estimated variance component
+#'         ratios in lme4's parameterisation (named as in
+#'         `lme4::getME(, "theta")`).
 #'
 #' @rdname msqrobLmer
 #'
@@ -566,7 +569,10 @@ msqrobGlm <- function(y,
         sigma        = sigma(model),
         betas        = .getBetaB(model),
         vcovUnscaled = as.matrix(.getVcovBetaBUnscaled(model)),
-        df.residual  = if (is.na(df)) 0 else df
+        df.residual  = if (is.na(df)) 0 else df,
+        ## the ridge term has an empty coefficient name, which lme4 names "ridge."
+        theta        = stats::setNames(lme4::getME(model, "theta"),
+                           sub("\\.$", "", names(lme4::getME(model, "theta"))))
     )
 }
 
@@ -644,6 +650,7 @@ msqrobGlm <- function(y,
 
     type   <- "fitError"
     params <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA, w = NA)
+    theta  <- NA_real_
 
     if (!is.null(model)) {
         try({
@@ -677,6 +684,7 @@ msqrobGlm <- function(y,
             if (!is.na(params$df.residual)) {
                 type   <- "lmer"
                 params <- .pad_to_orig_space(params, colnames_orig)
+                theta  <- fit$theta
             }
         }, silent = TRUE)
     }
@@ -684,7 +692,8 @@ msqrobGlm <- function(y,
     StatModel(
         type         = type,
         params       = c(params, list(robust = robust, ridge = TRUE, doQR = doQR,
-                                      lmerArgs = lmerArgs, nonest.basis = nb)),
+                                      lmerArgs = lmerArgs, nonest.basis = nb,
+                                      theta = theta)),
         varPosterior = as.numeric(NA),
         dfPosterior  = as.numeric(NA)
     )
@@ -730,6 +739,7 @@ msqrobGlm <- function(y,
 
     type   <- "fitError"
     params <- list(coefficients = NA, vcovUnscaled = NA, sigma = NA, df.residual = NA, w = NA)
+    theta  <- NA_real_
 
     if (!is.null(model)) {
         try({
@@ -738,6 +748,7 @@ msqrobGlm <- function(y,
             if (!is.na(params$df.residual)) {
                 type   <- "lmer"
                 params <- .pad_to_orig_space(params, colnames_orig)
+                theta  <- fit$theta
             }
         }, silent = TRUE)
     }
@@ -745,7 +756,7 @@ msqrobGlm <- function(y,
     StatModel(
         type         = type,
         params       = c(params, list(robust = robust, ridge = FALSE, lmerArgs = lmerArgs,
-                                      nonest.basis = nb)),
+                                      nonest.basis = nb, theta = theta)),
         varPosterior = as.numeric(NA),
         dfPosterior  = as.numeric(NA)
     )
