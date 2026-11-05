@@ -311,6 +311,28 @@ test_that("msqrobLmer stores theta = NA for fitErrors", {
     expect_true(is.na(models[[1]]@params$theta))
 })
 
+test_that("msqrobLmer gives fitError, not an error, for a feature without observations", {
+    d <- .make_lmer_data()
+    d$y[2, ] <- NA
+    expect_no_error(
+        models <- suppressWarnings(
+            msqrobLmer(d$y, ~condition + (1 | subject), data = d$coldata)))
+    expect_length(models, nrow(d$y))
+    expect_identical(getFitMethod(models[[2]]), "fitError")
+    expect_true(is.na(models[[2]]@params$theta))
+    expect_identical(unique(vapply(models[-2], getFitMethod, character(1))), "lmer")
+})
+
+test_that("msqrobLmer ridge=TRUE gives fitError for a feature without observations", {
+    d <- .make_ridge_data()
+    d$y[2, ] <- NA
+    expect_no_error(
+        models <- suppressWarnings(
+            msqrobLmer(d$y, ~condition, data = d$coldata, ridge = TRUE)))
+    expect_identical(getFitMethod(models[[2]]), "fitError")
+    expect_identical(unique(vapply(models[-2], getFitMethod, character(1))), "lmer")
+})
+
 test_that("msqrobLmer ridge=TRUE doQR=FALSE runs without error", {
     d <- .make_ridge_data()
     expect_no_error(

@@ -577,6 +577,23 @@ msqrobGlm <- function(y,
 }
 
 
+## StatModel for a feature without any observation (the design cannot even
+## be built), with the same params as the other failed lmer fits.
+.lmer_fitError <- function(robust, lmerArgs, ridge, doQR = NULL) {
+    StatModel(
+        type         = "fitError",
+        params       = c(list(coefficients = NA, vcovUnscaled = NA, sigma = NA,
+                              df.residual = NA, w = NA, robust = robust,
+                              ridge = ridge),
+                         if (ridge) list(doQR = doQR),
+                         list(lmerArgs = lmerArgs, nonest.basis = NULL,
+                              theta = NA_real_)),
+        varPosterior = as.numeric(NA),
+        dfPosterior  = as.numeric(NA)
+    )
+}
+
+
 ## Fit the mixed models with ridge regression
 .ridge_msqrobLmer <- function(y, rowdata = NULL, formula, coldata,
     doQR = TRUE, robust, maxitRob = 1, tol = 1e-06,
@@ -587,6 +604,8 @@ msqrobGlm <- function(y,
     fixed  <- model.matrix(nobars(formula), data = data)
     data$y <- as.matrix(y)
     obs    <- as.vector(!is.na(data$y))
+    if (!any(obs))
+        return(.lmer_fitError(robust, lmerArgs, ridge = TRUE, doQR = doQR))
     data   <- data[obs, , drop = FALSE]
     td     <- .trim_design(fixed[obs, , drop = FALSE])
     colnames_orig <- td$colnames_orig
@@ -713,6 +732,8 @@ msqrobGlm <- function(y,
 
     data$y <- as.matrix(y)
     obs    <- as.vector(!is.na(data$y))
+    if (!any(obs))
+        return(.lmer_fitError(robust, lmerArgs, ridge = FALSE))
     data   <- data[obs, , drop = FALSE]
     td     <- .trim_design(mm[obs, , drop = FALSE])
     colnames_orig     <- td$colnames_orig
