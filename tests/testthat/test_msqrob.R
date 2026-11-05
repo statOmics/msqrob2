@@ -333,6 +333,24 @@ test_that("msqrobLmer ridge=TRUE gives fitError for a feature without observatio
     expect_identical(unique(vapply(models[-2], getFitMethod, character(1))), "lmer")
 })
 
+test_that("msqrobLmer accepts a data.frame as data, with the same results as a DataFrame", {
+    d <- .make_lmer_data(n_feat = 6, n_subj = 4)
+    df <- as.data.frame(d$coldata)
+    expect_identical(
+        msqrobLmer(d$y, ~condition + (1 | subject), data = df),
+        msqrobLmer(d$y, ~condition + (1 | subject), data = d$coldata))
+    groups <- rep(c("prot1", "prot2"), each = 3)
+    expect_identical(
+        msqrobLmer(d$y, ~condition + (1 | subject), data = df,
+                   featureGroups = groups),
+        msqrobLmer(d$y, ~condition + (1 | subject), data = d$coldata,
+                   featureGroups = groups))
+    r <- .make_ridge_data()
+    expect_identical(
+        msqrobLmer(r$y, ~condition, data = as.data.frame(r$coldata), ridge = TRUE),
+        msqrobLmer(r$y, ~condition, data = r$coldata, ridge = TRUE))
+})
+
 test_that("msqrobLmer ridge=TRUE doQR=FALSE runs without error", {
     d <- .make_ridge_data()
     expect_no_error(

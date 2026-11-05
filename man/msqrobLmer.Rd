@@ -27,7 +27,7 @@ features are along the rows and samples along the columns.}
 \item{formula}{Model formula. The model is built based on the
 covariates in the data object.}
 
-\item{data}{A \code{DataFrame} with information on the design. It has
+\item{data}{A \code{DataFrame} (or \code{data.frame}) with information on the design. It has
 the same number of rows as the number of columns (samples) of
 \code{y}.}
 

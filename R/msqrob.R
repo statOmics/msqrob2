@@ -185,7 +185,7 @@ msqrobLm <- function(y,
 #' @param formula Model formula. The model is built based on the
 #'        covariates in the data object.
 #'
-#' @param data A `DataFrame` with information on the design. It has
+#' @param data A `DataFrame` (or `data.frame`) with information on the design. It has
 #'        the same number of rows as the number of columns (samples) of
 #'        `y`.
 #'
@@ -304,6 +304,9 @@ msqrobLmer <- function(y,
 
     if (isFALSE(trend)) trend <- "none"
     trend <- match.arg(trend, c("none", "mean", "count"))
+
+    ## the fitting functions rely on DataFrame semantics (e.g. data$y <- matrix)
+    data <- DataFrame(data, check.names = FALSE)
 
     if (is.null(featureGroups)) featureGroups <- rownames(y)
 
