@@ -1,4 +1,14 @@
 # msqrob 1.21 
+## msqrob 1.21.2
+
+- `msqrobLmer()` now stores the estimated variance component ratios of each
+  lmer fit in `getModel(model)$theta` (lme4's parameterisation and names).
+- Failed fits (`fitError`) now get `NA` instead of a log2 fold change of 0 in
+  `hypothesisTest()` and `topFeatures()`.
+- `msqrobLmer()` no longer stops on a feature without any observations; such
+  features become `fitError`.
+- `msqrobLmer()` also accepts a `data.frame` as `data`.
+
 ## msqrob 1.21.0 
 
 - Version bump
