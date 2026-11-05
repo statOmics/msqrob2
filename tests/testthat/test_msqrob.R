@@ -90,6 +90,20 @@ test_that("msqrobLm robust=FALSE produces 'lm' fit types for complete data", {
     expect_gt(sum(types == "lm"), 0L)
 })
 
+test_that("topFeatures reports NA, not logFC = 0, for failed fits", {
+    d <- .make_lm_data()
+    d$y[1, -c(1, 5)] <- NA        # 2 observations: no residual df, fitError
+    models <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE)
+    expect_identical(getFitMethod(models[[1]]), "fitError")
+    L <- makeContrast("conditionB = 0", parameterNames = "conditionB")
+    tf <- topFeatures(models, contrast = L, sort = FALSE)
+    expect_true(is.na(tf["feat1", "logFC"]))
+    expect_true(is.na(tf["feat1", "se"]))
+    expect_true(is.na(tf["feat1", "pval"]))
+    ## the other features are unaffected
+    expect_false(anyNA(tf[-1, "logFC"]))
+})
+
 test_that("msqrobLm coefficients are named by design-matrix columns", {
     d <- .make_lm_data()
     models <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE)

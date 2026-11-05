@@ -12,3 +12,17 @@ test_that("StatModel construction", {
     )
     expect_true(validObject(mod))
 })
+
+test_that("getContrast and varContrast return NA for failed fits", {
+    ## a failed fit as msqrobLm / msqrobLmer store it
+    mod <- StatModel(
+        type = "fitError",
+        params = list(coefficients = NA, vcovUnscaled = NA, sigma = NA,
+                      df.residual = NA, w = NA),
+        varPosterior = as.numeric(NA),
+        dfPosterior = as.numeric(NA)
+    )
+    L <- makeContrast("conditionB = 0", parameterNames = "conditionB")
+    expect_true(is.na(getContrast(mod, L)[1, 1]))
+    expect_true(is.na(varContrast(mod, L)[1, 1]))
+})

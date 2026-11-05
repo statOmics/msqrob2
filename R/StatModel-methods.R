@@ -39,7 +39,11 @@ setMethod(
         coefs <- getCoef(object)
         out <- matrix(rep(NA, ncol(L)))
         rownames(out) <- colnames(L)
+        ## failed fit: no coefficients at all, so no contrast (not 0)
+        if (all(is.na(coefs))) return(out)
         coefsSub <- coefs[rownames(L)]
+        ## coefficients dropped from a rank-deficient fit count as 0; contrasts
+        ## that involve non-estimable functions are set to NA below
         coefsSub[is.na(coefsSub)] <- 0
         hlp <- try(t(L) %*% coefsSub, silent = TRUE)
         if (!is(hlp, "try-error")) out[] <- hlp
@@ -64,6 +68,7 @@ setMethod(
         if (!is(L, "matrix")) L <- as.matrix(L)
         out <- matrix(NA, ncol(L), ncol(L))
         rownames(out) <- colnames(out) <- colnames(L)
+        if (all(is.na(getVcovUnscaled(object)))) return(out)   # failed fit
         vcovTmp <- getVcovUnscaled(object) * object@varPosterior
         hlp <- try({
             vcovSub <- vcovTmp[rownames(L), rownames(L)]
