@@ -335,6 +335,33 @@ test_that("msqrobLmer ridge=TRUE is not confused by random-effect levels contain
         expect_equal(unname(getCoef(models[[i]])), unname(getCoef(ref[[i]])))
 })
 
+test_that("msqrobLmer: a failure after lmer gives a fitError without coefficients", {
+    ## e.g. padding the parameters to the design fails, here for the first
+    ## feature only (squeezeVar needs at least some fitted features)
+    pad   <- msqrob2:::.pad_to_orig_space
+    calls <- 0
+    local_mocked_bindings(
+        .pad_to_orig_space = function(...) {
+            calls <<- calls + 1
+            if (calls == 1) stop("boom") else pad(...)
+        },
+        .package = "msqrob2")
+    d <- .make_lmer_data()
+    r <- .make_ridge_data()
+    fits <- list(
+        function() msqrobLmer(d$y, ~condition + (1 | subject), data = d$coldata),
+        function() suppressWarnings(msqrobLmer(r$y, ~condition, data = r$coldata,
+                                               ridge = TRUE)))
+    for (f in fits) {
+        calls  <- 0
+        models <- f()
+        expect_identical(getFitMethod(models[[1]]), "fitError")
+        expect_true(all(is.na(getCoef(models[[1]]))))
+        expect_true(is.na(models[[1]]@params$theta))
+        expect_identical(getFitMethod(models[[2]]), "lmer")
+    }
+})
+
 test_that("msqrobLmer stores theta = NA for fitErrors", {
     d <- .make_lmer_data()
     d$y[1, -(1:2)] <- NA

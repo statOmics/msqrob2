@@ -737,11 +737,13 @@ msqrobGlm <- function(y,
                 rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- names(betas)
             }
 
-            params <- .create_model(betas, vcovUnscaled, fit$sigma, fit$df.residual, fit$model)
-            if (!is.na(params$df.residual)) {
-                type   <- "lmer"
-                params <- .pad_to_orig_space(params, .ridge_param_names(colnames_orig))
+            p <- .create_model(betas, vcovUnscaled, fit$sigma, fit$df.residual, fit$model)
+            if (!is.na(p$df.residual)) {
+                p <- .pad_to_orig_space(p, .ridge_param_names(colnames_orig))
+                ## only a complete fit replaces the fitError defaults
+                params <- p
                 theta  <- fit$theta
+                type   <- "lmer"
             }
         }, silent = TRUE)
     }
@@ -816,11 +818,13 @@ msqrobGlm <- function(y,
                 names(fit$betas) <- nm
                 dimnames(fit$vcovUnscaled) <- list(nm, nm)
             }
-            params <- .create_model(fit$betas, fit$vcovUnscaled, fit$sigma, fit$df.residual, fit$model)
-            if (!is.na(params$df.residual)) {
-                type   <- "lmer"
-                params <- .pad_to_orig_space(params, colnames_orig)
+            p <- .create_model(fit$betas, fit$vcovUnscaled, fit$sigma, fit$df.residual, fit$model)
+            if (!is.na(p$df.residual)) {
+                p <- .pad_to_orig_space(p, colnames_orig)
+                ## only a complete fit replaces the fitError defaults
+                params <- p
                 theta  <- fit$theta
+                type   <- "lmer"
             }
         }, silent = TRUE)
     }
