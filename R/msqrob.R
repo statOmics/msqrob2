@@ -30,7 +30,7 @@
 #'
 #' @param counts An optional numeric vector of length \code{nrow(y)} with the
 #'        number of precursors (PSMs or peptides) per feature. Only used when
-#'        \code{trend = "count"}.
+#'        \code{trend = "count"}. Missing counts give an error.
 #'
 #' @examples
 #'
@@ -72,6 +72,8 @@ msqrobLm <- function(y,
     counts = NULL) {
     if (isFALSE(trend)) trend <- "none"
     trend <- match.arg(trend, c("none", "mean", "count"))
+    if (trend == "count" && !is.null(counts))
+        .check_counts(counts, rownames(y))
     myDesign <- model.matrix(formula, data)
     models <- BiocParallel::bplapply(asplit(y, 1),
         function(y, design) {
@@ -234,6 +236,7 @@ msqrobLm <- function(y,
 #'        group contains a single row (i.e. the data are already at protein level).
 #'        Named by feature group, or else in the order in which the feature
 #'        groups first occur in \code{y} (the row order for protein-level data).
+#'        Missing counts give an error.
 #'
 #' @param lmerArgs a list (of correct class, resulting from 'lmerControl()'
 #'        containing control parameters, including the nonlinear optimizer to be used
@@ -335,6 +338,7 @@ msqrobLmer <- function(y,
             counts <- counts[names(y)]
             if (anyNA(names(counts)))
                 stop("counts are missing for some feature groups.")
+            .check_counts(counts, names(y))
         } else {
             pep_counts <- vapply(y, nrow, integer(1))
             if (all(pep_counts == 1L)) {
@@ -498,6 +502,18 @@ msqrobGlm <- function(y,
 ## Build the 1-D trend covariate for squeezeVar: mean log-intensity
 ## (trend = "mean", like limma-trend) or log2 precursor count
 ## (trend = "count", like DEqMS). squeezeVar's loess handles the rest.
+## Stop before fitting when counts for trend = "count" are missing.
+.check_counts <- function(counts, featureNames) {
+    bad <- !is.finite(counts)
+    if (any(bad)) {
+        ids <- if (is.null(featureNames)) which(bad) else featureNames[bad]
+        stop("counts are missing (NA) for ", sum(bad), " feature(s), e.g. ",
+             paste(ids[seq_len(min(3, sum(bad)))], collapse = ", "),
+             ". Supply a count for every feature or remove these features.")
+    }
+    invisible(TRUE)
+}
+
 .make_trend_covariate <- function(mean_expr = NULL, counts = NULL) {
     if (!is.null(mean_expr)) return(mean_expr)
     if (!is.null(counts))    return(log2(pmax(counts, 0.5)))
@@ -509,6 +525,11 @@ msqrobGlm <- function(y,
 ## update varPosterior / dfPosterior slots in-place.
 .squeezeAndUpdatePosteriors <- function(models, binomialBound = FALSE,
                                         covariate = NULL) {
+    ## squeezeVar does not allow missing covariates. Counts are checked before
+    ## fitting, so these are means of features without observations: fitErrors
+    ## without a variance, so their value does not affect the prior.
+    bad <- !is.finite(covariate)
+    if (any(bad)) covariate[bad] <- stats::median(covariate[!bad])
     hlp <- limma::squeezeVar(
         var       = vapply(models, getVar, numeric(1)),
         df        = vapply(models, getDF,  numeric(1)),

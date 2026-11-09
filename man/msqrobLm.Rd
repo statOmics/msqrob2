@@ -41,7 +41,7 @@ log2 precursor count (like DEqMS).}
 
 \item{counts}{An optional numeric vector of length \code{nrow(y)} with the
 number of precursors (PSMs or peptides) per feature. Only used when
-\code{trend = "count"}.}
+\code{trend = "count"}. Missing counts give an error.}
 }
 \value{
 A list of objects of the \code{StatModel} class.

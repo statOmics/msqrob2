@@ -568,6 +568,36 @@ test_that("msqrobLm trend = 'count' without counts warns and applies no trend", 
     expect_identical(m, msqrobLm(d$y, ~condition, d$coldata, robust = FALSE))
 })
 
+test_that("trend = 'mean' works when a feature has no observations", {
+    d <- .make_trend_data()
+    d$y[3, ] <- NA
+    post <- function(m) vapply(m, getVarPosterior, numeric(1))
+    expect_no_error(
+        m <- suppressWarnings(msqrobLm(d$y, ~condition, d$coldata,
+                                       robust = FALSE, trend = "mean")))
+    expect_identical(getFitMethod(m[[3]]), "fitError")
+    ref <- msqrobLm(d$y[-3, ], ~condition, d$coldata, robust = FALSE,
+                    trend = "mean")
+    expect_equal(post(m)[-3], post(ref))
+    expect_no_error(
+        m <- suppressWarnings(msqrobLmer(d$y, ~ -1 + condition, d$coldata,
+                                         ridge = TRUE, robust = FALSE,
+                                         trend = "mean", doQR = FALSE)))
+})
+
+test_that("trend = 'count' stops before fitting when a count is missing", {
+    d <- .make_trend_data()
+    d$counts[5] <- NA
+    expect_error(
+        msqrobLm(d$y, ~condition, d$coldata, robust = FALSE,
+                 trend = "count", counts = d$counts),
+        "counts are missing \\(NA\\) for 1 feature\\(s\\), e.g. feat5")
+    expect_error(
+        msqrobLmer(d$y, ~ -1 + condition, d$coldata, ridge = TRUE,
+                   trend = "count", counts = d$counts),
+        "counts are missing \\(NA\\) for 1 feature\\(s\\), e.g. feat5")
+})
+
 test_that("trend rejects unknown options such as 'combined'", {
     d <- .make_trend_data(n_feat = 5)
     expect_error(msqrobLm(d$y, ~condition, d$coldata, trend = "combined"),

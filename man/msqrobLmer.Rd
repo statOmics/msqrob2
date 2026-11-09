@@ -74,7 +74,8 @@ groups) giving the number of precursors per protein. Used when
 \code{trend = "count"} and each feature
 group contains a single row (i.e. the data are already at protein level).
 Named by feature group, or else in the order in which the feature
-groups first occur in \code{y} (the row order for protein-level data).}
+groups first occur in \code{y} (the row order for protein-level data).
+Missing counts give an error.}
 
 \item{lmerArgs}{a list (of correct class, resulting from 'lmerControl()'
 containing control parameters, including the nonlinear optimizer to be used
