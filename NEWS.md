@@ -1,17 +1,45 @@
 # msqrob 1.21 
 ## msqrob 1.21.2
 
-- `msqrobLmer()` now stores the estimated variance component ratios of each
+- `msqrobLmer()` stores the estimated variance component ratios of each
   lmer fit in `getModel(model)$theta` (lme4's parameterisation and names).
-- Failed fits (`fitError`) now get `NA` instead of a log2 fold change of 0 in
+- Failed fits (`fitError`) get `NA` instead of a log2 fold change of 0 in
   `hypothesisTest()` and `topFeatures()`.
-- `msqrobLmer()` no longer stops on a feature without any observations; such
+- `msqrobLmer()` no longer crashes on a feature without any observations; such
   features become `fitError`.
 - `msqrobLmer()` also accepts a `data.frame` as `data`.
-
-## msqrob 1.21.0 
-
-- Version bump
+- Ridge models: the mean-model parameters keep the `ridge` prefix again (e.g.
+  `ridgeconditionB`), so contrasts from
+  `createPairwiseContrasts(ridge = TRUE)` and existing ridge contrasts work
+  again (1.21.1 gave a log2 fold change of 0).
+- `getContrast()` and `varContrast()` give `NA` instead of 0 for contrasts on
+  names that are no parameters of the model (e.g. a typo).
+- `msqrobLmer()` fits mixed models with a rank-deficient design (e.g. a
+  missing reference level) instead of returning `fitError`; non-estimable
+  contrasts are `NA`, as for `msqrobLm()`.
+- `msqrobAggregate()` (and `msqrobLmer()` with `rowdata`): when the formula
+  uses exactly one sample variable and one feature variable (e.g.
+  `~ condition + (1 | Sequence)`), the sample variable lost its type: a factor
+  became integer codes and a numeric covariate was treated as a factor.
+- `msqrobHurdle(ridge = TRUE)`: intensity models are stored on the correct
+  rows (when the rows were not sorted by name, proteins got the intensity
+  model of another protein).
+- `trend = "count"` with random effects or ridge: the counts are linked to the
+  correct features; missing counts give an error before fitting.
+- `trend = "mean"` no longer crashes when a feature has no observations.
+- `trend = TRUE` gives an informative error (use `trend = "mean"`).
+- `msqrobLmer()`: a failure after the lmer fit gives a `fitError`, no longer an
+  incomplete `lmer` model.
+- No error, but a warning, when no feature can be fitted; failed fits
+  (`fitError`) keep `NA` posterior variances and degrees of freedom.
+- Empirical Bayes variance moderation now always estimates the prior with
+  limma's `fitFDistUnequalDF1()` (`squeezeVar(legacy = FALSE)`), using the
+  fitted features only. Previously, limma used its moment estimator
+  `fitFDist()` as soon as one feature failed to fit, and `fitFDistUnequalDF1()`
+  otherwise, so the method depended on fit failures and filtering; the moment
+  estimator can also give an infinite prior df when residual df are small.
+  Posterior variances, and hence p-values, change slightly. Requires
+  limma >= 3.62.0.
 
 ## msqrob 1.21.1 
 
@@ -19,10 +47,16 @@
 - Add estimability functionality to catch and solve issues with changing 
   reference class 
 - Adding unit tests for all functions in msqrob.R
-- Trended squeezevar using mean (limma trend), using feature counts used for 
+- Trended squeezevar using mean (limma trend) or using feature counts used for 
   aggregation (DEqMS). 
 
+## msqrob 1.21.0 
+
+- Version bump
+
 # msqrob 1.20 
+
+## msqrob 1.20.0 
 
 - Version bump 
 
