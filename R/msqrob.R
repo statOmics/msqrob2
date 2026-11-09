@@ -745,10 +745,16 @@ msqrobGlm <- function(y,
     nb                <- td$nb
     data_model_matrix <- td$X
 
+    ## Rank-deficient design: fit the retained columns of the design matrix
+    ## directly, as covariates .x1, .x2, ... (syntactic names, and no extra
+    ## intercept), and map their coefficients back to the column names.
+    fixNames <- NULL
     if (td$rank_deficient) {
-        for (nm in colnames(data_model_matrix))
-            data[[paste0(".x.", nm)]] <- data_model_matrix[, nm]
-        fix     <- paste(paste0("`.x.", colnames(data_model_matrix), "`"), collapse = " + ")
+        fixNames <- stats::setNames(colnames(data_model_matrix),
+                                    paste0(".x", seq_len(ncol(data_model_matrix))))
+        for (k in names(fixNames))
+            data[[k]] <- data_model_matrix[, fixNames[[k]]]
+        fix     <- paste(c("0", names(fixNames)), collapse = " + ")
         bars    <- findbars(formula)
         formula <- if (is.null(bars)) {
             as.formula(paste("y ~", fix))
@@ -770,6 +776,13 @@ msqrobGlm <- function(y,
     if (!is.null(model)) {
         try({
             fit    <- .extract_lmer_fit(model, robust, maxitRob, tol)
+            if (!is.null(fixNames)) {
+                nm <- names(fit$betas)
+                i  <- nm %in% names(fixNames)
+                nm[i] <- fixNames[nm[i]]
+                names(fit$betas) <- nm
+                dimnames(fit$vcovUnscaled) <- list(nm, nm)
+            }
             params <- .create_model(fit$betas, fit$vcovUnscaled, fit$sigma, fit$df.residual, fit$model)
             if (!is.na(params$df.residual)) {
                 type   <- "lmer"

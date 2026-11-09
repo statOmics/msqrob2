@@ -384,6 +384,52 @@ test_that("msqrobLmer accepts a data.frame as data, with the same results as a D
         msqrobLmer(r$y, ~condition, data = r$coldata, ridge = TRUE))
 })
 
+## 3 conditions measured in every subject, for rank-deficient mixed models
+.make_lmer3_data <- function(n_subj = 5, seed = 11) {
+    set.seed(seed)
+    coldata <- DataFrame(
+        condition = factor(rep(c("A", "B", "C"), times = n_subj)),
+        subject   = factor(rep(paste0("subj", seq_len(n_subj)), each = 3)))
+    y <- matrix(rnorm(2 * 3 * n_subj, 10), 2,
+                dimnames = list(c("p1", "p2"), paste0("s", seq_len(3 * n_subj))))
+    y[, coldata$condition == "C"] <- y[, coldata$condition == "C"] + 2
+    y <- y + rep(rnorm(n_subj), each = 2 * 3)    # subject effect
+    list(y = y, coldata = coldata)
+}
+
+test_that("msqrobLmer fits a mixed model with a missing reference level", {
+    d <- .make_lmer3_data()
+    d$y["p2", d$coldata$condition == "A"] <- NA
+    models <- msqrobLmer(d$y, ~condition + (1 | subject), data = d$coldata,
+                         robust = FALSE)
+    expect_identical(getFitMethod(models[["p2"]]), "lmer")
+    ## C - B is estimable and equals the lmer fit without the A samples
+    obs <- !is.na(d$y["p2", ])
+    ref <- lmer(y ~ condition + (1 | subject),
+                data = droplevels(cbind(as.data.frame(d$coldata), y = d$y["p2", ])[obs, ]))
+    L <- makeContrast(c("conditionC - conditionB = 0", "conditionB = 0"),
+                      parameterNames = c("conditionB", "conditionC"))
+    est <- getContrast(models[["p2"]], L)
+    expect_equal(unname(est[1, 1]), unname(fixef(ref)["conditionC"]), tolerance = 1e-6)
+    ## B - A is not estimable
+    expect_true(is.na(est[2, 1]))
+})
+
+test_that("msqrobLmer fits a rank-deficient mixed model without intercept", {
+    d <- .make_lmer3_data()
+    d$coldata$g <- as.numeric(d$coldata$condition == "C")  # collinear with condition
+    models <- suppressMessages(
+        msqrobLmer(d$y, ~0 + condition + g + (1 | subject), data = d$coldata,
+                   robust = FALSE))
+    ref <- lmer(y ~ 0 + condition + (1 | subject),
+                data = cbind(as.data.frame(d$coldata), y = d$y["p1", ]))
+    expect_identical(getFitMethod(models[["p1"]]), "lmer")
+    coefs <- getCoef(models[["p1"]])
+    expect_equal(unname(coefs[c("conditionA", "conditionB", "conditionC")]),
+                 unname(fixef(ref)), tolerance = 1e-6)
+    expect_true(is.na(coefs[["g"]]))
+})
+
 test_that("msqrobLmer ridge=TRUE doQR=FALSE runs without error", {
     d <- .make_ridge_data()
     expect_no_error(
