@@ -529,7 +529,15 @@ msqrobGlm <- function(y,
 
 
 ## Squeeze sample variances together via empirical Bayes posterior means and
-## update varPosterior / dfPosterior slots in-place.
+## update varPosterior / dfPosterior slots in-place. Only fitted features enter
+## squeezeVar and get posteriors; fitErrors keep NA.
+##
+## legacy = FALSE: the prior is always estimated with limma's
+## fitFDistUnequalDF1 (profile ML), which is designed for unequal and
+## fractional residual df (robust fits, missing values). Left to limma, the
+## method would depend on whether some fits failed (an NA df makes squeezeVar
+## fall back to the moment estimator fitFDist), and that moment estimator can
+## give df.prior = Inf for small, fractional residual df.
 .squeezeAndUpdatePosteriors <- function(models, binomialBound = FALSE,
                                         covariate = NULL) {
     var <- vapply(models, getVar, numeric(1))
@@ -540,19 +548,16 @@ msqrobGlm <- function(y,
         warning("No feature could be fitted: all posterior variances are NA.")
         return(models)
     }
-    ## squeezeVar does not allow missing covariates. Counts are checked before
-    ## fitting, so these are means of features without observations: fitErrors
-    ## without a variance, so their value does not affect the prior.
-    bad <- !is.finite(covariate)
-    if (any(bad)) covariate[bad] <- stats::median(covariate[!bad])
-    ## All features enter squeezeVar, also the fitErrors: subsetting would
-    ## change the prior, because squeezeVar then switches to its method for
-    ## unequal df (fitFDistUnequalDF1). Only fitted features get posteriors.
-    hlp <- limma::squeezeVar(var = var, df = df, covariate = covariate)
-    dfPrior <- rep_len(hlp$df.prior, length(models))
-    for (i in which(ok)) {
-        vp <- as.numeric(hlp$var.post[i])
-        dp <- as.numeric(dfPrior[i] + df[i])
+    hlp <- limma::squeezeVar(var = var[ok], df = df[ok],
+                             covariate = covariate[ok], legacy = FALSE)
+    idx     <- which(ok)
+    ## the k-th posterior belongs to the k-th fitted feature, idx[k]
+    stopifnot(length(hlp$var.post) == length(idx))
+    dfPrior <- rep_len(hlp$df.prior, length(idx))
+    for (k in seq_along(idx)) {
+        i  <- idx[k]
+        vp <- as.numeric(hlp$var.post[k])
+        dp <- as.numeric(dfPrior[k] + df[i])
         if (binomialBound && !is.na(vp) && vp < 1) {
             vp <- 1
             dp <- Inf

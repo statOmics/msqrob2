@@ -540,13 +540,18 @@ test_that("msqrobLmer featureGroups aggregates multiple peptides per protein", {
     list(y = y, coldata = coldata, counts = counts)
 }
 
-## Expected posteriors: squeezeVar applied directly to the per-model fits.
+## Expected posteriors: squeezeVar (legacy = FALSE) applied directly to the
+## fitted models; NA for fitErrors.
 .expected_posteriors <- function(models, covariate = NULL) {
-    limma::squeezeVar(
-        var       = vapply(models, getVar, numeric(1)),
-        df        = vapply(models, getDF,  numeric(1)),
-        covariate = covariate
-    )
+    var <- vapply(models, getVar, numeric(1))
+    df  <- vapply(models, getDF,  numeric(1))
+    ok  <- is.finite(var) & is.finite(df) & df > 0
+    hlp <- limma::squeezeVar(var[ok], df[ok], covariate = covariate[ok],
+                             legacy = FALSE)
+    var.post <- df.prior <- rep(NA_real_, length(models))
+    var.post[ok] <- hlp$var.post
+    df.prior[ok] <- hlp$df.prior
+    list(var.post = var.post, df.prior = df.prior)
 }
 
 .expect_posteriors <- function(models, expected) {
@@ -917,24 +922,30 @@ test_that(".squeezeAndUpdatePosteriors with binomialBound enforces varPosterior 
     }
 })
 
-test_that(".squeezeAndUpdatePosteriors: fitErrors keep NA, fitted features as squeezeVar on all", {
+test_that(".squeezeAndUpdatePosteriors: fitErrors keep NA and do not change the prior", {
     d <- .make_trend_data()
     d$y[c(2, 7), -c(1, 5)] <- NA      # 2 observations: fitError
-    ## robust = TRUE: unequal df, for which squeezeVar on the fitted features
-    ## only would use another method than on all features
-    for (covariate in list(NULL, rowMeans(d$y, na.rm = TRUE))) {
+    ## robust = TRUE: unequal, fractional df. squeezeVar's default would switch
+    ## method depending on whether there are fitErrors; legacy = FALSE does not.
+    post <- function(m, f) unname(vapply(m, f, numeric(1)))
+    for (trend in c("none", "mean")) {
         m <- suppressWarnings(   # rlm convergence on simulated data
-            msqrobLm(d$y, ~condition, d$coldata, robust = TRUE,
-                     trend = if (is.null(covariate)) "none" else "mean"))
+            msqrobLm(d$y, ~condition, d$coldata, robust = TRUE, trend = trend))
         fe <- vapply(m, getFitMethod, character(1)) == "fitError"
         expect_identical(which(fe), c(feat2 = 2L, feat7 = 7L))
-        expect_true(all(is.na(vapply(m[fe], getVarPosterior, numeric(1)))))
-        expect_true(all(is.na(vapply(m[fe], getDfPosterior, numeric(1)))))
+        expect_true(all(is.na(post(m[fe], getVarPosterior))))
+        expect_true(all(is.na(post(m[fe], getDfPosterior))))
+        ## squeezeVar(legacy = FALSE) on the fitted features
+        covariate <- if (trend == "mean") rowMeans(d$y, na.rm = TRUE)
         ref <- .expected_posteriors(m, covariate = covariate)
-        expect_identical(unname(vapply(m[!fe], getVarPosterior, numeric(1))),
-                         unname(ref$var.post[!fe]))
-        expect_identical(unname(vapply(m[!fe], getDfPosterior, numeric(1))),
-                         unname(ref$df.prior + vapply(m[!fe], getDF, numeric(1))))
+        expect_identical(post(m[!fe], getVarPosterior), ref$var.post[!fe])
+        expect_identical(post(m[!fe], getDfPosterior),
+                         ref$df.prior[!fe] + post(m[!fe], getDF))
+        ## the same posteriors as without the failing features
+        m2 <- suppressWarnings(
+            msqrobLm(d$y[!fe, ], ~condition, d$coldata, robust = TRUE, trend = trend))
+        expect_identical(post(m[!fe], getVarPosterior), post(m2, getVarPosterior))
+        expect_identical(post(m[!fe], getDfPosterior), post(m2, getDfPosterior))
     }
     ## quasibinomial with binomialBound: a fitError no longer gets df = Inf
     g <- .make_glm_data()
