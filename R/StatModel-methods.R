@@ -47,6 +47,8 @@ setMethod(
         coefsSub[is.na(coefsSub)] <- 0
         hlp <- try(t(L) %*% coefsSub, silent = TRUE)
         if (!is(hlp, "try-error")) out[] <- hlp
+        ## contrasts that involve names that are no parameters of the model
+        out[.involves_unknown(L, names(coefs)), ] <- NA_real_
         nb <- object@params$nonest.basis
         if (!is.null(nb) && ncol(nb) > 0L) {
             L_full <- matrix(0, nrow = nrow(nb), ncol = ncol(L),
@@ -59,6 +61,13 @@ setMethod(
     }
 )
 
+## Which contrasts (columns of L) put a non-zero weight on a name that is not
+## a parameter of the model (e.g. a typo), so that they cannot be computed.
+.involves_unknown <- function(L, paramNames) {
+    unknown <- !rownames(L) %in% paramNames
+    colSums(L[unknown, , drop = FALSE] != 0) > 0
+}
+
 #' @rdname statModelMethods
 #' @importFrom methods is
 
@@ -70,12 +79,16 @@ setMethod(
         rownames(out) <- colnames(out) <- colnames(L)
         if (all(is.na(getVcovUnscaled(object)))) return(out)   # failed fit
         vcovTmp <- getVcovUnscaled(object) * object@varPosterior
+        unknown <- .involves_unknown(L, rownames(vcovTmp))
+        known   <- rownames(L) %in% rownames(vcovTmp)
         hlp <- try({
-            vcovSub <- vcovTmp[rownames(L), rownames(L)]
+            vcovSub <- vcovTmp[rownames(L)[known], rownames(L)[known], drop = FALSE]
             vcovSub[is.na(vcovSub)] <- 0
-            t(L) %*% vcovSub %*% L
+            t(L[known, , drop = FALSE]) %*% vcovSub %*% L[known, , drop = FALSE]
         }, silent = TRUE)
         if (!is(hlp, "try-error")) out[] <- hlp
+        out[unknown, ] <- NA_real_
+        out[, unknown] <- NA_real_
         nb <- object@params$nonest.basis
         if (!is.null(nb) && ncol(nb) > 0L) {
             L_full <- matrix(0, nrow = nrow(nb), ncol = ncol(L),
