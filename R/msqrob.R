@@ -532,25 +532,33 @@ msqrobGlm <- function(y,
 ## update varPosterior / dfPosterior slots in-place.
 .squeezeAndUpdatePosteriors <- function(models, binomialBound = FALSE,
                                         covariate = NULL) {
+    var <- vapply(models, getVar, numeric(1))
+    df  <- vapply(models, getDF,  numeric(1))
+    ok  <- is.finite(var) & is.finite(df) & df > 0
+    ## squeezeVar fails when no feature could be fitted
+    if (!any(ok)) {
+        warning("No feature could be fitted: all posterior variances are NA.")
+        return(models)
+    }
     ## squeezeVar does not allow missing covariates. Counts are checked before
     ## fitting, so these are means of features without observations: fitErrors
     ## without a variance, so their value does not affect the prior.
     bad <- !is.finite(covariate)
     if (any(bad)) covariate[bad] <- stats::median(covariate[!bad])
-    hlp <- limma::squeezeVar(
-        var       = vapply(models, getVar, numeric(1)),
-        df        = vapply(models, getDF,  numeric(1)),
-        covariate = covariate
-    )
-    for (i in seq_along(models)) {
+    ## All features enter squeezeVar, also the fitErrors: subsetting would
+    ## change the prior, because squeezeVar then switches to its method for
+    ## unequal df (fitFDistUnequalDF1). Only fitted features get posteriors.
+    hlp <- limma::squeezeVar(var = var, df = df, covariate = covariate)
+    dfPrior <- rep_len(hlp$df.prior, length(models))
+    for (i in which(ok)) {
         vp <- as.numeric(hlp$var.post[i])
-        df <- as.numeric(hlp$df.prior + getDF(models[[i]]))
+        dp <- as.numeric(dfPrior[i] + df[i])
         if (binomialBound && !is.na(vp) && vp < 1) {
             vp <- 1
-            df <- Inf
+            dp <- Inf
         }
         models[[i]]@varPosterior <- vp
-        models[[i]]@dfPosterior  <- df
+        models[[i]]@dfPosterior  <- dp
     }
     models
 }

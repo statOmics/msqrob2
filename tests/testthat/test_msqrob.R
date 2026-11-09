@@ -917,6 +917,48 @@ test_that(".squeezeAndUpdatePosteriors with binomialBound enforces varPosterior 
     }
 })
 
+test_that(".squeezeAndUpdatePosteriors: fitErrors keep NA, fitted features as squeezeVar on all", {
+    d <- .make_trend_data()
+    d$y[c(2, 7), -c(1, 5)] <- NA      # 2 observations: fitError
+    ## robust = TRUE: unequal df, for which squeezeVar on the fitted features
+    ## only would use another method than on all features
+    for (covariate in list(NULL, rowMeans(d$y, na.rm = TRUE))) {
+        m <- suppressWarnings(   # rlm convergence on simulated data
+            msqrobLm(d$y, ~condition, d$coldata, robust = TRUE,
+                     trend = if (is.null(covariate)) "none" else "mean"))
+        fe <- vapply(m, getFitMethod, character(1)) == "fitError"
+        expect_identical(which(fe), c(feat2 = 2L, feat7 = 7L))
+        expect_true(all(is.na(vapply(m[fe], getVarPosterior, numeric(1)))))
+        expect_true(all(is.na(vapply(m[fe], getDfPosterior, numeric(1)))))
+        ref <- .expected_posteriors(m, covariate = covariate)
+        expect_identical(unname(vapply(m[!fe], getVarPosterior, numeric(1))),
+                         unname(ref$var.post[!fe]))
+        expect_identical(unname(vapply(m[!fe], getDfPosterior, numeric(1))),
+                         unname(ref$df.prior + vapply(m[!fe], getDF, numeric(1))))
+    }
+    ## quasibinomial with binomialBound: a fitError no longer gets df = Inf
+    g <- .make_glm_data()
+    g$y[1, ] <- g$npep[1] + 1L
+    mg <- suppressWarnings(
+        msqrobGlm(g$y, g$npep, ~condition, g$coldata, binomialBound = TRUE))
+    expect_identical(getFitMethod(mg[[1]]), "fitError")
+    expect_true(is.na(getDfPosterior(mg[[1]])))
+})
+
+test_that("no error, but a warning, when no feature can be fitted", {
+    d <- .make_trend_data(n_feat = 5)
+    d$y[, -c(1, 5)] <- NA             # 2 observations per feature
+    expect_warning(m <- msqrobLm(d$y, ~condition, d$coldata),
+                   "No feature could be fitted")
+    expect_identical(unique(vapply(m, getFitMethod, character(1))), "fitError")
+    expect_true(all(is.na(vapply(m, getVarPosterior, numeric(1)))))
+    l <- .make_lmer_data()
+    l$y[, -(1:2)] <- NA
+    expect_warning(m <- msqrobLmer(l$y, ~condition + (1 | subject), data = l$coldata),
+                   "No feature could be fitted")
+    expect_identical(unique(vapply(m, getFitMethod, character(1))), "fitError")
+})
+
 test_that(".squeezeAndUpdatePosteriors preserves fitError models (NA sigma)", {
     good <- StatModel(
         type   = "lm",
