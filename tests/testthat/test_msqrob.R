@@ -626,6 +626,43 @@ test_that("msqrobLmer trend = 'count' matches named counts by protein", {
         m_named, covariate = log2(d$n_pep[names(m_named)])))
 })
 
+test_that("msqrobLmer trend = 'count' matches unnamed counts in row order when rows are not sorted", {
+    d <- .make_trend_pep_data()
+    y_prot <- t(vapply(split.data.frame(d$y, d$groups), colMeans,
+                       numeric(ncol(d$y))))
+    y_prot <- y_prot[rev(seq_len(nrow(y_prot))), ]    # rows not sorted by name
+    m_unnamed <- msqrobLmer(y_prot, ~condition + (1 | subject),
+                            data = d$coldata, robust = FALSE, trend = "count",
+                            counts = unname(d$n_pep[rownames(y_prot)]))
+    m_named <- msqrobLmer(y_prot, ~condition + (1 | subject),
+                          data = d$coldata, robust = FALSE, trend = "count",
+                          counts = d$n_pep)
+    expect_identical(m_unnamed, m_named)
+    .expect_posteriors(m_unnamed, .expected_posteriors(
+        m_unnamed, covariate = log2(d$n_pep[names(m_unnamed)])))
+    expect_error(
+        msqrobLmer(y_prot, ~condition + (1 | subject), data = d$coldata,
+                   trend = "count", counts = 1:3),
+        "one value per feature group")
+})
+
+test_that("msqrob ridge=TRUE trend = 'count' links .n to the right rows", {
+    d <- .make_ridge_data(n_feat = 12)
+    counts <- setNames(c(1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233), rownames(d$y))
+    ord <- c(7, 2, 11, 4, 9, 1, 12, 3, 10, 5, 8, 6)    # rows not sorted by name
+    se <- SummarizedExperiment::SummarizedExperiment(
+        assays  = list(intensity = d$y[ord, ]),
+        rowData = DataFrame(.n = unname(counts[ord]), row.names = rownames(d$y)[ord]),
+        colData = d$coldata)
+    se <- suppressMessages(msqrob(se, ~condition, ridge = TRUE, robust = FALSE,
+                                  trend = "count"))
+    ref <- suppressMessages(msqrobLmer(d$y, ~condition, data = d$coldata,
+                                       ridge = TRUE, robust = FALSE,
+                                       trend = "count", counts = counts))
+    expect_identical(SummarizedExperiment::rowData(se)$msqrobModels,
+                     ref[rownames(se)])
+})
+
 test_that("msqrobLmer trend = 'count' warns when every group has one feature", {
     d <- .make_lmer_data(n_feat = 6, n_subj = 4)
     expect_warning(

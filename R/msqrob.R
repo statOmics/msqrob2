@@ -232,6 +232,8 @@ msqrobLm <- function(y,
 #'        groups) giving the number of precursors per protein. Used when
 #'        \code{trend = "count"} and each feature
 #'        group contains a single row (i.e. the data are already at protein level).
+#'        Named by feature group, or else in the order in which the feature
+#'        groups first occur in \code{y} (the row order for protein-level data).
 #'
 #' @param lmerArgs a list (of correct class, resulting from 'lmerControl()'
 #'        containing control parameters, including the nonlinear optimizer to be used
@@ -322,7 +324,17 @@ msqrobLmer <- function(y,
     ## Priority: user-supplied counts > inferred from featureGroups > none.
     if (trend == "count") {
         if (!is.null(counts)) {
-            if (!is.null(names(counts))) counts <- counts[names(y)]
+            ## unnamed counts are in the order of the feature groups in y;
+            ## the models (and y) are sorted by name, so match by name
+            if (is.null(names(counts))) {
+                if (length(counts) != length(y))
+                    stop("counts must have one value per feature group (",
+                         length(y), "), or be named by feature group.")
+                names(counts) <- unique(featureGroups)
+            }
+            counts <- counts[names(y)]
+            if (anyNA(names(counts)))
+                stop("counts are missing for some feature groups.")
         } else {
             pep_counts <- vapply(y, nrow, integer(1))
             if (all(pep_counts == 1L)) {
