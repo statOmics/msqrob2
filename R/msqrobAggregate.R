@@ -158,7 +158,7 @@ setMethod(
             fun = aggregateFun
         )
 
-        rowData(object)[[modelColumnName]] <- modelOutput
+        rowData(object)[[modelColumnName]] <- modelOutput[rownames(object)]
 
         return(object)
     }

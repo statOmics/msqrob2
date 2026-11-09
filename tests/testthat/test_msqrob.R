@@ -1400,3 +1400,24 @@ test_that("heart design: estimability NA pattern preserved for rlm and ridge", {
                 info = paste(lbl, "prot_p3", cn[i], "should be non-NA"))
     }
 })
+
+## ===========================================================================
+## msqrobHurdle: models stored in the row order
+## ===========================================================================
+
+test_that("msqrobHurdle ridge=TRUE stores each intensity model on its own row", {
+    library(QFeatures)
+    data(pe)
+    pe <- suppressMessages(aggregateFeatures(pe, i = "peptide", fcol = "Proteins",
+                                             name = "protein"))
+    se <- pe[["protein"]][20:1, ]            # rows not sorted by name
+    colData(se) <- colData(pe)
+    se <- suppressWarnings(suppressMessages(
+        msqrobHurdle(se, formula = ~condition, ridge = TRUE)))
+    mods <- rowData(se)$msqrobHurdleIntensity
+    expect_identical(names(mods), rownames(se))
+    ref <- suppressWarnings(suppressMessages(
+        msqrobLmer(assay(se), ~condition, data = colData(se), ridge = TRUE)))
+    for (p in rownames(se))
+        expect_identical(getCoef(mods[[p]]), getCoef(ref[[p]]))
+})

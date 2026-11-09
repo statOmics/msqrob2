@@ -148,6 +148,9 @@ setMethod(
                 lmerArgs = lmerArgs
             )
         }
+        ## msqrobLmer returns the models sorted by name: back to the row order
+        intCol <- paste0(modelColumnName, "Intensity")
+        rowData(object)[[intCol]] <- rowData(object)[[intCol]][rownames(object)]
         rowData(object)[[paste0(modelColumnName, "Count")]] <- msqrobGlm(aggcounts(object),
             rowData(object)[[".n"]],
             formula,
@@ -216,6 +219,9 @@ setMethod(
                 lmerArgs = lmerArgs
             )
         }
+        ## msqrobLmer returns the models sorted by name: back to the row order
+        intCol <- paste0(modelColumnName, "Intensity")
+        rowData(object[[i]])[[intCol]] <- rowData(object[[i]])[[intCol]][rownames(object[[i]])]
         rowData(object[[i]])[[paste0(modelColumnName, "Count")]] <- msqrobGlm(aggcounts(object[[i]]),
             rowData(object[[i]])[[".n"]],
             formula,
