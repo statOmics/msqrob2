@@ -302,6 +302,39 @@ test_that("msqrobLmer ridge=TRUE stores theta including the ridge term", {
     expect_true(th >= 0)
 })
 
+test_that("msqrobLmer ridge=TRUE names the mean-model parameters with the ridge prefix", {
+    d <- .make_ridge_data()
+    d$y[, 9:12] <- d$y[, 9:12] + 3    # an effect, so the BLUPs are not shrunk to 0
+    for (doQR in c(TRUE, FALSE)) {
+        models <- msqrobLmer(d$y, ~condition, data = d$coldata,
+                             ridge = TRUE, doQR = doQR)
+        expect_identical(names(getCoef(models[[1]])),
+            c("(Intercept)", "ridgeconditioncond2", "ridgeconditioncond3"))
+        ## the pairwise contrasts for ridge refer to the same names
+        L <- createPairwiseContrasts(~condition, d$coldata, "condition", ridge = TRUE)
+        L <- makeContrast(L, parameterNames = c("ridgeconditioncond2", "ridgeconditioncond3"))
+        coefs <- getCoef(models[[1]])
+        expect_equal(c(getContrast(models[[1]], L)),
+            unname(c(coefs["ridgeconditioncond2"], coefs["ridgeconditioncond3"],
+                     coefs["ridgeconditioncond3"] - coefs["ridgeconditioncond2"])))
+        expect_true(all(getContrast(models[[1]], L) != 0))
+    }
+})
+
+test_that("msqrobLmer ridge=TRUE is not confused by random-effect levels containing 'ridge'", {
+    d <- .make_ridge_data()
+    d$coldata$subject <- factor(rep(paste0("s", 1:4), 3))
+    ref <- msqrobLmer(d$y, ~condition + (1 | subject), data = d$coldata,
+                      ridge = TRUE, robust = FALSE)
+    d$coldata$subject <- factor(rep(paste0("bridge", 1:4), 3))
+    models <- msqrobLmer(d$y, ~condition + (1 | subject), data = d$coldata,
+                         ridge = TRUE, robust = FALSE)
+    expect_identical(vapply(models, getFitMethod, character(1)),
+                     vapply(ref, getFitMethod, character(1)))
+    for (i in seq_along(models))
+        expect_equal(unname(getCoef(models[[i]])), unname(getCoef(ref[[i]])))
+})
+
 test_that("msqrobLmer stores theta = NA for fitErrors", {
     d <- .make_lmer_data()
     d$y[1, -(1:2)] <- NA
@@ -1177,7 +1210,10 @@ test_that("4-cond means coding: NA pattern preserved for rlm and ridge", {
     )) {
         se2 <- msqrob(se, formula = ~0 + condition,
                       robust = cfg$robust, ridge = cfg$ridge, overwrite = TRUE)
-        se2 <- hypothesisTest(se2, L)
+        ## ridge parameters carry the "ridge" prefix (e.g. ridgeconditionB)
+        Lc <- L
+        if (cfg$ridge) rownames(Lc) <- msqrob2:::.ridge_param_names(rownames(L))
+        se2 <- hypothesisTest(se2, Lc)
         rd  <- rowData(se2)
         lbl <- cfg$label
 
@@ -1219,7 +1255,10 @@ test_that("4-cond treatment coding: NA pattern preserved for rlm and ridge", {
     )) {
         se2 <- msqrob(se, formula = ~condition,
                       robust = cfg$robust, ridge = cfg$ridge, overwrite = TRUE)
-        se2 <- hypothesisTest(se2, L)
+        ## ridge parameters carry the "ridge" prefix (e.g. ridgeconditionB)
+        Lc <- L
+        if (cfg$ridge) rownames(Lc) <- msqrob2:::.ridge_param_names(rownames(L))
+        se2 <- hypothesisTest(se2, Lc)
         rd  <- rowData(se2)
         lbl <- cfg$label
 
@@ -1259,7 +1298,10 @@ test_that("heart design: estimability NA pattern preserved for rlm and ridge", {
     )) {
         se2 <- msqrob(se, formula = ~ location * tissue + patient,
                       robust = cfg$robust, ridge = cfg$ridge, overwrite = TRUE)
-        se2 <- hypothesisTest(se2, L)
+        ## ridge parameters carry the "ridge" prefix (e.g. ridgeconditionB)
+        Lc <- L
+        if (cfg$ridge) rownames(Lc) <- msqrob2:::.ridge_param_names(rownames(L))
+        se2 <- hypothesisTest(se2, Lc)
         rd  <- rowData(se2)
         lbl <- cfg$label
 

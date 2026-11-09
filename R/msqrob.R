@@ -597,6 +597,14 @@ msqrobGlm <- function(y,
 }
 
 
+## Parameter names of a ridge fit: the mean-model parameters are BLUPs of the
+## random effect "ridge", which lme4 names "ridge" + design column (e.g.
+## "ridgeconditionB"); the intercept stays a fixed effect.
+.ridge_param_names <- function(x) {
+    unname(ifelse(x == "(Intercept)", x, paste0("ridge", x)))
+}
+
+
 ## Fit the mixed models with ridge regression
 .ridge_msqrobLmer <- function(y, rowdata = NULL, formula, coldata,
     doQR = TRUE, robust, maxitRob = 1, tol = 1e-06,
@@ -613,6 +621,8 @@ msqrobGlm <- function(y,
     td     <- .trim_design(fixed[obs, , drop = FALSE])
     colnames_orig <- td$colnames_orig
     nb            <- td$nb
+    if (!identical(nb, estimability::all.estble))
+        rownames(nb) <- .ridge_param_names(rownames(nb))
     data$fixed    <- td$X
 
     has_intercept <- colnames(data$fixed)[1] == "(Intercept)"
@@ -682,8 +692,9 @@ msqrobGlm <- function(y,
             coefNames    <- names(betas)
 
             ## Back-transform from QR space to original parameter space
-            if (doQR && any(grepl("ridge", names(betas)))) {
-                ids <- if (has_intercept) c(1L, grep("ridge", names(betas))) else grep("ridge", names(betas))
+            if (doQR) {
+                ids <- match(paste0("ridge", colnames(Zridge)), names(betas))
+                if (has_intercept) ids <- c(1L, ids)
                 Rinv <- diag(length(betas))
                 Rinv[ids, ids] <- solve(qr.R(qrFixed))
                 if (has_intercept) Rinv[1L, 1L] <- 1
@@ -693,19 +704,10 @@ msqrobGlm <- function(y,
                 rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- names(betas)
             }
 
-            ## Rename ridge BLUPs from internal "ridgeconditionX" names to the
-            ## original design-matrix parameter names so getContrast can find them.
-            ridge_ids <- grep("ridge", names(betas))
-            if (length(ridge_ids) > 0L) {
-                names(betas)[ridge_ids]           <- colnames(Zridge)
-                rownames(vcovUnscaled)[ridge_ids] <- colnames(Zridge)
-                colnames(vcovUnscaled)[ridge_ids] <- colnames(Zridge)
-            }
-
             params <- .create_model(betas, vcovUnscaled, fit$sigma, fit$df.residual, fit$model)
             if (!is.na(params$df.residual)) {
                 type   <- "lmer"
-                params <- .pad_to_orig_space(params, colnames_orig)
+                params <- .pad_to_orig_space(params, .ridge_param_names(colnames_orig))
                 theta  <- fit$theta
             }
         }, silent = TRUE)
