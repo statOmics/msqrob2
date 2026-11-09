@@ -70,8 +70,7 @@ msqrobLm <- function(y,
     maxitRob = 5,
     trend = FALSE,
     counts = NULL) {
-    if (isFALSE(trend)) trend <- "none"
-    trend <- match.arg(trend, c("none", "mean", "count"))
+    trend <- .match_trend(trend)
     if (trend == "count" && !is.null(counts))
         .check_counts(counts, rownames(y))
     myDesign <- model.matrix(formula, data)
@@ -307,8 +306,7 @@ msqrobLmer <- function(y,
     counts = NULL,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
 
-    if (isFALSE(trend)) trend <- "none"
-    trend <- match.arg(trend, c("none", "mean", "count"))
+    trend <- .match_trend(trend)
 
     ## the fitting functions rely on DataFrame semantics (e.g. data$y <- matrix)
     data <- DataFrame(data, check.names = FALSE)
@@ -499,9 +497,15 @@ msqrobGlm <- function(y,
 }
 
 
-## Build the 1-D trend covariate for squeezeVar: mean log-intensity
-## (trend = "mean", like limma-trend) or log2 precursor count
-## (trend = "count", like DEqMS). squeezeVar's loess handles the rest.
+## FALSE means "none"; TRUE (as in limma::eBayes) is ambiguous here.
+.match_trend <- function(trend) {
+    if (isFALSE(trend)) return("none")
+    if (!is.character(trend))
+        stop("trend must be FALSE, \"none\", \"mean\" or \"count\". ",
+             "For limma's trend = TRUE, use trend = \"mean\".")
+    match.arg(trend, c("none", "mean", "count"))
+}
+
 ## Stop before fitting when counts for trend = "count" are missing.
 .check_counts <- function(counts, featureNames) {
     bad <- !is.finite(counts)
@@ -514,6 +518,9 @@ msqrobGlm <- function(y,
     invisible(TRUE)
 }
 
+## Build the 1-D trend covariate for squeezeVar: mean log-intensity
+## (trend = "mean", like limma-trend) or log2 precursor count
+## (trend = "count", like DEqMS). squeezeVar's loess handles the rest.
 .make_trend_covariate <- function(mean_expr = NULL, counts = NULL) {
     if (!is.null(mean_expr)) return(mean_expr)
     if (!is.null(counts))    return(log2(pmax(counts, 0.5)))

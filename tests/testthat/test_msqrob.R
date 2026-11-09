@@ -625,6 +625,18 @@ test_that("trend = 'count' stops before fitting when a count is missing", {
         "counts are missing \\(NA\\) for 1 feature\\(s\\), e.g. feat5")
 })
 
+test_that("trend = TRUE (as in limma) gives an informative error", {
+    d <- .make_trend_data(n_feat = 5)
+    expect_error(msqrobLm(d$y, ~condition, d$coldata, trend = TRUE),
+                 "use trend = \"mean\"")
+    expect_error(msqrobLmer(d$y, ~ -1 + condition, d$coldata, ridge = TRUE,
+                            trend = TRUE),
+                 "use trend = \"mean\"")
+    se <- SummarizedExperiment::SummarizedExperiment(
+        assays = list(intensity = d$y), colData = d$coldata)
+    expect_error(msqrob(se, ~condition, trend = TRUE), "use trend = \"mean\"")
+})
+
 test_that("trend rejects unknown options such as 'combined'", {
     d <- .make_trend_data(n_feat = 5)
     expect_error(msqrobLm(d$y, ~condition, d$coldata, trend = "combined"),
