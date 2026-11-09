@@ -711,6 +711,24 @@ test_that(".create_data with rowdata adds rowdata columns", {
     expect_true("seq" %in% colnames(out))
 })
 
+test_that(".create_data with rowdata keeps the type of single variables", {
+    cd <- DataFrame(cond = factor(c("A", "B", "A")))
+    rd <- DataFrame(seq = c("PEP1", "PEP2"))
+    out <- msqrob2:::.create_data(matrix(0, 2, 3), rd, cd)
+    expect_identical(out$cond, factor(rep(c("A", "B", "A"), each = 2)))
+    expect_identical(out$seq, rep(c("PEP1", "PEP2"), 3))
+})
+
+test_that("msqrobLmer with rowdata names the parameters after the factor levels", {
+    d <- .make_lm_data(n_feat = 6)
+    rd <- DataFrame(Sequence = paste0("pep", 1:6))
+    models <- suppressMessages(
+        msqrobLmer(d$y, ~condition + (1 | Sequence), data = d$coldata,
+                   rowdata = rd, featureGroups = rep(c("prot1", "prot2"), each = 3)))
+    expect_identical(names(getCoef(models[["prot1"]]))[1:2],
+                     c("(Intercept)", "conditionB"))
+})
+
 ## .create_model -----------------------------------------------------------
 
 test_that(".create_model returns NA list when df.residual < 2", {

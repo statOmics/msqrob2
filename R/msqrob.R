@@ -897,9 +897,11 @@ msqrobGlm <- function(y,
     if (is.null(rowdata)) {
         coldata[rep(seq_len(nr), each = nrow(y)), , drop = FALSE]
     } else {
+        ## drop = FALSE: a single variable would otherwise become a vector,
+        ## and cbind would turn a factor into its integer codes
         data <- cbind(
-            coldata[rep(seq_len(nr), each = nrow(y)), ],
-            rowdata[rep(seq_len(nrow(rowdata)), ncol(y)), ]
+            coldata[rep(seq_len(nr), each = nrow(y)), , drop = FALSE],
+            rowdata[rep(seq_len(nrow(rowdata)), ncol(y)), , drop = FALSE]
         )
         data <- DataFrame(data)
         colnames(data) <- c(colnames(coldata), colnames(rowdata))
