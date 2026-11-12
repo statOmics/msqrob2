@@ -82,6 +82,46 @@ test_that("msqrobLm robust=TRUE produces 'rlm' fit types for complete data", {
     expect_gt(sum(types == "rlm"), 0L)
 })
 
+test_that("msqrobLm robust=TRUE uses the Huber M-estimator variance of summary.rlm", {
+    d <- .make_lm_data()
+    d$y[2, 3] <- d$y[2, 3] + 4        # an outlier, so that some weights are < 1
+    d$y[3, 1] <- NA                   # and a missing value
+    models <- suppressWarnings(msqrobLm(d$y, ~condition, d$coldata,
+                                        robust = TRUE, maxitRob = 1))
+    for (i in 1:3) {
+        obs <- !is.na(d$y[i, ])
+        X <- model.matrix(~condition, as.data.frame(d$coldata))[obs, ]
+        ref <- suppressWarnings(MASS::rlm(X, d$y[i, obs], method = "M", maxit = 1))
+        sm  <- summary(ref, method = "XtX")
+        m   <- models[[i]]
+        expect_equal(getSigma(m), sm$stddev)
+        expect_equal(getDF(m), sum(ref$w) - 2)
+        expect_equal(getVcovUnscaled(m), solve(crossprod(X)),
+                     check.attributes = FALSE)
+        expect_equal(getCoef(m), coef(ref))
+        expect_equal(m@params$w, ref$w)
+    }
+    expect_lt(min(models[[2]]@params$w), 1)
+})
+
+test_that("msqrobLm robust variance is calibrated for normal data without outliers", {
+    ## the weighted least squares variance with Huber weights was ~15% too
+    ## small at the normal; the M-estimator variance is not
+    set.seed(31)
+    n_feat <- 2000
+    coldata <- DataFrame(condition = factor(rep(c("A", "B"), each = 10)))
+    y <- matrix(rnorm(n_feat * 20), n_feat,
+                dimnames = list(paste0("f", seq_len(n_feat)), paste0("s", 1:20)))
+    models <- suppressWarnings(msqrobLm(y, ~condition, coldata, robust = TRUE,
+                                        maxitRob = 1))
+    b  <- vapply(models, function(m) getCoef(m)[["conditionB"]], numeric(1))
+    se <- vapply(models, function(m)
+        getSigma(m) * sqrt(getVcovUnscaled(m)["conditionB", "conditionB"]),
+        numeric(1))
+    expect_gt(mean(vapply(models, getSigma, numeric(1))^2), 0.95)
+    expect_equal(sqrt(mean(se^2)) / sd(b), 1, tolerance = 0.05)
+})
+
 test_that("msqrobLm robust=FALSE produces 'lm' fit types for complete data", {
     d <- .make_lm_data()
     models <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE)

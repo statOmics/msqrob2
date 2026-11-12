@@ -9,7 +9,7 @@ msqrobLm(
   formula,
   data,
   robust = TRUE,
-  maxitRob = 5,
+  maxitRob = 1,
   trend = FALSE,
   counts = NULL
 )
@@ -31,7 +31,7 @@ performed to account for outliers. Default is \code{TRUE}. If
 
 \item{maxitRob}{\code{numeric(1)} indicating the maximum iterations in
 the IRWLS algorithm used in the M-estimation step of the robust
-regression.}
+regression. Default is 1, as in \code{\link[=msqrob]{msqrob()}}.}
 
 \item{trend}{\code{character(1)} or \code{FALSE} controlling the empirical Bayes
 variance trend. \code{FALSE} (default) or \code{"none"} uses a global prior

@@ -20,7 +20,7 @@
 #'
 #' @param maxitRob `numeric(1)` indicating the maximum iterations in
 #'        the IRWLS algorithm used in the M-estimation step of the robust
-#'        regression.
+#'        regression. Default is 1, as in [msqrob()].
 #'
 #' @param trend `character(1)` or `FALSE` controlling the empirical Bayes
 #'        variance trend. `FALSE` (default) or `"none"` uses a global prior
@@ -67,7 +67,7 @@ msqrobLm <- function(y,
     formula,
     data,
     robust = TRUE,
-    maxitRob = 5,
+    maxitRob = 1,
     trend = FALSE,
     counts = NULL) {
     trend <- .match_trend(trend)
@@ -106,10 +106,14 @@ msqrobLm <- function(y,
 
                 if (type == "rlm") {
                     w <- mod$w
-                    sw <- sum(w)
-                    df.residual <- sw - mod$rank
-                    sigma <- sqrt(sum(w * mod$resid^2) / df.residual)
-                    if (df.residual < 2L) type <- "fitError"
+                    sw <- .rlm_sandwich(mod)
+                    if (is.null(sw)) {
+                        type <- "fitError"
+                    } else {
+                        sigma <- sw$sigma
+                        df.residual <- sw$df.residual
+                        if (df.residual < 2L) type <- "fitError"
+                    }
                 }
 
                 if (type == "lm") {
@@ -129,7 +133,8 @@ msqrobLm <- function(y,
                         ncol = length(colnames_orig)
                     )
                     rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- colnames_orig
-                    vcovUnscaled[names(mod$coef), names(mod$coef)] <- .vcovUnscaled(mod)
+                    vcovUnscaled[names(mod$coef), names(mod$coef)] <-
+                        if (type == "rlm") sw$vcovUnscaled else .vcovUnscaled(mod)
 
                     model <- list(
                         coefficients = coef,
@@ -860,6 +865,22 @@ msqrobGlm <- function(y,
 
 
 ## Calculate unscaled covariance matrix for lm or rlm fit
+## Variance of the Huber M-estimator (Huber 1981), as MASS::summary.rlm with
+## method = "XtX": sigma^2 = sum(psi(r / s)^2) s^2 / (n - p) * (kappa /
+## mean(psi'))^2, with the unweighted (X'X)^-1. The weighted least squares
+## variance, sum(w r^2) / (sum(w) - p) with (X'WX)^-1, treats the Huber
+## weights as known and is too small at the normal (E[w u^2] / E[w] = 0.86),
+## which makes robust fits liberal. The residual df stay sum(w) - p: in
+## simulations they calibrate the tests slightly better than n - p.
+## NULL when the variance is not defined, e.g. for a perfect fit (s = 0).
+.rlm_sandwich <- function(mod) {
+    sm <- tryCatch(summary(mod, method = "XtX"), error = function(e) NULL)
+    if (is.null(sm) || !is.finite(sm$stddev) || sm$stddev <= 0) return(NULL)
+    list(sigma        = sm$stddev,
+         vcovUnscaled = sm$cov.unscaled,
+         df.residual  = sum(mod$w) - mod$rank)
+}
+
 .vcovUnscaled <- function(model) {
     p1  <- seq_len(model$rank)
     p   <- length(model$coefficients)
