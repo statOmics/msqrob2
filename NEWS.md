@@ -1,5 +1,23 @@
-# msqrob 1.21 
-## msqrob 1.21.2
+# msqrob2 1.21
+## msqrob2 1.21.3
+
+- Robust fits without random effects or ridge (`msqrob()` and
+  `msqrobHurdle()` with such a formula, and `msqrobLm()`) use the
+  variance of the Huber M-estimator (as `MASS::summary.rlm(method = "XtX")`)
+  instead of the weighted least squares variance. The latter treats the Huber
+  weights as known and underestimates the variance, which made the tests of
+  robust fits liberal. Log2 fold changes are unchanged; standard errors are
+  typically a few percent larger. The residual degrees of freedom remain
+  `sum(w) - p`. Robust mixed and ridge models (`msqrobLmer()`, and thus
+  `msqrobAggregate()`) still use the previous variance; they will be updated
+  in a later release.
+- `msqrobLm()`: `maxitRob` now defaults to 1, as in `msqrob()` and the other
+  functions (was 5). Results from `msqrob()` are not affected by this change.
+- `msqrobLm()` no longer warns that `rlm` "failed to converge in `maxitRob`
+  steps": stopping after `maxitRob` iterations is intended (a one-step
+  M-estimator by default). Other warnings are kept.
+
+## msqrob2 1.21.2
 
 - `msqrobLmer()` stores the estimated variance component ratios of each
   lmer fit in `getModel(model)$theta` (lme4's parameterisation and names).
@@ -41,7 +59,7 @@
   Posterior variances, and hence p-values, change slightly. Requires
   limma >= 3.62.0.
 
-## msqrob 1.21.1 
+## msqrob2 1.21.1
 
 - Modular implementation of msqrob.R 
 - Add estimability functionality to catch and solve issues with changing 
@@ -50,19 +68,19 @@
 - Trended squeezevar using mean (limma trend) or using feature counts used for 
   aggregation (DEqMS). 
 
-## msqrob 1.21.0 
+## msqrob2 1.21.0
 
 - Version bump
 
-# msqrob 1.20 
+# msqrob2 1.20
 
-## msqrob 1.20.0 
+## msqrob2 1.20.0
 
 - Version bump 
 
-# msqrob 1.19
+# msqrob2 1.19
 
-## msqrob 1.19.1
+## msqrob2 1.19.1
 
 - Add functions to calculate log-normalisation factors that can be used with 
   sweep function
@@ -83,77 +101,77 @@
 to avoid issues with readQFeatures
 - Update README to point to msqrob2book
 
-# msqrob 1.17
+# msqrob2 1.17
 
-## msqrob 1.17.2
+## msqrob2 1.17.2
 
 (nothing yet)
 
-## msqrob 1.17.1
+## msqrob2 1.17.1
 
 - Fixed NEWS file
 - Fixed vignette upon renaming of longFormat to longForm
 
-## msqrob 1.17.0
+## msqrob2 1.17.0
 
 - New Bioconductor devel release 3.22
 
-# msqrob 1.16
+# msqrob2 1.16
 
-## msqrob 1.16.0
+## msqrob2 1.16.0
 
 - New Bioconductor stable release 3.21
 
-# msqrob 1.15
+# msqrob2 1.15
 
-## msqrob 1.15.1
+## msqrob2 1.15.1
 
 - fix: fixed fnames in cptac vignette and moved away from `msdata` to 
   rely on `MsDataHub` instead
 
-## msqrob 1.15.0
+## msqrob2 1.15.0
 
 - New Bioconductor devel release 3.21
 
-# msqrob 1.14
+# msqrob2 1.14
 
-## msqrob 1.14.1
+## msqrob2 1.14.1
 
 - Added more flexibility in the msqrobLM function for models with missing variables
 - Fixed full rank check for models without ridge in certain cases
 
-## msqrob 1.14.0
+## msqrob2 1.14.0
 
 - New Bioconductor stable release 3.20
 
-# msqrob 1.13
+# msqrob2 1.13
 
-## msqrob 1.13.1
+## msqrob2 1.13.1
 
 - Implemented msqrobAggregate() method for SummarizedExperiment objects. 
 
-## msqrob 1.13.0
+## msqrob2 1.13.0
 
 - New Bioconductor devel release 3.20
 
-# msqrob 1.12
+# msqrob2 1.12
 
-## msqrob 1.12.0
+## msqrob2 1.12.0
  
 - New Bioconductor stable release 3.19
 
-## msqrob 1.11.2
+## msqrob2 1.11.2
 
 - Fixed issue related to levels of a ridge variable
 - Fixed issue when fitting only one random effect
 
-## msqrob 1.11.1
+## msqrob2 1.11.1
 
 - Fixed issues related to reference class changes in the models
 - Fixed issue related to colData assay levels
 - Refactored internal code
 
-## msqrob 1.6.2
+## msqrob2 1.6.2
 
 - Fixed issues related to residual degrees of freedom of overparameterized models.
 - Fixed issue relating to coldata variables as factors.
