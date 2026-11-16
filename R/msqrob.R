@@ -74,6 +74,8 @@ msqrobLm <- function(y,
     if (trend == "count" && !is.null(counts))
         .check_counts(counts, rownames(y))
     myDesign <- model.matrix(formula, data)
+    rlmNoConv <- gettextf("'rlm' failed to converge in %d steps",
+                          as.integer(maxitRob), domain = "R-MASS")
     models <- BiocParallel::bplapply(asplit(y, 1),
         function(y, design) {
             obs <- is.finite(y)
@@ -95,7 +97,15 @@ msqrobLm <- function(y,
                 y <- y[obs]
 
                 if (robust) {
-                    mod <- try(MASS::rlm(X, y, method = "M", maxit = maxitRob),
+                    ## stopping after maxitRob IRWLS steps is intended (a
+                    ## one-step M-estimator by default): muffle only rlm's
+                    ## "failed to converge in maxitRob steps" warning
+                    mod <- try(withCallingHandlers(
+                        MASS::rlm(X, y, method = "M", maxit = maxitRob),
+                        warning = function(w) {
+                            if (identical(conditionMessage(w), rlmNoConv))
+                                invokeRestart("muffleWarning")
+                        }),
                         silent = TRUE
                     )
                     if (!is(mod, "try-error")) type <- "rlm"
@@ -106,12 +116,12 @@ msqrobLm <- function(y,
 
                 if (type == "rlm") {
                     w <- mod$w
-                    sw <- .rlm_sandwich(mod)
-                    if (is.null(sw)) {
+                    hv <- .rlm_huber_vcov(mod)
+                    if (is.null(hv)) {
                         type <- "fitError"
                     } else {
-                        sigma <- sw$sigma
-                        df.residual <- sw$df.residual
+                        sigma <- hv$sigma
+                        df.residual <- hv$df.residual
                         if (df.residual < 2L) type <- "fitError"
                     }
                 }
@@ -134,7 +144,7 @@ msqrobLm <- function(y,
                     )
                     rownames(vcovUnscaled) <- colnames(vcovUnscaled) <- colnames_orig
                     vcovUnscaled[names(mod$coef), names(mod$coef)] <-
-                        if (type == "rlm") sw$vcovUnscaled else .vcovUnscaled(mod)
+                        if (type == "rlm") hv$vcovUnscaled else .vcovUnscaled(mod)
 
                     model <- list(
                         coefficients = coef,
@@ -864,7 +874,6 @@ msqrobGlm <- function(y,
 }
 
 
-## Calculate unscaled covariance matrix for lm or rlm fit
 ## Variance of the Huber M-estimator (Huber 1981), as MASS::summary.rlm with
 ## method = "XtX": sigma^2 = sum(psi(r / s)^2) s^2 / (n - p) * (kappa /
 ## mean(psi'))^2, with the unweighted (X'X)^-1. The weighted least squares
@@ -872,8 +881,10 @@ msqrobGlm <- function(y,
 ## weights as known and is too small at the normal (E[w u^2] / E[w] = 0.86),
 ## which makes robust fits liberal. The residual df stay sum(w) - p: in
 ## simulations they calibrate the tests slightly better than n - p.
+## This averages psi' and psi^2 over the observations (Huber's model-based
+## variance); it is not the empirical (Huber-White) sandwich.
 ## NULL when the variance is not defined, e.g. for a perfect fit (s = 0).
-.rlm_sandwich <- function(mod) {
+.rlm_huber_vcov <- function(mod) {
     sm <- tryCatch(summary(mod, method = "XtX"), error = function(e) NULL)
     if (is.null(sm) || !is.finite(sm$stddev) || sm$stddev <= 0) return(NULL)
     list(sigma        = sm$stddev,
@@ -881,6 +892,7 @@ msqrobGlm <- function(y,
          df.residual  = sum(mod$w) - mod$rank)
 }
 
+## Calculate unscaled covariance matrix for lm or rlm fit
 .vcovUnscaled <- function(model) {
     p1  <- seq_len(model$rank)
     p   <- length(model$coefficients)

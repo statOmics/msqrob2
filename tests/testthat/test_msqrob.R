@@ -86,8 +86,7 @@ test_that("msqrobLm robust=TRUE uses the Huber M-estimator variance of summary.r
     d <- .make_lm_data()
     d$y[2, 3] <- d$y[2, 3] + 4        # an outlier, so that some weights are < 1
     d$y[3, 1] <- NA                   # and a missing value
-    models <- suppressWarnings(msqrobLm(d$y, ~condition, d$coldata,
-                                        robust = TRUE, maxitRob = 1))
+    models <- msqrobLm(d$y, ~condition, d$coldata, robust = TRUE, maxitRob = 1)
     for (i in 1:3) {
         obs <- !is.na(d$y[i, ])
         X <- model.matrix(~condition, as.data.frame(d$coldata))[obs, ]
@@ -112,14 +111,21 @@ test_that("msqrobLm robust variance is calibrated for normal data without outlie
     coldata <- DataFrame(condition = factor(rep(c("A", "B"), each = 10)))
     y <- matrix(rnorm(n_feat * 20), n_feat,
                 dimnames = list(paste0("f", seq_len(n_feat)), paste0("s", 1:20)))
-    models <- suppressWarnings(msqrobLm(y, ~condition, coldata, robust = TRUE,
-                                        maxitRob = 1))
+    models <- msqrobLm(y, ~condition, coldata, robust = TRUE, maxitRob = 1)
     b  <- vapply(models, function(m) getCoef(m)[["conditionB"]], numeric(1))
     se <- vapply(models, function(m)
         getSigma(m) * sqrt(getVcovUnscaled(m)["conditionB", "conditionB"]),
         numeric(1))
     expect_gt(mean(vapply(models, getSigma, numeric(1))^2), 0.95)
     expect_equal(sqrt(mean(se^2)) / sd(b), 1, tolerance = 0.05)
+})
+
+test_that("msqrobLm robust=TRUE does not warn when rlm stops after maxitRob steps", {
+    d <- .make_lm_data()
+    d$y[2, 3] <- d$y[2, 3] + 4
+    expect_no_warning(msqrobLm(d$y, ~condition, d$coldata, robust = TRUE))
+    expect_no_warning(msqrobLm(d$y, ~condition, d$coldata, robust = TRUE,
+                               maxitRob = 2))
 })
 
 test_that("msqrobLm robust=FALSE produces 'lm' fit types for complete data", {
@@ -969,8 +975,7 @@ test_that(".squeezeAndUpdatePosteriors: fitErrors keep NA and do not change the 
     ## method depending on whether there are fitErrors; legacy = FALSE does not.
     post <- function(m, f) unname(vapply(m, f, numeric(1)))
     for (trend in c("none", "mean")) {
-        m <- suppressWarnings(   # rlm convergence on simulated data
-            msqrobLm(d$y, ~condition, d$coldata, robust = TRUE, trend = trend))
+        m <- msqrobLm(d$y, ~condition, d$coldata, robust = TRUE, trend = trend)
         fe <- vapply(m, getFitMethod, character(1)) == "fitError"
         expect_identical(which(fe), c(feat2 = 2L, feat7 = 7L))
         expect_true(all(is.na(post(m[fe], getVarPosterior))))
@@ -982,8 +987,8 @@ test_that(".squeezeAndUpdatePosteriors: fitErrors keep NA and do not change the 
         expect_identical(post(m[!fe], getDfPosterior),
                          ref$df.prior[!fe] + post(m[!fe], getDF))
         ## the same posteriors as without the failing features
-        m2 <- suppressWarnings(
-            msqrobLm(d$y[!fe, ], ~condition, d$coldata, robust = TRUE, trend = trend))
+        m2 <- msqrobLm(d$y[!fe, ], ~condition, d$coldata, robust = TRUE,
+                       trend = trend)
         expect_identical(post(m[!fe], getVarPosterior), post(m2, getVarPosterior))
         expect_identical(post(m[!fe], getDfPosterior), post(m2, getDfPosterior))
     }
