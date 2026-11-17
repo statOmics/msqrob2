@@ -65,6 +65,9 @@ topFeatures <- function(models, contrast, adjust.method = "BH", sort = TRUE, alp
     ))
     df <- vapply(models, getDfPosterior, numeric(1))
     t <- logFC / se
+    ## a contrast that is shrunken to exactly 0 without uncertainty, e.g. in
+    ## a ridge model whose penalty sets all effects to 0, is not significant
+    t[!is.na(logFC) & logFC == 0 & !is.na(se) & se == 0] <- 0
     pval <- pt(-abs(t), df) * 2
     adjPval <- p.adjust(pval, method = adjust.method)
     out <- data.frame(logFC, se, df, t, pval, adjPval)

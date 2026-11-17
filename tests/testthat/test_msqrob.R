@@ -564,6 +564,207 @@ test_that("msqrobLmer featureGroups aggregates multiple peptides per protein", {
 })
 
 
+# ---------------------------------------------------------------------------
+# Robust variance of mixed models (.mixed_sandwich)
+# ---------------------------------------------------------------------------
+
+## Subjects with random intercepts and slopes, and a crossed batch effect.
+.make_re_data <- function(n_subj = 15, seed = 5) {
+    set.seed(seed)
+    d <- data.frame(
+        cond  = factor(rep(c("A", "B", "C"), times = 2 * n_subj)),
+        subj  = factor(rep(paste0("s", seq_len(n_subj)), each = 6)),
+        batch = factor(rep(c("b1", "b2", "b3"), length.out = 6 * n_subj)),
+        x     = rnorm(6 * n_subj))
+    b  <- rnorm(n_subj)
+    sl <- 0.6 * b + rnorm(n_subj, 0, 0.8)
+    d$y <- 10 + 0.3 * as.integer(d$cond) + b[d$subj] + rnorm(3)[d$batch] +
+        sl[d$subj] * d$x + rnorm(nrow(d), 0, 0.4)
+    d
+}
+
+test_that(".mixed_sandwich without downweighting reproduces lme4's variance", {
+    d <- .make_re_data()
+    for (f in c("y ~ cond + (1 | subj)", "y ~ cond + (1 | subj) + (1 | batch)",
+                "y ~ cond + x + (1 + x | subj)", "y ~ cond + x + (x || subj)")) {
+        m <- suppressMessages(lmer(as.formula(f), d))
+        expect_false(isSingular(m))
+        sw <- msqrob2:::.mixed_sandwich(getME(m, "X"), getME(m, "Z"),
+                                        getME(m, "Lambda"), resid(m),
+                                        rep(1, nrow(d)), k = Inf)
+        ## same values and layout as the existing (beta, b) covariance
+        expect_equal(sw$vcovUnscaled,
+                     as.matrix(msqrob2:::.getVcovBetaBUnscaled(m)),
+                     tolerance = 1e-8, check.attributes = FALSE)
+        ## sigma^2 = RSS / (n - tr(H)) and df = n - tr(H) at lme4's theta
+        X <- getME(m, "X")
+        M <- cbind(X, as.matrix(getME(m, "Z") %*% getME(m, "Lambda")))
+        C <- crossprod(M)
+        iu <- ncol(X) + seq_len(ncol(M) - ncol(X))
+        C[iu, iu] <- C[iu, iu] + diag(length(iu))
+        trH <- sum(diag(M %*% solve(C, t(M))))
+        expect_equal(sw$sigma^2, sum(resid(m)^2) / (nrow(d) - trH))
+        expect_equal(sw$df.residual, nrow(d) - trH)
+    }
+})
+
+test_that(".mixed_sandwich gives lme4's fixed-effects variance for singular fits", {
+    ## a singular correlated term: G = Lambda Lambda' cannot be inverted,
+    ## which the u-space computation does not need
+    set.seed(3)
+    d <- data.frame(cond = factor(rep(c("A", "B", "C"), times = 12)),
+                    subj = factor(rep(paste0("s", 1:6), each = 6)),
+                    batch = factor(rep(c("b1", "b2", "b3"), length.out = 36)),
+                    x = rnorm(36))
+    b <- rnorm(6); bb <- rnorm(3); sl <- rnorm(6, 0, 0.5)
+    d$y <- 10 + 0.3 * as.integer(d$cond) + b[d$subj] + bb[d$batch] +
+        sl[d$subj] * d$x + rnorm(36, 0, 0.5)
+    m <- suppressMessages(suppressWarnings(lmer(y ~ cond + x + (1 + x | subj), d)))
+    expect_true(isSingular(m))
+    sw <- msqrob2:::.mixed_sandwich(getME(m, "X"), getME(m, "Z"),
+                                    getME(m, "Lambda"), resid(m),
+                                    rep(1, nrow(d)), k = Inf)
+    p <- ncol(getME(m, "X"))
+    expect_equal(sw$vcovUnscaled[seq_len(p), seq_len(p)],
+                 as.matrix(vcov(m)) / sigma(m)^2, check.attributes = FALSE)
+})
+
+test_that(".mixed_sandwich without random effects is the summary.rlm variance", {
+    set.seed(12)
+    X <- model.matrix(~ g, data.frame(g = factor(rep(c("a", "b", "c"), each = 6))))
+    y <- rnorm(18); y[4] <- y[4] + 5
+    mod <- MASS::rlm(X, y, method = "M", maxit = 100)   # converged: scale is stable
+    Z <- Matrix::sparseMatrix(i = seq_len(18), j = rep(1:2, 9), x = 1)
+    sw <- msqrob2:::.mixed_sandwich(X, Z, Matrix::Diagonal(2, 0), mod$resid, mod$w)
+    sm <- summary(mod, method = "XtX")
+    expect_equal(sw$sigma, sm$stddev, tolerance = 1e-3)   # rlm scale: previous step
+    expect_equal(sw$vcovUnscaled[1:3, 1:3], sm$cov.unscaled, check.attributes = FALSE)
+    expect_equal(sw$df.residual, sum(mod$w) - 3)
+})
+
+test_that(".AiJAi equals the dense A^-1 J A^-1", {
+    set.seed(11)
+    d <- data.frame(condition = factor(rep(c("A", "B"), 30)),
+                    subject = factor(rep(1:12, each = 5)),
+                    batch = factor(sample(1:4, 60, TRUE)), x = rnorm(60))
+    d$y <- rnorm(60) + rnorm(12)[d$subject] + d$x * rnorm(12)[d$subject]
+    fits <- list(lmer(y ~ condition + (1 | subject) + (1 | batch), d),
+                 suppressMessages(lmer(y ~ condition + (1 + x | subject), d)))
+    for (m in fits) {
+        X <- getME(m, "X"); U <- getME(m, "Z") %*% getME(m, "Lambda")
+        p <- ncol(X); q <- ncol(U); mn <- 0.8
+        M <- as.matrix(cbind2(X, U))
+        J <- diag(rep(c(0, 1), c(p, q)))
+        Ai <- solve(mn * crossprod(M) + J)
+        expect_equal(msqrob2:::.AiJAi(mn, X, U), Ai %*% J %*% Ai,
+                     check.attributes = FALSE, tolerance = 1e-10)
+    }
+})
+
+test_that("msqrobLmer robust fits with featureGroups keep the reweighted lmer variance", {
+    d <- .make_lmer_data()
+    d$y[1, 3] <- d$y[1, 3] + 6
+    grouped <- msqrobLmer(d$y, ~condition + (1 | subject), d$coldata,
+                          featureGroups = rownames(d$y), robust = TRUE)
+    single  <- msqrobLmer(d$y, ~condition + (1 | subject), d$coldata, robust = TRUE)
+    dat <- cbind(as.data.frame(d$coldata), y = d$y[1, ])
+    m <- lmer(y ~ condition + (1 | subject), dat)
+    m@frame$`(weights)` <- MASS::psi.huber(resid(m) / mad(resid(m), 0))
+    m <- refit(m)
+    expect_equal(getSigma(grouped[["feat1"]]), sigma(m), tolerance = 1e-6)
+    expect_equal(getVcovUnscaled(grouped[["feat1"]]),
+                 as.matrix(msqrob2:::.getVcovBetaBUnscaled(m)),
+                 check.attributes = FALSE, tolerance = 1e-6)
+    expect_equal(getDF(grouped[["feat1"]]), msqrob2:::.getDfLmer(m), tolerance = 1e-6)
+    ## without featureGroups the Huber M-estimator variance is used
+    expect_false(isTRUE(all.equal(getSigma(single[["feat1"]]), sigma(m))))
+    expect_equal(getCoef(single[["feat1"]]), getCoef(grouped[["feat1"]]))
+})
+
+test_that("msqrobLmer robust=FALSE keeps lme4's sigma, variance and df", {
+    d <- .make_lmer_data()
+    models <- msqrobLmer(d$y, ~condition + (1 | subject), d$coldata, robust = FALSE)
+    dat <- cbind(as.data.frame(d$coldata), y = d$y[1, ])
+    m <- lmer(y ~ condition + (1 | subject), dat)
+    expect_equal(getSigma(models[[1]]), sigma(m), tolerance = 1e-6)
+    expect_equal(getVcovUnscaled(models[[1]]),
+                 as.matrix(msqrob2:::.getVcovBetaBUnscaled(m)), check.attributes = FALSE,
+                 tolerance = 1e-6)
+    expect_equal(getDF(models[[1]]), msqrob2:::.getDfLmer(m), tolerance = 1e-6)
+})
+
+test_that("msqrobLmer robust variance follows the random-effect labels", {
+    ## an unbalanced design: subj1 has a single observation, so its random
+    ## effect has the largest variance; swapping the labels must move it
+    d <- .make_lmer_data(n_feat = 3, n_subj = 5)
+    d$y[, 2] <- NA
+    d$y[1, 4] <- d$y[1, 4] + 4
+    m1 <- suppressMessages(msqrobLmer(d$y, ~condition + (1 | subject), d$coldata))
+    cd2 <- d$coldata
+    ## swap the names of subj1 and subj2; the level order changes as well
+    lab <- as.character(cd2$subject)
+    cd2$subject <- factor(ifelse(lab == "subj1", "subj2",
+                                 ifelse(lab == "subj2", "subj1", lab)))
+    m2 <- suppressMessages(msqrobLmer(d$y, ~condition + (1 | subject), cd2))
+    for (i in seq_len(3)) {
+        v1 <- getVcovUnscaled(m1[[i]]); v2 <- getVcovUnscaled(m2[[i]])
+        expect_equal(v1["(Intercept)subjectsubj1", "(Intercept)subjectsubj1"],
+                     v2["(Intercept)subjectsubj2", "(Intercept)subjectsubj2"],
+                     tolerance = 1e-6)
+        expect_equal(getSigma(m1[[i]]), getSigma(m2[[i]]), tolerance = 1e-6)
+        b1 <- diag(v1)[grep("subject", rownames(v1))]
+        expect_identical(names(which.max(b1)), "(Intercept)subjectsubj1")
+    }
+})
+
+test_that("msqrobLmer robust variance is calibrated for normal data without outliers", {
+    set.seed(21)
+    n_feat <- 300
+    coldata <- DataFrame(condition = factor(rep(c("A", "B"), times = 8)),
+                         subject = factor(rep(paste0("s", 1:8), each = 2)))
+    sig <- sqrt(0.1 * 6 / rchisq(n_feat, 6))
+    y <- t(vapply(sig, function(s) 10 + rnorm(8, sd = s)[coldata$subject] +
+                      rnorm(16, sd = s), numeric(16)))
+    dimnames(y) <- list(sprintf("f%03d", seq_len(n_feat)), paste0("s", 1:16))
+    models <- suppressMessages(msqrobLmer(y, ~condition + (1 | subject), coldata))
+    models <- models[rownames(y)]
+    ok <- vapply(models, getFitMethod, character(1)) == "lmer"
+    b  <- vapply(models[ok], function(m) getCoef(m)[["conditionB"]], numeric(1))
+    se <- vapply(models[ok], function(m) getSigma(m) *
+        sqrt(getVcovUnscaled(m)["conditionB", "conditionB"]), numeric(1))
+    expect_equal(sqrt(mean(se^2 / sig[ok]^2)) / sd(b / sig[ok]), 1, tolerance = 0.1)
+})
+
+test_that("msqrobLmer ridge=TRUE robust fits keep the parameter layout", {
+    d <- .make_ridge_data()
+    d$y[1, 2] <- d$y[1, 2] + 4
+    rob <- suppressMessages(msqrobLmer(d$y, ~condition, d$coldata, ridge = TRUE))
+    ols <- suppressMessages(msqrobLmer(d$y, ~condition, d$coldata, ridge = TRUE,
+                                       robust = FALSE))
+    for (i in seq_along(rob)) {
+        expect_identical(dimnames(getVcovUnscaled(rob[[i]])),
+                         dimnames(getVcovUnscaled(ols[[i]])))
+        v <- getVcovUnscaled(rob[[i]])
+        expect_equal(v, t(v))
+        expect_true(all(eigen(v, only.values = TRUE)$values > -1e-10))
+    }
+})
+
+test_that("topFeatures gives p = 1 for ridge effects shrunken to exactly 0", {
+    ## no effects at all: the ridge penalty can set all effects to 0, with a
+    ## variance of exactly 0 for robust fits
+    d <- .make_ridge_data(n_feat = 20, seed = 4)
+    models <- suppressMessages(msqrobLmer(d$y, ~condition, d$coldata, ridge = TRUE))
+    L <- makeContrast("ridgeconditioncond2 = 0", parameterNames = "ridgeconditioncond2")
+    tf <- topFeatures(models, contrast = L, sort = FALSE)
+    zero <- !is.na(tf$logFC) & tf$logFC == 0
+    skip_if_not(any(zero))
+    expect_true(all(tf$pval[zero] == 1))
+    expect_true(all(tf$t[zero] == 0))
+    expect_false(anyNA(tf$pval[!is.na(tf$logFC)]))
+})
+
+
 # ===========================================================================
 # Empirical Bayes variance trend (trend = "mean" / "count")
 # ===========================================================================

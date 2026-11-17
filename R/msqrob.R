@@ -234,7 +234,12 @@ msqrobLm <- function(y,
 #'
 #' @param featureGroups vector of type `character` or vector of type `factor` indicating how to aggregate
 #'        the features. Is only used when multiple features are used to build the model, e.g. when starting
-#'        from peptide data and modelling the fold change at the protein level. The default is `NULL`
+#'        from peptide data and modelling the fold change at the protein level. The default is `NULL`.
+#'        Robust fits with `featureGroups` keep the weighted least squares
+#'        variance of the reweighted `lmer` fit: the Huber M-estimator variance
+#'        used for one feature per model assumes identically distributed
+#'        errors, and was too liberal for large proteins in peptide-level
+#'        models, whose peptides differ in noise.
 #'
 #' @param trend `character(1)` or `FALSE` controlling the empirical Bayes
 #'        variance trend. `FALSE` (default) or `"none"` uses a global prior
@@ -326,6 +331,8 @@ msqrobLmer <- function(y,
     ## the fitting functions rely on DataFrame semantics (e.g. data$y <- matrix)
     data <- DataFrame(data, check.names = FALSE)
 
+    ## Huber M-estimator variance only for one feature per model
+    huberVcov <- is.null(featureGroups)
     if (is.null(featureGroups)) featureGroups <- rownames(y)
 
     if (!is.null(rowdata)) {
@@ -378,10 +385,12 @@ msqrobLmer <- function(y,
     extraArgs <- if (ridge) {
         list(formula = formula, coldata = data, doQR = doQR,
              robust = robust, maxitRob = maxitRob, tol = tol,
+             huberVcov = huberVcov,
              lmerArgs = lmerArgs)
     } else {
         list(formula = formula, coldata = data,
              robust = robust, maxitRob = maxitRob, tol = tol,
+             huberVcov = huberVcov,
              lmerArgs = lmerArgs)
     }
     models <- .lmer_apply(y, rowdata, FUN, extraArgs)
@@ -630,12 +639,16 @@ msqrobGlm <- function(y,
 
 
 ## Initialise weights, run optional robust IRWLS, and extract model components.
-.extract_lmer_fit <- function(model, robust, maxitRob, tol) {
+## Robust fits get the M-estimator variance of .mixed_sandwich when huberVcov
+## (one feature per model), otherwise the weighted least squares variance of
+## the reweighted fit; an undefined robust variance is an error, which the
+## callers turn into a fitError.
+.extract_lmer_fit <- function(model, robust, maxitRob, tol, huberVcov = TRUE) {
     model@frame$`(weights)` <- rep(1, nrow(model@frame))
     sseOld <- model@devcomp$cmp["pwrss"]
     if (robust) model <- .robust_fitting(model, maxitRob, sseOld, tol)
     df <- .getDfLmer(model)
-    list(
+    fit <- list(
         model        = model,
         sigma        = sigma(model),
         betas        = .getBetaB(model),
@@ -645,6 +658,95 @@ msqrobGlm <- function(y,
         theta        = stats::setNames(lme4::getME(model, "theta"),
                            sub("\\.$", "", names(lme4::getME(model, "theta"))))
     )
+    if (robust && huberVcov) {
+        sw <- .mixed_sandwich(lme4::getME(model, "X"), lme4::getME(model, "Z"),
+                              lme4::getME(model, "Lambda"), resid(model),
+                              model@frame$`(weights)`)
+        if (is.null(sw)) stop("The robust variance is not defined for this fit.")
+        stopifnot(identical(dim(sw$vcovUnscaled), dim(fit$vcovUnscaled)))
+        ## same layout as .getVcovBetaBUnscaled: columns of X, then of Z
+        dimnames(sw$vcovUnscaled) <- dimnames(fit$vcovUnscaled)
+        fit[c("sigma", "vcovUnscaled", "df.residual")] <- sw
+    }
+    fit
+}
+
+## Variance of a robust (Huber) mixed model fit at its theta: the analogue of
+## .rlm_huber_vcov for the penalised M-estimator. In lme4's u-space, with
+## M = [X, Z Lambda], gamma = (beta, u) and J = blockdiag(0_p, I_q), the
+## estimating equation sum_i s psi(r_i / s) m_i - J gamma = 0 gives, with
+## Huber's averaging of psi' and psi^2 over the observations,
+##   Var(gamma) = sigma^2 A^-1 (mean(psi')^2 M'M + J) A^-1,
+##   A = mean(psi') M'M + J,
+##   sigma^2 = s^2 sum(psi(r / s)^2) / (n - tr(H)) * (kappa / mean(psi'))^2,
+## with H the unweighted hat matrix at theta and kappa as in summary.rlm, on
+## the p fixed effects. Without random effects this is the variance of
+## .rlm_huber_vcov. The returned covariance is for (beta, b = Lambda u), in the
+## column order of X and Z. The residual df are sum(w) - tr(H_w), with H_w
+## the hat matrix of the weighted fit. k: Huber's tuning constant (k = Inf
+## gives the non-robust variance at theta). NULL when not defined.
+.mixed_sandwich <- function(X, Z, Lambda, resid, w, k = 1.345) {
+    n <- nrow(X)
+    p <- ncol(X)
+    q <- ncol(Z)
+    s <- mad(resid, 0)
+    if (!is.finite(s) || s <= 0) return(NULL)
+    u    <- resid / s
+    psi  <- pmax(-k, pmin(k, u))
+    dpsi <- as.numeric(abs(u) <= k)
+    mn   <- mean(dpsi)
+    if (mn <= 0) return(NULL)
+    ## Sparse matrices throughout, as in .getVcovBetaBUnscaled: dense
+    ## (p + q) x (p + q) inverses and products are O(q^3), slow for many
+    ## random-effect levels.
+    U   <- Z %*% Lambda
+    M   <- cbind2(as(X, "CsparseMatrix"), U)
+    MtM <- Matrix::crossprod(M)
+    J   <- Matrix::Diagonal(p + q, rep(c(0, 1), c(p, q)))
+    iu  <- p + seq_len(q)
+    ## tr(H) = p + q - tr of the u-block of (M'WM + J)^-1
+    trH <- function(MtWM) {
+        Ci <- Matrix::solve(Matrix::forceSymmetric(MtWM + J))
+        p + q - sum(Matrix::diag(Ci)[iu])
+    }
+    trH1 <- trH(MtM)
+    trHw <- trH(Matrix::crossprod(sqrt(w) * M))
+    if (n - trH1 <= 0) return(NULL)
+    kappa  <- 1 + p * stats::var(dpsi) / (n * mn^2)
+    sigma2 <- s^2 * sum(psi^2) / (n - trH1) * (kappa / mn)^2
+    ## Var(gamma) / sigma^2 = A^-1 (mn^2 M'M + J) A^-1
+    ##                      = mn A^-1 + (1 - mn) A^-1 J A^-1
+    Ai <- as.matrix(Matrix::solve(Matrix::forceSymmetric(mn * MtM + J)))
+    Vu <- mn * Ai + (1 - mn) * .AiJAi(mn, X, U)
+    Tm <- Matrix::bdiag(Matrix::Diagonal(p), Lambda)
+    list(sigma        = sqrt(sigma2),
+         vcovUnscaled = as.matrix(Tm %*% Vu %*% Matrix::t(Tm)),
+         df.residual  = sum(w) - trHw)
+}
+
+## A^-1 J A^-1 for A = [mn X'X, mn X'U; mn U'X, D], D = mn U'U + I_q, and
+## J = blockdiag(0_p, I_q), without the O(q^3) dense product
+## A^-1[, u] A^-1[u, ]. With R = D^-1 mn U'X and S = mn X'X - mn X'U R (the
+## Schur complement), A^-1[x, u] = -S^-1 R' and A^-1[u, u] = D^-1 + R S^-1 R',
+## so the u-block of A^-1 J A^-1 is D^-2 + D^-1 R S^-1 R' + R S^-1 R' D^-1 +
+## R S^-1 R'R S^-1 R': the sparse D^-1 and D^-2 = (D D)^-1 plus terms of rank p.
+.AiJAi <- function(mn, X, U) {
+    q   <- ncol(U)
+    D   <- Matrix::forceSymmetric(mn * Matrix::crossprod(U) + Matrix::Diagonal(q))
+    Di  <- as.matrix(Matrix::solve(D))
+    Di2 <- as.matrix(Matrix::solve(Matrix::forceSymmetric(Matrix::crossprod(D))))
+    if (ncol(X) == 0L) return(Di2)
+    X   <- as.matrix(X)
+    R   <- Di %*% as.matrix(mn * Matrix::crossprod(U, X))   # q x p
+    Si  <- solve(mn * crossprod(X) - mn * crossprod(X, as.matrix(U %*% R)))
+    RSi <- R %*% Si                                         # q x p
+    DiR <- Di %*% R                                         # q x p
+    RtR <- crossprod(R)
+    xx  <- Si %*% RtR %*% Si
+    xu  <- -(t(DiR) + RtR %*% t(RSi))
+    xu  <- Si %*% xu
+    uu  <- Di2 + DiR %*% t(RSi) + RSi %*% t(DiR) + RSi %*% RtR %*% t(RSi)
+    rbind(cbind(xx, xu), cbind(t(xu), uu))
 }
 
 
@@ -675,7 +777,7 @@ msqrobGlm <- function(y,
 
 ## Fit the mixed models with ridge regression
 .ridge_msqrobLmer <- function(y, rowdata = NULL, formula, coldata,
-    doQR = TRUE, robust, maxitRob = 1, tol = 1e-06,
+    doQR = TRUE, robust, maxitRob = 1, tol = 1e-06, huberVcov = TRUE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
 
     data <- .create_data(y, rowdata, coldata)
@@ -754,7 +856,7 @@ msqrobGlm <- function(y,
 
     if (!is.null(model)) {
         try({
-            fit          <- .extract_lmer_fit(model, robust, maxitRob, tol)
+            fit          <- .extract_lmer_fit(model, robust, maxitRob, tol, huberVcov)
             betas        <- fit$betas
             vcovUnscaled <- fit$vcovUnscaled
             coefNames    <- names(betas)
@@ -797,7 +899,7 @@ msqrobGlm <- function(y,
 ## Fit the mixed models without ridge regression
 #' @importFrom stats as.formula
 .noridge_msqrobLmer <- function(y, rowdata = NULL, formula, coldata,
-    robust, maxitRob = 0, tol = 1e-06,
+    robust, maxitRob = 0, tol = 1e-06, huberVcov = TRUE,
     lmerArgs = list(control = lmerControl(calc.derivs = FALSE))) {
 
     data <- .create_data(y, rowdata, coldata)
@@ -845,7 +947,7 @@ msqrobGlm <- function(y,
 
     if (!is.null(model)) {
         try({
-            fit    <- .extract_lmer_fit(model, robust, maxitRob, tol)
+            fit    <- .extract_lmer_fit(model, robust, maxitRob, tol, huberVcov)
             if (!is.null(fixNames)) {
                 nm <- names(fit$betas)
                 i  <- nm %in% names(fixNames)
