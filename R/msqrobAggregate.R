@@ -92,7 +92,9 @@
 #' @param trend `character(1)` or `FALSE` controlling the empirical Bayes
 #'        variance trend. `FALSE` (default) or `"none"` uses a global prior
 #'        variance. `"mean"` conditions the prior on mean log-intensity. `"count"`
-#'        conditions it on log2 peptide count (inferred from \code{fcol}).
+#'        conditions it on log2 of the number of features (e.g. peptides) per
+#'        protein, i.e. the number of rows of `object` per level of \code{fcol}
+#'        (as \code{.n} of \code{QFeatures::aggregateFeatures()}).
 #'
 #' @return A 'QFeatures' object with an additional assay.
 #'

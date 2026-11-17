@@ -64,18 +64,20 @@ from peptide data and modelling the fold change at the protein level. The defaul
 \item{trend}{\code{character(1)} or \code{FALSE} controlling the empirical Bayes
 variance trend. \code{FALSE} (default) or \code{"none"} uses a global prior
 variance. \code{"mean"} conditions the prior on mean log-intensity. \code{"count"}
-conditions it on log2 precursor count. When \code{featureGroups}
-groups multiple features per protein, precursor counts are
-inferred automatically; for protein-level data supply them via
-\code{counts}.}
+conditions it on log2 of the number of features per protein. When
+\code{featureGroups} groups multiple features per protein, these
+counts are the number of rows of \code{y} per feature group (as
+\code{.n} of \code{QFeatures::aggregateFeatures()}); for
+protein-level data supply them via \code{counts}.}
 
 \item{counts}{An optional numeric vector (length = number of unique feature
-groups) giving the number of precursors per protein. Used when
-\code{trend = "count"} and each feature
-group contains a single row (i.e. the data are already at protein level).
+groups) giving the number of features (e.g. peptides) per protein.
+Used when \code{trend = "count"}; when supplied, it takes precedence
+over the counts inferred from \code{featureGroups}, and it is needed
+for protein-level data (one row per feature group).
 Named by feature group, or else in the order in which the feature
 groups first occur in \code{y} (the row order for protein-level data).
-Missing counts give an error.}
+Missing or negative counts give an error.}
 
 \item{lmerArgs}{a list (of correct class, resulting from 'lmerControl()'
 containing control parameters, including the nonlinear optimizer to be used

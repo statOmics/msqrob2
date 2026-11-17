@@ -87,9 +87,11 @@
 #'        variance trend. `FALSE` (default) or `"none"` uses a global prior
 #'        variance. `"mean"` conditions the prior on mean log-intensity (like
 #'        \code{limma::eBayes(trend = TRUE)}). `"count"` conditions it on log2
-#'        precursor count (like DEqMS).
-#'        Precursor counts are taken from the `.n` column of `rowData(object)`
-#'        when available.
+#'        of the number of features (e.g. peptides) summarised into each
+#'        protein, similar in spirit to DEqMS. These counts are taken from the
+#'        `.n` column of `rowData(object)` (added by
+#'        \code{QFeatures::aggregateFeatures()}); without it, `"count"` gives a
+#'        warning and no trend.
 #' @rdname msqrob
 #'
 #' @import SummarizedExperiment

@@ -37,11 +37,18 @@ regression. Default is 1, as in \code{\link[=msqrob]{msqrob()}}.}
 variance trend. \code{FALSE} (default) or \code{"none"} uses a global prior
 variance. \code{"mean"} conditions the prior on mean log-intensity (like
 \code{limma::eBayes(trend = TRUE)}). \code{"count"} conditions it on
-log2 precursor count (like DEqMS).}
+log2 of the number of features (e.g. peptides) summarised into each
+protein, similar in spirit to DEqMS (which uses the minimum number
+of PSMs over the samples). Only the residual variance prior is
+affected.}
 
-\item{counts}{An optional numeric vector of length \code{nrow(y)} with the
-number of precursors (PSMs or peptides) per feature. Only used when
-\code{trend = "count"}. Missing counts give an error.}
+\item{counts}{An optional numeric vector with the number of features
+(e.g. peptides or PSMs) summarised into each row of \code{y}, as in
+the \code{.n} column of \code{QFeatures::aggregateFeatures()}. Named by
+the row names of \code{y}, or else one value per row in the row
+order of \code{y}. Only used when \code{trend = "count"}; without
+counts, \code{trend = "count"} gives a warning and no trend. Missing
+or negative counts give an error.}
 }
 \value{
 A list of objects of the \code{StatModel} class.

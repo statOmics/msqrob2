@@ -26,11 +26,18 @@
 #'        variance trend. `FALSE` (default) or `"none"` uses a global prior
 #'        variance. `"mean"` conditions the prior on mean log-intensity (like
 #'        \code{limma::eBayes(trend = TRUE)}). `"count"` conditions it on
-#'        log2 precursor count (like DEqMS).
+#'        log2 of the number of features (e.g. peptides) summarised into each
+#'        protein, similar in spirit to DEqMS (which uses the minimum number
+#'        of PSMs over the samples). Only the residual variance prior is
+#'        affected.
 #'
-#' @param counts An optional numeric vector of length \code{nrow(y)} with the
-#'        number of precursors (PSMs or peptides) per feature. Only used when
-#'        \code{trend = "count"}. Missing counts give an error.
+#' @param counts An optional numeric vector with the number of features
+#'        (e.g. peptides or PSMs) summarised into each row of \code{y}, as in
+#'        the \code{.n} column of \code{QFeatures::aggregateFeatures()}. Named by
+#'        the row names of \code{y}, or else one value per row in the row
+#'        order of \code{y}. Only used when \code{trend = "count"}; without
+#'        counts, \code{trend = "count"} gives a warning and no trend. Missing
+#'        or negative counts give an error.
 #'
 #' @examples
 #'
@@ -72,7 +79,7 @@ msqrobLm <- function(y,
     counts = NULL) {
     trend <- .match_trend(trend)
     if (trend == "count" && !is.null(counts))
-        .check_counts(counts, rownames(y))
+        counts <- .align_counts(counts, rownames(y))
     myDesign <- model.matrix(formula, data)
     rlmNoConv <- gettextf("'rlm' failed to converge in %d steps",
                           as.integer(maxitRob), domain = "R-MASS")
@@ -239,18 +246,20 @@ msqrobLm <- function(y,
 #' @param trend `character(1)` or `FALSE` controlling the empirical Bayes
 #'        variance trend. `FALSE` (default) or `"none"` uses a global prior
 #'        variance. `"mean"` conditions the prior on mean log-intensity. `"count"`
-#'        conditions it on log2 precursor count. When \code{featureGroups}
-#'        groups multiple features per protein, precursor counts are
-#'        inferred automatically; for protein-level data supply them via
-#'        \code{counts}.
+#'        conditions it on log2 of the number of features per protein. When
+#'        \code{featureGroups} groups multiple features per protein, these
+#'        counts are the number of rows of \code{y} per feature group (as
+#'        \code{.n} of \code{QFeatures::aggregateFeatures()}); for
+#'        protein-level data supply them via \code{counts}.
 #'
 #' @param counts An optional numeric vector (length = number of unique feature
-#'        groups) giving the number of precursors per protein. Used when
-#'        \code{trend = "count"} and each feature
-#'        group contains a single row (i.e. the data are already at protein level).
+#'        groups) giving the number of features (e.g. peptides) per protein.
+#'        Used when \code{trend = "count"}; when supplied, it takes precedence
+#'        over the counts inferred from \code{featureGroups}, and it is needed
+#'        for protein-level data (one row per feature group).
 #'        Named by feature group, or else in the order in which the feature
 #'        groups first occur in \code{y} (the row order for protein-level data).
-#'        Missing counts give an error.
+#'        Missing or negative counts give an error.
 #'
 #' @param lmerArgs a list (of correct class, resulting from 'lmerControl()'
 #'        containing control parameters, including the nonlinear optimizer to be used
@@ -522,7 +531,23 @@ msqrobGlm <- function(y,
 }
 
 ## Stop before fitting when counts for trend = "count" are missing.
+## Counts for msqrobLm: matched to the rows of y by name when both are named,
+## otherwise one count per row in the row order of y.
+.align_counts <- function(counts, featureNames) {
+    if (!is.null(names(counts)) && !is.null(featureNames)) {
+        counts <- counts[featureNames]
+        names(counts) <- featureNames
+    } else if (length(counts) != length(featureNames)) {
+        stop("counts must have one value per feature (", length(featureNames),
+             "), or be named by feature.")
+    }
+    .check_counts(counts, featureNames)
+    counts
+}
+
 .check_counts <- function(counts, featureNames) {
+    if (any(counts < 0, na.rm = TRUE))
+        stop("counts must be non-negative numbers of features (e.g. peptides) per protein.")
     bad <- !is.finite(counts)
     if (any(bad)) {
         ids <- if (is.null(featureNames)) which(bad) else featureNames[bad]
@@ -885,6 +910,10 @@ msqrobGlm <- function(y,
 ## variance); it is not the empirical (Huber-White) sandwich.
 ## NULL when the variance is not defined, e.g. for a perfect fit (s = 0).
 .rlm_huber_vcov <- function(mod) {
+    ## A rank-deficient rlm fit (e.g. a constant feature: zero scale, so
+    ## degenerate weights) gives summary.rlm's covariance only for the
+    ## estimable coefficients; such a fit is a fitError, as in the lm path.
+    if (anyNA(mod$coefficients)) return(NULL)
     sm <- tryCatch(summary(mod, method = "XtX"), error = function(e) NULL)
     if (is.null(sm) || !is.finite(sm$stddev) || sm$stddev <= 0) return(NULL)
     list(sigma        = sm$stddev,

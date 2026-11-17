@@ -128,6 +128,32 @@ test_that("msqrobLm robust=TRUE does not warn when rlm stops after maxitRob step
                                maxitRob = 2))
 })
 
+test_that(".rlm_huber_vcov gives NULL (fitError) for a rank-deficient rlm fit", {
+    d <- .make_lm_data()
+    X <- model.matrix(~condition, d$coldata)
+    mod <- suppressWarnings(MASS::rlm(X, d$y[1, ], method = "M", maxit = 1))
+    expect_false(is.null(msqrob2:::.rlm_huber_vcov(mod)))
+    mod$coefficients[2] <- NA   # as rlm returns for a numerically singular fit
+    expect_null(msqrob2:::.rlm_huber_vcov(mod))
+})
+
+test_that("msqrobLm robust=TRUE does not fail on constant features", {
+    ## zero scale: degenerate Huber weights can make rlm numerically rank
+    ## deficient (summary.rlm then only covers the estimable coefficients)
+    set.seed(3)
+    cond <- factor(rep(c("A", "B", "C", "D", "E"), each = 4))
+    cd <- DataFrame(condition = cond, row.names = paste0("s", 1:20))
+    y <- matrix(rnorm(4 * 20, 10), 4, dimnames = list(paste0("f", 1:4), rownames(cd)))
+    y[1, ] <- 20
+    y[2, cond == "A"] <- NA          # reference level missing
+    expect_no_error(m <- msqrobLm(y, ~condition, cd, robust = TRUE))
+    expect_identical(unname(vapply(m[2:4], getFitMethod, "")), rep("rlm", 3))
+    L <- makeContrast(c("conditionB = 0", "conditionC - conditionB = 0"),
+                      parameterNames = c("conditionB", "conditionC"))
+    expect_true(is.na(getContrast(m[[2]], L[, 1, drop = FALSE])))
+    expect_false(is.na(getContrast(m[[2]], L[, 2, drop = FALSE])))
+})
+
 test_that("msqrobLm robust=FALSE produces 'lm' fit types for complete data", {
     d <- .make_lm_data()
     models <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE)
@@ -634,6 +660,30 @@ test_that("msqrobLm trend = 'count' uses log2 counts as covariate", {
                   trend = "count", counts = d$counts)
     .expect_posteriors(m, .expected_posteriors(
         m, covariate = log2(d$counts)))
+})
+
+test_that("msqrobLm trend = 'count' matches named counts by row name", {
+    d <- .make_trend_data()
+    m <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE,
+                  trend = "count", counts = d$counts)
+    shuffled <- rev(setNames(d$counts, rownames(d$y)))
+    m_named <- msqrobLm(d$y, ~condition, d$coldata, robust = FALSE,
+                        trend = "count", counts = shuffled)
+    expect_equal(vapply(m_named, getVarPosterior, numeric(1)),
+                 vapply(m, getVarPosterior, numeric(1)))
+    expect_error(msqrobLm(d$y, ~condition, d$coldata, robust = FALSE,
+                          trend = "count", counts = shuffled[-1]),
+                 "missing")
+})
+
+test_that("msqrobLm trend = 'count' checks the length and sign of counts", {
+    d <- .make_trend_data()
+    expect_error(msqrobLm(d$y, ~condition, d$coldata, trend = "count",
+                          counts = d$counts[-1]),
+                 "one value per feature")
+    expect_error(msqrobLm(d$y, ~condition, d$coldata, trend = "count",
+                          counts = replace(d$counts, 1, -2)),
+                 "non-negative")
 })
 
 test_that("msqrobLm trend = 'count' without counts warns and applies no trend", {

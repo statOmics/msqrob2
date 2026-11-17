@@ -73,9 +73,11 @@ matrix columns are used directly (standard L2 penalty on original parameters).}
 variance trend. \code{FALSE} (default) or \code{"none"} uses a global prior
 variance. \code{"mean"} conditions the prior on mean log-intensity (like
 \code{limma::eBayes(trend = TRUE)}). \code{"count"} conditions it on log2
-precursor count (like DEqMS).
-Precursor counts are taken from the \code{.n} column of \code{rowData(object)}
-when available.}
+of the number of features (e.g. peptides) summarised into each
+protein, similar in spirit to DEqMS. These counts are taken from the
+\code{.n} column of \code{rowData(object)} (added by
+\code{QFeatures::aggregateFeatures()}); without it, \code{"count"} gives a
+warning and no trend.}
 
 \item{lmerArgs}{a list (of correct class, resulting from 'lmerControl()'
 containing control parameters, including the nonlinear optimizer to be used

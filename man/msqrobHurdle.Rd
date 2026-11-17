@@ -74,10 +74,12 @@ When \code{TRUE} the predictor columns are orthogonalised so that shrinkage is
 invariant to predictor ordering and collinearity. When \code{FALSE} the raw design
 matrix columns are used directly (standard L2 penalty on original parameters).}
 
-\item{trend}{Character or FALSE. Controls the empirical Bayes variance trend
-for the intensity component. FALSE (default) or "none" uses a global
-prior variance. "mean" conditions on mean log-intensity. "count"
-conditions on log2 precursor count (from the .n column of rowData).}
+\item{trend}{`character(1)` or `FALSE` controlling the empirical Bayes
+variance trend of the intensity component (the count component has
+no trend). `FALSE` (default) or `"none"` uses a global prior
+variance. `"mean"` conditions it on mean log-intensity. `"count"`
+conditions it on log2 of the number of features per protein (the
+`.n` column of `rowData(object)`).}
 
 \item{lmerArgs}{a list (of correct class, resulting from 'lmerControl()'
 containing control parameters, including the nonlinear optimizer to be used

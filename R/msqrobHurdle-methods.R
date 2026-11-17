@@ -49,10 +49,12 @@
 #'        'lmerControl' documentation of the lme4 package for more details.
 #'        Default is \code{list(control = lmerControl(calc.derivs = FALSE))}
 #'
-#' @param trend Character or FALSE. Controls the empirical Bayes variance trend
-#'        for the intensity component. FALSE (default) or "none" uses a global
-#'        prior variance. "mean" conditions on mean log-intensity. "count"
-#'        conditions on log2 precursor count (from the .n column of rowData).
+#' @param trend `character(1)` or `FALSE` controlling the empirical Bayes
+#'        variance trend of the intensity component (the count component has
+#'        no trend). `FALSE` (default) or `"none"` uses a global prior
+#'        variance. `"mean"` conditions it on mean log-intensity. `"count"`
+#'        conditions it on log2 of the number of features per protein (the
+#'        `.n` column of `rowData(object)`).
 #'
 #' @param priorCount A 'numeric(1)', which is a prior count to be added to the observations to shrink
 #'          the estimated odds ratios of the count component towards zero. Default is 0.1.

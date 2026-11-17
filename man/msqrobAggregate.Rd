@@ -80,7 +80,9 @@ matrix columns are used directly (standard L2 penalty on original parameters).}
 \item{trend}{\code{character(1)} or \code{FALSE} controlling the empirical Bayes
 variance trend. \code{FALSE} (default) or \code{"none"} uses a global prior
 variance. \code{"mean"} conditions the prior on mean log-intensity. \code{"count"}
-conditions it on log2 peptide count (inferred from \code{fcol}).}
+conditions it on log2 of the number of features (e.g. peptides) per
+protein, i.e. the number of rows of \code{object} per level of \code{fcol}
+(as \code{.n} of \code{QFeatures::aggregateFeatures()}).}
 
 \item{lmerArgs}{a list (of correct class, resulting from 'lmerControl()'
 containing control parameters, including the nonlinear optimizer to be used
